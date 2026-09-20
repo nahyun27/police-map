@@ -67,8 +67,11 @@ export const REVIEWS: Review[] = [
     text: '계좌 추적 진행 상황을 단계별로 안내받았습니다. 출석 일정 조율에도 유연하게 응해 주었습니다.' },
 ];
 
-/** 게시 불가 표현 (프로토타입 기준 단순 포함 검사) */
-export const BANNED = ['쓰레기', '무능', '멍청', '개', '새끼', '미친', '병신', '죽어'];
+/**
+ * 게시 불가 표현 — 서버(backend/app/core/moderation.py)와 같은 목록을 유지한다.
+ * '개' 한 글자는 '3개월', '개인' 등 정상 문장에 오탐되어 제외했다.
+ */
+export const BANNED = ['쓰레기', '무능', '멍청', '새끼', '미친', '병신', '죽어'];
 
 export const REMEDY: Remedy[] = [
   { id: 'attitude', q: '태도가 불친절하거나 진행상황 연락이 없어요',
