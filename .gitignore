@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+.DS_Store
+*.local
+
+# 사업기획서 등 내부 문서는 저장소에 올리지 않음
+*.docx
