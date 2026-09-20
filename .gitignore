@@ -13,3 +13,9 @@ dist
 .next
 next-env.d.ts
 *.tsbuildinfo
+
+# Backend (Python)
+backend/venv/
+__pycache__/
+*.pyc
+.pytest_cache/

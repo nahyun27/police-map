@@ -1,0 +1,64 @@
+"""평점 집계. 공개되는 평가(게시 상태 + 수사관이 공개 상태)만 집계에 포함한다."""
+from sqlalchemy import Float, Select, case, cast, func, select
+from sqlalchemy.orm import Session
+
+from app.models import Officer, Review, ReviewStatus
+from app.schemas.public import RatingSummary
+
+DIMS = ("fair", "proc", "att", "comm", "speed")
+
+
+def _r(v: float | None) -> float | None:
+    return None if v is None else round(float(v), 1)
+
+
+def overall_expr():
+    """리뷰 1건의 종합 점수 = 입력된 항목 점수의 평균(미입력 항목은 제외)."""
+    cols = [getattr(Review, d) for d in DIMS]
+    total = func.coalesce(cols[0], 0)
+    n = case((cols[0].is_not(None), 1), else_=0)
+    for c in cols[1:]:
+        total = total + func.coalesce(c, 0)
+        n = n + case((c.is_not(None), 1), else_=0)
+    return cast(total, Float) / func.nullif(n, 0)
+
+
+def visible_reviews(*columns) -> Select:
+    """공개 대상 평가 쿼리의 공통 뼈대."""
+    return (
+        select(*columns)
+        .select_from(Review)
+        .join(Officer, Officer.id == Review.officer_id)
+        .where(Review.status == ReviewStatus.published, Officer.is_published.is_(True), Officer.is_blinded.is_(False))
+    )
+
+
+def _summary_columns():
+    return [*(func.avg(getattr(Review, d)) for d in DIMS), func.avg(overall_expr()), func.count(Review.id)]
+
+
+def _to_summary(row) -> RatingSummary:
+    *dims, overall, count = row
+    return RatingSummary(**{d: _r(v) for d, v in zip(DIMS, dims)}, overall=_r(overall), count=int(count))
+
+
+EMPTY = RatingSummary(count=0)
+
+
+def officer_summaries(db: Session, officer_ids: list[int] | None = None) -> dict[int, RatingSummary]:
+    q = visible_reviews(Review.officer_id, *_summary_columns()).group_by(Review.officer_id)
+    if officer_ids is not None:
+        q = q.where(Review.officer_id.in_(officer_ids))
+    return {row[0]: _to_summary(row[1:]) for row in db.execute(q)}
+
+
+def station_summaries(db: Session, station_ids: list[int] | None = None) -> dict[int, RatingSummary]:
+    q = visible_reviews(Officer.station_id, *_summary_columns()).group_by(Officer.station_id)
+    if station_ids is not None:
+        q = q.where(Officer.station_id.in_(station_ids))
+    return {row[0]: _to_summary(row[1:]) for row in db.execute(q)}
+
+
+def national_summary(db: Session) -> RatingSummary:
+    row = db.execute(visible_reviews(*_summary_columns())).one()
+    return _to_summary(row)

@@ -4,7 +4,12 @@
 
 > ⚠ 현재 화면의 모든 관서·인물·평가·통계는 **가상의 샘플 데이터**입니다.
 
-## 실행
+## 백엔드
+
+FastAPI + PostgreSQL API 는 [backend/](backend/) 에 있다. 실행 방법·API·정책 구현은 [backend/README.md](backend/README.md) 참고.
+프론트는 아직 샘플 데이터(`src/data/sample.ts`)를 쓰며, API 연동은 다음 단계다.
+
+## 프론트엔드 실행
 
 ```bash
 npm install

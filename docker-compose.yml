@@ -1,0 +1,22 @@
+# 로컬 개발용 DB. kcpec-platform 의 postgres(5432)와 충돌하지 않도록 5433 을 쓴다.
+services:
+  postgres:
+    image: postgres:16
+    container_name: police-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: policemap
+      POSTGRES_USER: policemap
+      POSTGRES_PASSWORD: policemap
+    ports:
+      - "5433:5432"
+    volumes:
+      - police_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U policemap -d policemap"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  police_postgres_data:
