@@ -22,15 +22,15 @@ export const REGIONS: Region[] = [
   { id: 'jeju', name: '제주', full: '제주경찰청', stations: 3 },
 ];
 
-/** 타일 지도 배치 (7열 그리드, null=빈칸) */
+/** 타일 지도 배치 (5열 그리드, null=빈칸) */
 export const TILE: (string | null)[] = [
-  null, null, 'ggn', 'gangwon', null, null, null,
-  null, 'seoul', 'ggs', null, null, null, null,
-  'incheon', 'sejong', 'chungbuk', 'gyeongbuk', null, null, null,
-  null, 'chungnam', 'daejeon', 'daegu', 'ulsan', null, null,
-  'jeonbuk', 'gwangju', 'gyeongnam', 'busan', null, null, null,
-  'jeonnam', null, null, null, null, null, null,
-  'jeju', null, null, null, null, null, null,
+  null, null, 'ggn', 'gangwon', null,
+  null, 'seoul', 'ggs', null, null,
+  'incheon', 'sejong', 'chungbuk', 'gyeongbuk', null,
+  null, 'chungnam', 'daejeon', 'daegu', 'ulsan',
+  'jeonbuk', 'gwangju', 'gyeongnam', 'busan', null,
+  'jeonnam', null, null, null, null,
+  'jeju', null, null, null, null,
 ];
 
 export const STATIONS: Station[] = [

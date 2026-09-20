@@ -3,23 +3,23 @@
   "version": "0.1.0",
   "description": "폴리스맵 — 국민 참여형 수사기관 평가 플랫폼",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "typecheck": "tsc --noEmit"
   },
   "type": "module",
   "dependencies": {
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "react-router-dom": "^7.18.4"
+    "lucide-react": "^1.47.0",
+    "next": "^16.2.4",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@types/node": "^20.19.43",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^4.7.0",
-    "typescript": "^7.0.2",
-    "vite": "^6.4.3"
+    "typescript": "^5.9.3"
   },
   "private": true
 }

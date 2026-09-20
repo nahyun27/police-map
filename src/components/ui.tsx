@@ -1,10 +1,22 @@
 import { Fragment, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import type { Rating } from '../data/types';
+import Link from 'next/link';
+import { ChevronRight, Star } from 'lucide-react';
+import type { Rating } from '@/data/types';
 
 export function Stars({ value }: { value: number }) {
   const f = Math.max(0, Math.min(5, Math.round(value)));
-  return <span className="stars">{'★'.repeat(f) + '☆'.repeat(5 - f)}</span>;
+  return <span className="stars" aria-label={`5점 만점에 ${value.toFixed(1)}점`}>{'★'.repeat(f) + '☆'.repeat(5 - f)}</span>;
+}
+
+/** 평점 알약 — 3.8 이상 good, 3.2 이상 mid, 그 미만 low */
+export function Score({ value }: { value: number }) {
+  const tone = value >= 3.8 ? 'good' : value >= 3.2 ? 'mid' : 'low';
+  return (
+    <span className={`score ${tone}`}>
+      <Star size={12} fill="currentColor" strokeWidth={0} />
+      {value.toFixed(1)}
+    </span>
+  );
 }
 
 export function Bars({ rating }: { rating: Rating }) {
@@ -34,17 +46,32 @@ export function Bars({ rating }: { rating: Rating }) {
 /** label만 있으면 현재 페이지, to가 있으면 링크 */
 export function Crumb({ items }: { items: { label: string; to?: string }[] }) {
   return (
-    <div className="crumb">
+    <nav className="crumb" aria-label="현재 위치">
       {items.map((it, i) => (
         <Fragment key={i}>
-          {i > 0 && ' › '}
-          {it.to ? <Link to={it.to}>{it.label}</Link> : it.label}
+          {i > 0 && <ChevronRight size={14} />}
+          {it.to ? <Link href={it.to}>{it.label}</Link> : <span>{it.label}</span>}
         </Fragment>
       ))}
-    </div>
+    </nav>
   );
 }
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`card ${className}`.trim()}>{children}</div>;
+}
+
+export function PageHead({ eyebrow, title, sub, children }: { eyebrow?: string; title: string; sub?: string; children?: ReactNode }) {
+  return (
+    <header className="pagehead">
+      {eyebrow && <div className="eyebrow">{eyebrow}</div>}
+      <h1>{title}</h1>
+      {sub && <p className="lead">{sub}</p>}
+      {children}
+    </header>
+  );
+}
+
+export function TableWrap({ children }: { children: ReactNode }) {
+  return <div className="table-wrap">{children}</div>;
 }
