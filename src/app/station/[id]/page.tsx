@@ -97,6 +97,9 @@ export default async function StationPage({ params, searchParams }: Props) {
               </div>
               <div className="head"><Score value={rv.overall} /></div>
               <p>{rv.body || '(서술 없음, 별점만 등록)'}</p>
+              <Link href={`/takedown/review/${rv.id}?station=${encodeURIComponent(s.name)}`} className="sub" style={{ display: 'inline-block', marginTop: 8 }}>
+                이 게시물 삭제·정정 요청
+              </Link>
             </div>
           ))
         ) : (

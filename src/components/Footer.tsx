@@ -9,7 +9,7 @@ export default function Footer() {
           <Link href="/policy">이용약관</Link>
           <Link href="/policy">커뮤니티 가이드라인</Link>
           <Link href="/policy">개인정보처리방침</Link>
-          <Link href="/policy">삭제·정정 요청</Link>
+          <Link href="/takedown/status">삭제·정정 요청</Link>
         </div>
         <p>
           폴리스맵(가칭) 프로토타입 · 국민 참여형 수사기관 평가 플랫폼<br />

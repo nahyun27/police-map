@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Star } from 'lucide-react';
 
@@ -69,8 +69,8 @@ export function Crumb({ items }: { items: { label: string; to?: string }[] }) {
   );
 }
 
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`card ${className}`.trim()}>{children}</div>;
+export function Card({ children, className = '', style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
+  return <div className={`card ${className}`.trim()} style={style}>{children}</div>;
 }
 
 export function PageHead({ eyebrow, title, sub, children }: { eyebrow?: string; title: string; sub?: string; children?: ReactNode }) {
