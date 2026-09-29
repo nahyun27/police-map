@@ -19,3 +19,6 @@ backend/venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# 의뢰인 전달 자료(압축 파일)
+*.zip

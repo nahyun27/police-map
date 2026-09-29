@@ -19,6 +19,9 @@ class Region(Base):
     full_name: Mapped[str] = mapped_column(String(50))
     # 실제 관할 경찰서 수(공식 수치). 현재 DB 에 등록된 수와 다를 수 있다.
     station_total: Mapped[int] = mapped_column(default=0)
+    # 시·도경찰청(본청) 자체의 주소·홈페이지. 데이터가 없으면 None.
+    hq_address: Mapped[str | None] = mapped_column(String(200))
+    hq_website: Mapped[str | None] = mapped_column(String(200))
 
     stations: Mapped[list["Station"]] = relationship(back_populates="region")
 
@@ -30,6 +33,10 @@ class Station(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     region_id: Mapped[str] = mapped_column(ForeignKey("regions.id"), index=True)
     name: Mapped[str] = mapped_column(String(100))
+    address: Mapped[str | None] = mapped_column(String(200))
+    website: Mapped[str | None] = mapped_column(String(200))
+    # 공개 데이터 출처(경찰청 전국경찰관서안내 등). 화면에 "출처" 표기용.
+    source: Mapped[str | None] = mapped_column(String(300))
     is_sample: Mapped[bool] = mapped_column(default=False)
 
     region: Mapped[Region] = relationship(back_populates="stations")

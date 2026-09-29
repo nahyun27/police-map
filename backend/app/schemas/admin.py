@@ -40,4 +40,6 @@ class OfficerUpdate(BaseModel):
 class StationCreate(BaseModel):
     region_id: str
     name: str = Field(min_length=2, max_length=100)
+    address: str | None = Field(default=None, max_length=200)
+    website: str | None = Field(default=None, max_length=200)
     department_names: list[str] = []

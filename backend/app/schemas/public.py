@@ -28,11 +28,15 @@ class RegionOut(BaseModel):
     full_name: str
     station_total: int  # 실제 관할 경찰서 수
     station_count: int  # 현재 DB 에 등록된 경찰서 수
+    hq_address: str | None = None
+    hq_website: str | None = None
 
 
 class StationItem(BaseModel):
     id: int
     name: str
+    address: str | None
+    website: str | None
     department_count: int
     rating: RatingSummary
 
@@ -60,6 +64,9 @@ class RegionRef(BaseModel):
 class StationDetail(BaseModel):
     id: int
     name: str
+    address: str | None
+    website: str | None
+    source: str | None
     region: RegionRef
     departments: list[str]
     rating: RatingSummary

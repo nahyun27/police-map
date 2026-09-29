@@ -3,10 +3,14 @@ API = "/api/v1"
 
 def test_regions_and_region_detail(client, world):
     regions = client.get(f"{API}/regions").json()
-    assert regions == [{"id": "seoul", "name": "서울", "full_name": "서울경찰청", "station_total": 31, "station_count": 1}]
+    assert regions == [{
+        "id": "seoul", "name": "서울", "full_name": "서울경찰청", "station_total": 31, "station_count": 1,
+        "hq_address": None, "hq_website": None,
+    }]
     detail = client.get(f"{API}/regions/seoul").json()
     assert detail["stations"][0]["name"] == "테스트경찰서"
     assert detail["stations"][0]["department_count"] == 2
+    assert detail["stations"][0]["address"] is None and detail["stations"][0]["website"] is None
     assert client.get(f"{API}/regions/nope").status_code == 404
 
 
@@ -77,3 +81,15 @@ def test_recent_reviews_and_stats(client, world):
     assert stats["national"]["overall"] == 3.5
     assert [r["name"] for r in stats["station_ranking"]] == ["테스트경찰서"]
     assert stats["appeal_acceptance_rate"] is None and stats["appeals_filed"] == []
+
+
+def test_station_and_region_expose_address_and_website(client, db, world):
+    from app.models import Region
+    db.get(Region, "seoul").hq_address = "서울시 종로구 사직로8길 31"
+    world["station"].address, world["station"].website = "테스트시 테스트구 1", "https://example.gov"
+    db.commit()
+
+    region = client.get(f"{API}/regions/seoul").json()
+    assert region["hq_address"] == "서울시 종로구 사직로8길 31"
+    station = client.get(f"{API}/stations/{world['station'].id}").json()
+    assert station["address"] == "테스트시 테스트구 1" and station["website"] == "https://example.gov"

@@ -23,7 +23,10 @@ def _region_ref(r: Region) -> RegionRef:
 def _station_items(db: Session, stations: list[Station]) -> list[StationItem]:
     sums = station_summaries(db, [s.id for s in stations])
     return [
-        StationItem(id=s.id, name=s.name, department_count=len(s.departments), rating=sums.get(s.id, EMPTY))
+        StationItem(
+            id=s.id, name=s.name, address=s.address, website=s.website,
+            department_count=len(s.departments), rating=sums.get(s.id, EMPTY),
+        )
         for s in stations
     ]
 
@@ -33,7 +36,10 @@ def list_regions(db: Session = Depends(get_db)):
     counts = dict(db.execute(select(Station.region_id, func.count(Station.id)).group_by(Station.region_id)).all())
     regions = db.scalars(select(Region).order_by(Region.id)).all()
     return [
-        RegionOut(id=r.id, name=r.name, full_name=r.full_name, station_total=r.station_total, station_count=counts.get(r.id, 0))
+        RegionOut(
+            id=r.id, name=r.name, full_name=r.full_name, station_total=r.station_total,
+            station_count=counts.get(r.id, 0), hq_address=r.hq_address, hq_website=r.hq_website,
+        )
         for r in regions
     ]
 
@@ -48,7 +54,8 @@ def get_region(region_id: str, db: Session = Depends(get_db)):
     ).unique().all()
     return RegionDetail(
         id=r.id, name=r.name, full_name=r.full_name, station_total=r.station_total,
-        station_count=len(stations), stations=_station_items(db, list(stations)),
+        station_count=len(stations), hq_address=r.hq_address, hq_website=r.hq_website,
+        stations=_station_items(db, list(stations)),
     )
 
 
@@ -62,7 +69,8 @@ def get_station(station_id: int, db: Session = Depends(get_db)):
     ).all()
     osums = officer_summaries(db, [o.id for o in officers])
     return StationDetail(
-        id=s.id, name=s.name, region=_region_ref(s.region), departments=[d.name for d in s.departments],
+        id=s.id, name=s.name, address=s.address, website=s.website, source=s.source,
+        region=_region_ref(s.region), departments=[d.name for d in s.departments],
         rating=station_summaries(db, [s.id]).get(s.id, EMPTY), officers=[officer_item(o, osums.get(o.id)) for o in officers],
     )
 

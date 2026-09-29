@@ -185,7 +185,7 @@ def _get_or_create_department(db: Session, station_id: int, name: str) -> Depart
 def create_station(body: StationCreate, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     if not db.get(Region, body.region_id):
         raise HTTPException(404, "지역을 찾을 수 없습니다.")
-    s = Station(region_id=body.region_id, name=body.name)
+    s = Station(region_id=body.region_id, name=body.name, address=body.address, website=body.website, source="관리자 수동 등록")
     db.add(s)
     try:
         db.flush()
