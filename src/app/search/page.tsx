@@ -1,9 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Building2, UserRound } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { Card, PageHead, Score } from '@/components/ui';
-import { OFFICERS, STATIONS, avgRating, findStation } from '@/data/sample';
+import { search as apiSearch } from '@/lib/api';
 import { NOINDEX } from '@/lib/seo';
+
+// 백엔드의 실시간 데이터를 그리므로 빌드 시점에 정적 생성하지 않는다.
+export const dynamic = 'force-dynamic';
 
 type Props = { searchParams: Promise<{ q?: string | string[] }> };
 
@@ -13,35 +16,28 @@ export const metadata: Metadata = { title: '검색', robots: NOINDEX };
 export default async function SearchPage({ searchParams }: Props) {
   const raw = (await searchParams).q;
   const q = (Array.isArray(raw) ? raw[0] : raw ?? '').trim();
-  const stations = q ? STATIONS.filter((s) => s.name.includes(q)) : [];
-  const officers = q ? OFFICERS.filter((o) => o.name.includes(q) || o.dept.includes(q)) : [];
+  const result = q ? await apiSearch(q) : null;
+  const stations = result?.stations ?? [];
 
   return (
     <>
-      <PageHead eyebrow="검색" title={q ? `"${q}" 검색 결과` : '검색어를 입력해 주세요'} sub={q ? `경찰서 ${stations.length}건 · 수사관 ${officers.length}건` : undefined} />
-      <div className="grid2">
-        <Card>
-          <h2><Building2 size={17} style={{ verticalAlign: -2, marginRight: 8, color: 'var(--brand)' }} />경찰서 ({stations.length})</h2>
-          {stations.length ? stations.map((s) => (
-            <div className="review" key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-              <div><Link href={`/station/${s.id}`} style={{ fontWeight: 650 }}>{s.name}</Link><div className="sub">평가 {s.reviews}건</div></div>
-              <Score value={s.rating} />
+      <PageHead
+        eyebrow="검색"
+        title={q ? `"${q}" 검색 결과` : '검색어를 입력해 주세요'}
+        sub={q ? `경찰서 ${stations.length}건` : undefined}
+      />
+      <Card>
+        <h2><Building2 size={17} style={{ verticalAlign: -2, marginRight: 8, color: 'var(--brand)' }} />경찰서 ({stations.length})</h2>
+        {stations.length ? stations.map((s) => (
+          <div className="review" key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <div>
+              <Link href={`/station/${s.id}`} style={{ fontWeight: 650 }}>{s.name}</Link>
+              <div className="sub">{s.address ?? '주소 정보 없음'}</div>
             </div>
-          )) : <p className="sub">결과 없음</p>}
-        </Card>
-        <Card>
-          <h2><UserRound size={17} style={{ verticalAlign: -2, marginRight: 8, color: 'var(--brand)' }} />수사관 ({officers.length})</h2>
-          {officers.length ? officers.map((o) => (
-            <div className="review" key={o.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-              <div>
-                <Link href={`/officer/${o.id}`} style={{ fontWeight: 650 }}>{o.name} {o.rank}</Link>
-                <div className="sub">{findStation(o.station)?.name} · {o.dept}</div>
-              </div>
-              <Score value={avgRating(o.rating)} />
-            </div>
-          )) : <p className="sub">결과 없음</p>}
-        </Card>
-      </div>
+            <Score value={s.rating.overall} />
+          </div>
+        )) : <p className="sub">{q ? '결과 없음' : '경찰서 이름을 입력해 검색해 보세요.'}</p>}
+      </Card>
     </>
   );
 }

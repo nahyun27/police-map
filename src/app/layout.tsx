@@ -37,7 +37,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body>
         <div className="demo-banner">
-          데모 프로토타입 — 화면의 모든 관서·인물·평가·통계는 <b>가상의 샘플 데이터</b>이며 실존 인물·기관과 무관합니다.
+          개발 중인 프로토타입 — 경찰서 정보는 경찰청 공개자료를 기반으로 하며, <b>평가·통계 일부는 테스트용 샘플입니다.</b>
         </div>
         <Header />
         <main>{children}</main>

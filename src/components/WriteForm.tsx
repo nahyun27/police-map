@@ -4,14 +4,21 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { BANNED } from '@/data/sample';
-import type { Rating } from '@/data/types';
+import { ApiError, submitReview, type ReviewRatingsIn } from '@/lib/api';
 
-const CRITERIA: [keyof Rating, string][] = [
+const CRITERIA: [keyof ReviewRatingsIn, string][] = [
   ['fair', '공정성·중립성'],
   ['proc', '절차 준수(권리 고지 등)'],
   ['att', '조사 태도'],
   ['comm', '소통·연락 응대'],
   ['speed', '신속성'],
+];
+
+const ROLE_OPTIONS: [string, string][] = [
+  ['complainant', '고소인'], ['victim', '피해자'], ['suspect', '피의자'], ['witness', '참고인'], ['lawyer', '변호인'],
+];
+const CASE_TYPE_OPTIONS: [string, string][] = [
+  ['fraud', '사기(경제)'], ['assault', '폭행·상해'], ['cyber', '사이버 범죄'], ['sexual', '성범죄'], ['traffic', '교통'], ['other', '기타'],
 ];
 
 function StarPick({ value, onChange }: { value: number; onChange: (v: number) => void }) {
@@ -24,52 +31,77 @@ function StarPick({ value, onChange }: { value: number; onChange: (v: number) =>
   );
 }
 
-export default function WriteForm({ officerId }: { officerId: string }) {
+function errorMessage(e: unknown): string {
+  if (e instanceof ApiError) {
+    if (e.status === 0) return '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.';
+    if (e.status === 409) return '같은 사건번호로 이미 제출된 평가가 있습니다.';
+    const detail = (e.body as { detail?: unknown } | null)?.detail;
+    if (typeof detail === 'string') return detail;
+    if (detail && typeof detail === 'object' && 'message' in detail) return String((detail as { message: unknown }).message);
+    return '입력값을 확인해 주세요.';
+  }
+  return '제출에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+}
+
+export default function WriteForm({ stationId }: { stationId: number }) {
   const router = useRouter();
-  const [role, setRole] = useState('고소인');
-  const [type, setType] = useState('사기(경제)');
+  const [role, setRole] = useState(ROLE_OPTIONS[0][0]);
+  const [caseType, setCaseType] = useState(CASE_TYPE_OPTIONS[0][0]);
   const [caseNo, setCaseNo] = useState('');
-  const [pick, setPick] = useState<Rating>({ fair: 0, proc: 0, att: 0, comm: 0, speed: 0 });
+  const [pick, setPick] = useState<Record<keyof ReviewRatingsIn, number>>({ fair: 0, proc: 0, att: 0, comm: 0, speed: 0 });
   const [text, setText] = useState('');
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const hit = BANNED.filter((b) => text.includes(b));
 
-  const submit = () => {
+  const submit = async () => {
     if (hit.length) return;
     if (Object.values(pick).every((v) => v === 0)) {
       alert('별점 항목을 1개 이상 입력해 주세요.');
       return;
     }
-    // TODO: 백엔드 연동 시 role/type/caseNo/pick/text 전송
-    setDone(true);
+    setSubmitting(true);
+    setError(null);
+    try {
+      await submitReview({
+        station_id: stationId,
+        role,
+        case_type: caseType,
+        case_number: caseNo.trim() || null,
+        ratings: Object.fromEntries(Object.entries(pick).map(([k, v]) => [k, v || null])),
+        body: text,
+      });
+      setDone(true);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <>
-      <div className="form-section">1. 본인 확인 · 사건 정보</div>
-      <div className="field">
-        <label>본인 확인 <span className="tag">데모에서는 생략</span></label>
-        <button className="btn line sm" onClick={() => alert('데모: 실서비스에서는 휴대폰 본인인증이 진행됩니다.')}>휴대폰 본인인증</button>
-      </div>
+      <div className="form-section">1. 사건 정보</div>
       <div className="grid2" style={{ marginBottom: 0 }}>
         <div className="field">
           <label>사건에서의 지위</label>
           <select value={role} onChange={(e) => setRole(e.target.value)}>
-            {['고소인', '피해자', '피의자', '참고인', '변호인'].map((v) => <option key={v}>{v}</option>)}
+            {ROLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
         <div className="field">
           <label>사건 유형</label>
-          <select value={type} onChange={(e) => setType(e.target.value)}>
-            {['사기(경제)', '폭행·상해', '사이버 범죄', '성범죄', '교통', '기타'].map((v) => <option key={v}>{v}</option>)}
+          <select value={caseType} onChange={(e) => setCaseType(e.target.value)}>
+            {CASE_TYPE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
       </div>
       <div className="field">
-        <label>사건번호 <span className="tag">비공개 · 경험 검증용</span></label>
+        <label>사건번호 <span className="tag">선택 · 비공개 · 경험 검증용</span></label>
         <input type="text" value={caseNo} onChange={(e) => setCaseNo(e.target.value)}
-          placeholder="예: 2026-형제-00000 (게시되지 않으며 검증에만 사용됩니다)" />
+          placeholder="예: 2026-형제-00000 (입력하지 않아도 제출할 수 있습니다)" />
       </div>
 
       <div className="form-section">2. 항목별 평가</div>
@@ -93,15 +125,18 @@ export default function WriteForm({ officerId }: { officerId: string }) {
         )}
       </div>
 
-      <button className="btn lg" onClick={submit}>검수 요청(제출)</button>
+      {error && <div className="warn">{error}</div>}
+      <button className="btn lg" onClick={submit} disabled={submitting}>
+        {submitting ? '제출 중…' : '검수 요청(제출)'}
+      </button>
 
       {done && (
         <div className="modal-ok">
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontWeight: 700 }}><CheckCircle2 size={20} />제출 완료(데모)</div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontWeight: 700 }}><CheckCircle2 size={20} />제출 완료</div>
           <p style={{ marginTop: 6 }}>작성하신 평가는 커뮤니티 가이드라인 적합성 검수(24~48시간) 후 게시됩니다. 부적합 판정 시 사유와 함께 반려됩니다.</p>
           <hr className="divider" style={{ margin: '14px 0' }} />
           <p>비슷한 문제로 불편을 겪으셨다면 후기에서 멈추지 마세요.</p>
-          <button className="btn sm" style={{ marginTop: 10 }} onClick={() => router.push(`/remedy/${officerId}`)}>
+          <button className="btn sm" style={{ marginTop: 10 }} onClick={() => router.push(`/remedy/${stationId}`)}>
             이 경험을 공식 민원으로 이어가기 <ArrowRight size={14} />
           </button>
         </div>

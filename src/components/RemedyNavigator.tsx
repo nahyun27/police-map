@@ -21,7 +21,7 @@ const BOARD: [string, number][] = [
   ['국민신문고 민원', 128], ['기피신청', 54], ['불송치 이의신청', 41], ['인권위 진정', 12],
 ];
 
-/** contextLabel: 특정 수사관 페이지에서 넘어온 경우 "○○경찰서 ○○팀 ○○○ 경위" */
+/** contextLabel: 특정 경찰서 페이지에서 넘어온 경우 그 경찰서명 */
 export default function RemedyNavigator({ contextLabel }: { contextLabel?: string }) {
   const [sel, setSel] = useState<string | null>(null);
   const r = REMEDY.find((x) => x.id === sel);
@@ -41,7 +41,7 @@ export default function RemedyNavigator({ contextLabel }: { contextLabel?: strin
         <h2>어떤 문제를 겪으셨나요?</h2>
         {contextLabel && (
           <div className="guidebox" style={{ marginTop: 0 }}>
-            선택된 맥락 · <b>{contextLabel}</b> 관련 경험을 바탕으로 안내합니다. (데모)
+            선택된 맥락 · <b>{contextLabel}</b> 관련 경험을 바탕으로 안내합니다.
           </div>
         )}
         <div className="chips">
