@@ -28,15 +28,13 @@ router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(requir
 # ---------- 평가 검수 ----------
 class AdminReview(BaseModel):
     id: int
-    officer_id: int
-    officer_name: str
+    station_id: int
     station_name: str
-    author_id: int
     role: str
     role_label: str
     case_type: str
     case_type_label: str
-    case_number: str  # 검증용 — 관리자에게만 노출
+    case_number: str | None  # 검증용 — 관리자에게만 노출. 선택 입력이라 없을 수 있음
     ratings: dict[str, int | None]
     body: str
     status: str
@@ -46,7 +44,7 @@ class AdminReview(BaseModel):
 
 def _admin_review(r: Review) -> AdminReview:
     return AdminReview(
-        id=r.id, officer_id=r.officer_id, officer_name=r.officer.name, station_name=r.officer.station.name, author_id=r.author_id,
+        id=r.id, station_id=r.station_id, station_name=r.station.name,
         role=r.role.value, role_label=ROLE_LABELS[r.role], case_type=r.case_type.value, case_type_label=CASE_TYPE_LABELS[r.case_type],
         case_number=r.case_number, ratings=ratings_dict(r), body=r.body, status=r.status.value, reject_reason=r.reject_reason,
         created_at=iso(r.created_at),

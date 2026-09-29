@@ -31,9 +31,6 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
-    # 본인인증 연동 전에는 False. True 면 identity_verified_at 이 있는 회원만 평가 작성 가능.
-    REQUIRE_IDENTITY_VERIFICATION: bool = False
-
     # 삭제·정정 요청 접수 후 재검토 기한(일). 운영원칙: "접수 즉시 임시조치 후 10일 내 재검토".
     TAKEDOWN_REVIEW_DAYS: int = 10
 

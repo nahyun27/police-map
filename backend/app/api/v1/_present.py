@@ -1,9 +1,8 @@
-"""ORM 객체 → 응답 스키마 변환. 공개 응답에는 사건번호·작성자·요청자 연락처를 절대 넣지 않는다."""
-from app.models import Officer, Review
-from app.models.officer import SOURCE_LABELS
+"""ORM 객체 → 응답 스키마 변환. 공개 응답에는 사건번호·요청자 연락처를 절대 넣지 않는다."""
+from app.models import Review
 from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
-from app.schemas.public import OfficerItem, RatingSummary, ReviewPublic
-from app.services.ratings import DIMS, EMPTY
+from app.schemas.public import ReviewPublic
+from app.services.ratings import DIMS
 
 
 def ratings_dict(r: Review) -> dict[str, int | None]:
@@ -25,14 +24,3 @@ def review_public(r: Review) -> ReviewPublic:
         case_type_label=CASE_TYPE_LABELS[r.case_type], ratings=ratings_dict(r), overall=review_overall(r),
         body=r.body, published_at=iso(r.published_at),
     )
-
-
-def officer_fields(o: Officer, rating: RatingSummary | None) -> dict:
-    return dict(
-        id=o.id, name=o.name, rank=o.rank, department=o.department.name if o.department else None,
-        source=o.source.value, source_label=SOURCE_LABELS[o.source], rating=rating or EMPTY,
-    )
-
-
-def officer_item(o: Officer, rating: RatingSummary | None) -> OfficerItem:
-    return OfficerItem(**officer_fields(o, rating))

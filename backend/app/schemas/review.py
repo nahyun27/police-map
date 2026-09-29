@@ -12,29 +12,27 @@ class RatingsIn(BaseModel):
 
 
 class ReviewCreate(BaseModel):
-    officer_id: int
+    station_id: int
     role: ReviewRole
     case_type: CaseType
-    # 게시되지 않고 경험 검증에만 쓴다.
-    case_number: str = Field(min_length=4, max_length=100)
+    # 선택 입력. 게시되지 않고 경험 검증·중복 제출 방지에만 쓴다.
+    case_number: str | None = Field(default=None, max_length=100)
     ratings: RatingsIn
     body: str = Field(default="", max_length=2000)
 
     @model_validator(mode="after")
-    def _at_least_one_rating(self):
+    def _normalize(self):
         if all(v is None for v in self.ratings.model_dump().values()):
             raise ValueError("별점 항목을 1개 이상 입력해 주세요.")
-        self.case_number = self.case_number.strip()
+        if self.case_number is not None:
+            self.case_number = self.case_number.strip() or None
+        if self.case_number is not None and len(self.case_number) < 4:
+            raise ValueError("사건번호는 4자 이상으로 입력하거나 비워 주세요.")
         self.body = self.body.strip()
         return self
 
 
-class MyReviewOut(BaseModel):
+class ReviewReceipt(BaseModel):
     id: int
-    officer_id: int
-    officer_name: str
     status: str
-    reject_reason: str | None
-    ratings: dict[str, int | None]
-    body: str
-    created_at: str
+    message: str

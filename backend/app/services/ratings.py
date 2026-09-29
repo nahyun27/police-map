@@ -1,8 +1,8 @@
-"""평점 집계. 공개되는 평가(게시 상태 + 수사관이 공개 상태)만 집계에 포함한다."""
+"""평점 집계. 게시(published) 상태인 평가만 집계에 포함한다."""
 from sqlalchemy import Float, Select, case, cast, func, select
 from sqlalchemy.orm import Session
 
-from app.models import Officer, Review, ReviewStatus
+from app.models import Review, ReviewStatus
 from app.schemas.public import RatingSummary
 
 DIMS = ("fair", "proc", "att", "comm", "speed")
@@ -25,12 +25,7 @@ def overall_expr():
 
 def visible_reviews(*columns) -> Select:
     """공개 대상 평가 쿼리의 공통 뼈대."""
-    return (
-        select(*columns)
-        .select_from(Review)
-        .join(Officer, Officer.id == Review.officer_id)
-        .where(Review.status == ReviewStatus.published, Officer.is_published.is_(True), Officer.is_blinded.is_(False))
-    )
+    return select(*columns).select_from(Review).where(Review.status == ReviewStatus.published)
 
 
 def _summary_columns():
@@ -45,17 +40,10 @@ def _to_summary(row) -> RatingSummary:
 EMPTY = RatingSummary(count=0)
 
 
-def officer_summaries(db: Session, officer_ids: list[int] | None = None) -> dict[int, RatingSummary]:
-    q = visible_reviews(Review.officer_id, *_summary_columns()).group_by(Review.officer_id)
-    if officer_ids is not None:
-        q = q.where(Review.officer_id.in_(officer_ids))
-    return {row[0]: _to_summary(row[1:]) for row in db.execute(q)}
-
-
 def station_summaries(db: Session, station_ids: list[int] | None = None) -> dict[int, RatingSummary]:
-    q = visible_reviews(Officer.station_id, *_summary_columns()).group_by(Officer.station_id)
+    q = visible_reviews(Review.station_id, *_summary_columns()).group_by(Review.station_id)
     if station_ids is not None:
-        q = q.where(Officer.station_id.in_(station_ids))
+        q = q.where(Review.station_id.in_(station_ids))
     return {row[0]: _to_summary(row[1:]) for row in db.execute(q)}
 
 

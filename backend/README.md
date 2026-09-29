@@ -39,9 +39,9 @@ data/         전국 경찰관서 실데이터(공개 자료, 출처는 data/REA
 
 | 구분 | 엔드포인트 |
 | --- | --- |
-| 공개 | `GET /regions` `/regions/{id}` `/stations/{id}` `/officers/{id}` `/reviews/recent` `/search?q=` `/stats/overview` |
-| 인증 | `POST /auth/register` `/auth/login` `/auth/refresh` `/auth/logout`, `GET /auth/me` |
-| 평가 | `POST /reviews`(로그인 필요, 항상 검수 대기로 저장), `GET /reviews/mine` |
+| 공개 | `GET /regions` `/regions/{id}` `/stations/{id}` `/reviews/recent` `/search?q=` `/stats/overview` |
+| 인증 | `POST /auth/register` `/auth/login` `/auth/refresh` `/auth/logout`, `GET /auth/me` — 현재는 관리자 로그인에만 쓰인다(아래 정책 표 참고) |
+| 평가 | `POST /reviews`(**로그인 없이 익명 작성**, 항상 검수 대기로 저장) |
 | 당사자 | `POST /takedown-requests`(비회원 가능, **접수 즉시 임시조치**), `GET /takedown-requests/{code}` |
 | 관리자 | `GET /admin/reviews` `POST .../approve` `.../reject`, `GET /admin/takedown-requests` `POST .../resolve`, `POST /admin/stations` `/admin/officers` `PATCH /admin/officers/{id}`, `GET /admin/audit-logs` |
 
@@ -51,27 +51,41 @@ data/         전국 경찰관서 실데이터(공개 자료, 출처는 data/REA
 
 | 운영원칙 | 구현 |
 | --- | --- |
+| 평가는 경찰서 단위 | `Review.station_id`(NOT NULL). 수사관 개인 단위는 의뢰인 결정(2026-09)으로 보류 — 아래 참고 |
+| 기본 비로그인 익명 작성 | `POST /reviews` 에 인증 의존성이 없음. 남용 방지는 IP 기준 속도 제한(`core/rate_limit.py`)만 |
 | 전량 선검수 후 게시 | 평가는 항상 `pending` 으로 저장, 관리자 승인 전에는 공개 API·집계에서 제외 |
 | 접수 즉시 임시조치 | `POST /takedown-requests` 가 같은 트랜잭션에서 대상을 `blinded` 로 전환 |
 | 10일 내 재검토 | `due_at` 저장, 관리자 목록에 `overdue` 표시 |
 | 운영진 개입 기록화 | 모든 관리자 조치·삭제 요청 접수가 `audit_logs` 에 기록(수정·삭제 API 없음) |
-| 사건번호 비공개 | 공개·작성자 응답 스키마에 필드 자체가 없음. 중복 판별은 HMAC 해시로 |
+| 사건번호는 선택 입력·비공개 | 공개·관리자 응답 스키마 모두 원문을 평문으로 반환하지 않는 곳(공개 API)에는 필드 자체가 없음. 중복 판별은 HMAC 해시로, 미입력 시 건너뜀 |
 | 직무 관련 정보만 게재 | 수사관 모델에 사진·연락처·사생활 컬럼이 없음, 출처(`source`) 필수 |
 | 인신공격 표현 차단 | 서버에서 재검사(`core/moderation.py`) — 프론트 검사는 UX 용 |
 
+## 수사관 개인 단위는 보류 중 (2026-09 의뢰인 결정)
+
+평가는 당분간 경찰서 단위로만 받는다. `Officer`/`OfficerAssignment` 모델과 관리자 CRUD(`POST /admin/officers`,
+`PATCH /admin/officers/{id}`)는 남아 있지만, **공개 API·프론트에는 수사관이 전혀 노출되지 않는다** —
+`GET /officers/{id}` 같은 공개 조회 엔드포인트 자체가 없다. 개인 단위 평가를 재도입할 때는:
+
+1. `Review` 에 `officer_id`(nullable) 를 다시 추가하고, 집계(`services/ratings.py`)에 수사관 단위 그룹핑을 추가
+2. 공개 조회 API·스키마(`OfficerDetail` 등, 이전 커밋에 있던 형태) 복원
+3. 관리자가 미리 등록해 둔 `Officer` 데이터를 그대로 활용 가능(스키마가 안 바뀌었으므로)
+
+## 인증은 지금 관리자 전용이다
+
+로그인·회원가입 API(`/auth/*`)는 남아 있지만 현재 관리자 로그인에만 쓰인다. 의뢰인 결정(2026-09): "기본은
+비로그인 익명, 회원가입·로그인은 향후 과금 단계에서만". `Review.author_id` 는 그 미래를 위해 nullable 로
+남겨 뒀을 뿐 지금은 항상 `NULL` 이다 — 로그인 붙는 시점에 `POST /reviews` 를 `get_current_user` 로 감싸고
+이 컬럼을 채우면 된다(마이그레이션 불필요).
+
 ## 알려진 한계 / 배포 전 할 일
 
-- **본인인증 미연동**: `users.identity_verified_at` 만 준비됨. 연동 후 `REQUIRE_IDENTITY_VERIFICATION=true`.
-- **이메일 인증·비밀번호 재설정 없음.**
+- **이메일 인증·비밀번호 재설정 없음**(관리자 계정용으로도).
 - **알림 없음**: 삭제·정정 처리 결과를 양측에 통지하는 이메일 발송은 미구현(접수 코드 조회만 가능).
 - **사건번호 평문 저장**: 운영 전 컬럼 암호화(또는 KMS) 필요.
-- **속도 제한은 프로세스 메모리 기반**(단일 인스턴스 전제). Nginx 뒤에서는 `--proxy-headers` 로 실제 IP 를 받아야 함.
+- **속도 제한은 프로세스 메모리 기반**(단일 인스턴스 전제, IP 키). Nginx 뒤에서는 `--proxy-headers` 로 실제 IP 를 받아야 하고,
+  여러 인스턴스로 늘리면 Redis 등 공유 저장소로 바꿔야 한다. 익명 작성 전환으로 이 속도 제한이 유일한 도배 방지 수단이 됐다.
 - **임시조치 남용 가능성**: 누구나 삭제 요청으로 게시물을 즉시 블라인드할 수 있는 구조(정책상 의도). 속도 제한과 기한 관리로 완화하며, 남용 패턴이 보이면 정책 조정 필요.
 - **금칙어는 단순 포함 검사**: 우회·오탐 한계가 있어 사람 검수가 최종 관문.
-- **수사관 개인 단위는 보류 중**: 평가는 당분간 경찰서 단위로만 운영한다(의뢰인 결정, 2026-09). `Officer`/`Review.officer_id`
-  등 개인 단위 스키마·API는 남아 있지만, 실제 수사관 데이터는 없고 프론트에도 노출하지 않는다. 평가를 경찰서 단위로
-  받는 스키마 전환(`Review.station_id` 추가 등)은 다음 작업.
-- **작성자 인증 방식 미정**: 현재 API 는 이메일 회원가입 후 평가 작성(로그인 필요) 구조다. 의뢰인은 "기본 비로그인
-  익명 작성, 과금 단계에서만 회원가입"으로 정책을 정했다(2026-09) — `POST /reviews` 의 인증 요구 제거, 속도 제한을
-  IP 기반으로 전환하는 작업이 아직 반영되지 않았다.
+- **경찰서 자체의 삭제·정정 절차 없음**: 주소·부서 등 관서 정보 오류는 현재 관리자가 `PATCH` 로 직접 고치는 것 외엔 신고 경로가 없다.
 - 운영 환경(`ENVIRONMENT=production`)에서는 기본 시크릿·비보안 쿠키로는 서버가 기동을 거부한다.

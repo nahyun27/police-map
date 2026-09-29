@@ -45,42 +45,10 @@ class RegionDetail(RegionOut):
     stations: list[StationItem]
 
 
-class OfficerItem(BaseModel):
-    id: int
-    name: str
-    rank: str
-    department: str | None
-    source: str
-    source_label: str
-    rating: RatingSummary
-
-
 class RegionRef(BaseModel):
     id: str
     name: str
     full_name: str
-
-
-class StationDetail(BaseModel):
-    id: int
-    name: str
-    address: str | None
-    website: str | None
-    source: str | None
-    region: RegionRef
-    departments: list[str]
-    rating: RatingSummary
-    officers: list[OfficerItem]
-
-
-class AssignmentOut(BaseModel):
-    period: str
-    description: str
-
-
-class StationRef(BaseModel):
-    id: int
-    name: str
 
 
 class ReviewPublic(BaseModel):
@@ -95,28 +63,19 @@ class ReviewPublic(BaseModel):
     published_at: str | None
 
 
-class OfficerDetail(BaseModel):
+class StationDetail(BaseModel):
     id: int
     name: str
-    rank: str
-    department: str | None
-    source: str
-    source_label: str
-    station: StationRef
+    address: str | None
+    website: str | None
+    source: str | None
     region: RegionRef
-    assignments: list[AssignmentOut]
+    departments: list[str]
     rating: RatingSummary
     reviews: Page[ReviewPublic]
 
 
 class RecentReview(ReviewPublic):
-    officer_id: int
-    officer_name: str
-    station_name: str
-    department: str | None
-
-
-class SearchOfficer(OfficerItem):
     station_id: int
     station_name: str
 
@@ -124,13 +83,11 @@ class SearchOfficer(OfficerItem):
 class SearchResult(BaseModel):
     query: str
     stations: list[StationItem]
-    officers: list[SearchOfficer]
 
 
 class Totals(BaseModel):
     stations: int
     departments: int
-    officers: int
     reviews: int
 
 

@@ -12,7 +12,6 @@ from sqlalchemy import create_engine  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 from sqlalchemy.pool import StaticPool  # noqa: E402
 
-from app.core.config import settings  # noqa: E402
 from app.core.database import Base, get_db  # noqa: E402
 from app.core.rate_limit import ALL_LIMITERS  # noqa: E402
 from app.core.security import hash_case_number, hash_password  # noqa: E402
@@ -39,7 +38,6 @@ def db():
     app.dependency_overrides[get_db] = override
     for lim in ALL_LIMITERS:
         lim.reset()
-    settings.REQUIRE_IDENTITY_VERIFICATION = False
     yield session
     session.close()
     app.dependency_overrides.clear()
@@ -81,24 +79,23 @@ def admin_client(db):
 
 @pytest.fixture()
 def world(db):
-    """지역 1 · 경찰서 1 · 부서 2 · 수사관 2(A: 평가 2건 게시, B: 평가 없음)."""
+    """지역 1 · 경찰서 2(station: 평가 2건 게시 / station2: 평가 없음) · 수사관 1(관리자 CRUD 데모용,
+    평가 기능과는 무관 — 평가는 경찰서 단위로만 받는다)."""
     db.add(Region(id="seoul", name="서울", full_name="서울경찰청", station_total=31))
-    st = Station(region_id="seoul", name="테스트경찰서", is_sample=True)
-    db.add(st)
+    station = Station(region_id="seoul", name="테스트경찰서", is_sample=True)
+    station2 = Station(region_id="seoul", name="테스트경찰서2", is_sample=True)
+    db.add_all([station, station2])
     db.flush()
-    d1, d2 = Department(station_id=st.id, name="수사과"), Department(station_id=st.id, name="사이버수사팀")
+    d1, d2 = Department(station_id=station.id, name="수사과"), Department(station_id=station.id, name="사이버수사팀")
     db.add_all([d1, d2])
     db.flush()
-    a = Officer(station_id=st.id, department_id=d1.id, name="가상갑", rank="경위", source=OfficerSource.announcement)
-    b = Officer(station_id=st.id, department_id=d2.id, name="가상을", rank="경사", source=OfficerSource.homepage)
-    db.add_all([a, b])
-    author = User(email="seed@example.invalid", password_hash="x", nickname="seed")
-    db.add(author)
+    officer = Officer(station_id=station.id, department_id=d1.id, name="가상갑", rank="경위", source=OfficerSource.announcement)
+    db.add(officer)
     db.flush()
     reviews = []
     for i, (stars, when) in enumerate([(3, 5), (4, 7)]):
         r = Review(
-            officer_id=a.id, author_id=author.id, role=ReviewRole.complainant, case_type=CaseType.fraud,
+            station_id=station.id, role=ReviewRole.complainant, case_type=CaseType.fraud,
             case_number=f"CASE-{i}", case_number_hash=hash_case_number(f"CASE-{i}"),
             fair=stars, proc=stars, att=stars, comm=stars, speed=stars, body=f"후기 {i}",
             status=ReviewStatus.published, published_at=datetime(2026, when, 1, tzinfo=timezone.utc),
@@ -106,12 +103,12 @@ def world(db):
         db.add(r)
         reviews.append(r)
     db.commit()
-    return {"station": st, "a": a, "b": b, "reviews": reviews, "author": author}
+    return {"station": station, "station2": station2, "officer": officer, "reviews": reviews}
 
 
-def review_payload(officer_id: int, **over):
+def review_payload(station_id: int, **over):
     body = {
-        "officer_id": officer_id, "role": "complainant", "case_type": "fraud", "case_number": "2026-형제-12345",
+        "station_id": station_id, "role": "complainant", "case_type": "fraud", "case_number": "2026-형제-12345",
         "ratings": {"fair": 4, "proc": 5}, "body": "절차에 따라 진행되었습니다.",
     }
     body.update(over)

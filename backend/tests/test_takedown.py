@@ -14,7 +14,7 @@ def test_review_takedown_blinds_immediately(client, world):
     receipt = r.json()
     assert receipt["status"] == "pending" and receipt["public_code"]
     # 즉시 공개 목록·집계에서 빠진다(정책: 접수 즉시 임시조치)
-    pub = client.get(f"{API}/officers/{world['a'].id}").json()
+    pub = client.get(f"{API}/stations/{world['station'].id}").json()
     assert pub["reviews"]["total"] == 1 and all(x["id"] != rid for x in pub["reviews"]["items"])
     assert pub["rating"]["count"] == 1 and pub["rating"]["overall"] == 4.0  # 남은 4점 평가만
 
@@ -36,12 +36,12 @@ def test_cannot_target_unpublished_review(client, world, db):
     assert client.post(f"{API}/takedown-requests", json=takedown_payload(target_id=9999)).status_code == 404
 
 
-def test_officer_takedown_hides_profile_and_reviews(client, world):
-    r = client.post(f"{API}/takedown-requests", json=takedown_payload(target_type="officer", target_id=world["a"].id, request_type="correct"))
+def test_officer_takedown_blinds_officer_record(client, world, db):
+    """수사관 개인 단위는 아직 공개 기능이 없어(2026-09 결정: 평가는 경찰서 단위로만) 관측 지점이 DB 뿐이다."""
+    r = client.post(f"{API}/takedown-requests", json=takedown_payload(target_type="officer", target_id=world["officer"].id, request_type="correct"))
     assert r.status_code == 201
-    assert client.get(f"{API}/officers/{world['a'].id}").status_code == 404
-    st = client.get(f"{API}/stations/{world['station'].id}").json()
-    assert [o["name"] for o in st["officers"]] == ["가상을"] and st["rating"]["count"] == 0
+    db.refresh(world["officer"])
+    assert world["officer"].is_blinded is True
 
 
 def test_validation(client, world):
@@ -49,7 +49,7 @@ def test_validation(client, world):
     assert client.post(f"{API}/takedown-requests", json=takedown_payload(target_id=rid, reason="짧음")).status_code == 422
     assert client.post(f"{API}/takedown-requests", json=takedown_payload(target_id=rid, relation="친구")).status_code == 422
     # 검증에 실패한 요청은 접수·임시조치되지 않는다
-    assert client.get(f"{API}/officers/{world['a'].id}").json()["reviews"]["total"] == 2
+    assert client.get(f"{API}/stations/{world['station'].id}").json()["reviews"]["total"] == 2
 
 
 def test_rate_limit_is_5_per_hour_and_counts_invalid_requests_too(client, world):
@@ -69,7 +69,7 @@ def test_resolve_keep_restores(client, admin_client, world):
     tid = admin_client.get(f"{API}/admin/takedown-requests").json()["items"][0]["id"]
     r = admin_client.post(f"{API}/admin/takedown-requests/{tid}/resolve", json={"decision": "keep", "note": "사실관계 확인 결과 게시 유지"})
     assert r.status_code == 200 and r.json()["status"] == "kept"
-    assert client.get(f"{API}/officers/{world['a'].id}").json()["reviews"]["total"] == 2  # 복원
+    assert client.get(f"{API}/stations/{world['station'].id}").json()["reviews"]["total"] == 2  # 복원
     s = client.get(f"{API}/takedown-requests/{t['public_code']}").json()
     assert s["status"] == "kept" and "게시 유지" in s["resolution_note"]
     assert admin_client.post(f"{API}/admin/takedown-requests/{tid}/resolve", json={"decision": "keep", "note": "다시 처리"}).status_code == 409
@@ -81,9 +81,9 @@ def test_keep_does_not_unblind_while_another_request_is_pending(client, admin_cl
     client.post(f"{API}/takedown-requests", json=takedown_payload(target_id=rid, requester_name="김철수"))
     ids = [i["id"] for i in admin_client.get(f"{API}/admin/takedown-requests").json()["items"]]
     admin_client.post(f"{API}/admin/takedown-requests/{ids[0]}/resolve", json={"decision": "keep", "note": "첫 요청 기각"})
-    assert client.get(f"{API}/officers/{world['a'].id}").json()["reviews"]["total"] == 1  # 아직 블라인드
+    assert client.get(f"{API}/stations/{world['station'].id}").json()["reviews"]["total"] == 1  # 아직 블라인드
     admin_client.post(f"{API}/admin/takedown-requests/{ids[1]}/resolve", json={"decision": "keep", "note": "둘째 요청도 기각"})
-    assert client.get(f"{API}/officers/{world['a'].id}").json()["reviews"]["total"] == 2
+    assert client.get(f"{API}/stations/{world['station'].id}").json()["reviews"]["total"] == 2
 
 
 def test_resolve_remove_closes_sibling_requests(client, admin_client, world):
@@ -93,14 +93,15 @@ def test_resolve_remove_closes_sibling_requests(client, admin_client, world):
     admin_client.post(f"{API}/admin/takedown-requests/{first}/resolve", json={"decision": "remove", "note": "허위 사실로 확인되어 삭제"})
     assert [client.get(f"{API}/takedown-requests/{c}").json()["status"] for c in codes] == ["removed", "removed"]
     assert admin_client.get(f"{API}/admin/takedown-requests").json()["total"] == 0
-    assert client.get(f"{API}/officers/{world['a'].id}").json()["reviews"]["total"] == 1  # 영구 비공개
+    assert client.get(f"{API}/stations/{world['station'].id}").json()["reviews"]["total"] == 1  # 영구 비공개
 
 
-def test_officer_remove_unpublishes(client, admin_client, world):
-    client.post(f"{API}/takedown-requests", json=takedown_payload(target_type="officer", target_id=world["a"].id))
+def test_officer_remove_unpublishes(client, admin_client, world, db):
+    client.post(f"{API}/takedown-requests", json=takedown_payload(target_type="officer", target_id=world["officer"].id))
     tid = admin_client.get(f"{API}/admin/takedown-requests").json()["items"][0]["id"]
     admin_client.post(f"{API}/admin/takedown-requests/{tid}/resolve", json={"decision": "remove", "note": "정보주체 요청에 따라 삭제"})
-    assert client.get(f"{API}/officers/{world['a'].id}").status_code == 404
+    db.refresh(world["officer"])
+    assert world["officer"].is_published is False
 
 
 def test_overdue_flag(client, admin_client, world, db):
