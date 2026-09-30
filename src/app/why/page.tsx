@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: '왜 폴리스맵인가',
-  description: '수사의 실패는 언제나 있었습니다. 기록되지 않았을 뿐입니다 — 법원 판결과 국정조사로 이미 확인된 사건들의 기록.',
+  description: '수사의 실패는 언제나 있었습니다. 기록되지 않았을 뿐입니다. 법원 판결과 국정조사로 이미 확인된 사건들의 기록.',
 };
 
 type Tone = 'danger' | 'brand';
@@ -73,7 +73,7 @@ export default async function WhyPage() {
   return (
     <>
       <section className="card hero solo">
-        <div className="eyebrow">POLICEMAP.KR — 국민이 만드는 수사 감시 플랫폼</div>
+        <div className="eyebrow">POLICEMAP.KR · 국민이 만드는 수사 감시 플랫폼</div>
         <h1>수사의 실패는 언제나 있었습니다.<br /><em>기록되지 않았을 뿐입니다.</em></h1>
         <p className="lead">
           수사권 조정 이후 대부분의 사건은 경찰 단계에서 시작되고, 경찰 단계에서 끝납니다. 그러나 그 과정을 지켜보고
@@ -88,7 +88,7 @@ export default async function WhyPage() {
             <div className="ico"><TrendingUp size={22} /></div>
             <div>
               <div className="num">{latestAppeal.value.toLocaleString()}건</div>
-              <div className="lbl">연간 수사관 기피신청({latestAppeal.year}) — 5년 새 2배</div>
+              <div className="lbl">연간 수사관 기피신청({latestAppeal.year}), 5년 새 2배</div>
               <p className="sub" style={{ marginTop: 4 }}>2018년 2,425건 대비 · 언론 보도 종합</p>
             </div>
           </Card>
@@ -106,7 +106,7 @@ export default async function WhyPage() {
       <ChapterHead n="01" eyebrow="Chapter 01 · 국민이 치른 대가" title="현장에서 물러선 경찰, 지켜지지 않은 신변보호"
         sub="현장 대응과 초동 조치의 실패가 되돌릴 수 없는 결과로 이어진 4건의 기록" />
       <div className="grid2">
-        <WhyCase icon={AlertTriangle} tone="danger" tag="2021 · 인천" title="층간소음 흉기난동 — 현장을 이탈한 경찰"
+        <WhyCase icon={AlertTriangle} tone="danger" tag="2021 · 인천" title="층간소음 흉기난동, 현장을 이탈한 경찰"
           after={'경찰관 2명 해임. 2026년 6월 법원, 국가·경찰의 배상책임 인정(3억 5천만 원). "경찰 믿을 수 있나"라는 사회적 공분의 기점.'}
           refs="출처: 서울신문 2022.1.7, 연합뉴스·네이트뉴스 2026.6.21">
           층간소음 갈등 끝에 이웃이 흉기를 휘두르는 동안, 출동해 있던 <b>경찰관들이 현장을 이탈</b>해 피해자가 중상을 입었습니다.
@@ -119,13 +119,13 @@ export default async function WhyPage() {
           여성 대신 <b>그 가족이 보복 살해</b>당했으며(송파), 스토킹 피해를 고소했던 역무원은 신변보호가 연장되지 않은 채
           근무지에서 살해됐습니다(신당역, 2022). 세 사건 모두 "신고 이후"에 일어났습니다.
         </WhyCase>
-        <WhyCase icon={Siren} tone="danger" tag="2022 · 서울" title="이태원 참사 — 묵살된 11건의 112 신고"
+        <WhyCase icon={Siren} tone="danger" tag="2022 · 서울" title="이태원 참사, 묵살된 11건의 112 신고"
           after="서울경찰청장 등 지휘부 기소, 용산경찰서장 유죄 판결. 국정조사·특별수사로 대응 체계 전반 개편."
           refs="출처: 국정조사 결과·언론 보도 종합">
           참사 당일 저녁, 압사 위험을 알리는 <b>112 신고 11건이 접수됐지만 실질적 조치는 이뤄지지 않았습니다.</b> 159명이
           희생됐고, 경찰 지휘부의 사전 대비·당일 대응 실패가 수사와 재판의 대상이 됐습니다.
         </WhyCase>
-        <WhyCase icon={PhoneOff} tone="danger" tag="2012 · 수원" title="오원춘 사건 — 골든타임을 놓친 112"
+        <WhyCase icon={PhoneOff} tone="danger" tag="2012 · 수원" title="오원춘 사건, 골든타임을 놓친 112"
           after="112 통합 시스템 개편, 위치추적 권한 확대 입법의 계기. 부실 대응 경찰관 다수 징계."
           refs="출처: 언론 보도 종합">
           납치된 피해자가 112에 전화해 위치를 설명하는 동안 <b>상담 요원은 정확한 위치를 파악하지 못했고, 현장 수색은
@@ -136,19 +136,19 @@ export default async function WhyPage() {
       <ChapterHead n="02" eyebrow="Chapter 02 · 조작과 은폐, 그리고 뒤늦은 무죄" title="잘못된 수사는 무고한 시민의 인생을 빼앗았습니다"
         sub="강압수사와 조작된 증거로 수십 년 뒤에야 무죄가 밝혀진 3건의 기록" />
       <div className="grid3">
-        <WhyCase icon={Gavel} tone="brand" tag="1988→2020 · 화성" title="이춘재 8차 사건 — 20년을 빼앗긴 윤성여 씨"
+        <WhyCase icon={Gavel} tone="brand" tag="1988→2020 · 화성" title="이춘재 8차 사건, 20년을 빼앗긴 윤성여 씨"
           after="2020년 재심 무죄. 법원, 당시 경찰 수사의 위법성을 정면으로 인정."
           refs="출처: 재심 판결·언론 보도 종합">
           경찰의 <b>강압수사와 조작된 증거</b>로 무고한 시민이 살인범으로 몰려 20년을 복역했습니다. 진범 이춘재의 자백 후
           재심에서 무죄가 선고되기까지 32년이 걸렸습니다.
         </WhyCase>
-        <WhyCase icon={FileWarning} tone="brand" tag="2000→2016 · 익산" title="약촌오거리 사건 — 15살 소년의 10년"
+        <WhyCase icon={FileWarning} tone="brand" tag="2000→2016 · 익산" title="약촌오거리 사건, 15살 소년의 10년"
           after="2016년 재심 무죄, 국가배상 판결. 영화 '재심'의 실화."
           refs="출처: 재심 판결·언론 보도 종합">
           택시기사 살인 사건에서 경찰은 <b>15세 소년을 폭행·협박해 허위 자백</b>을 받아냈고, 소년은 10년을 복역했습니다.
           진범이 검거될 기회도 수사기관이 스스로 덮었습니다.
         </WhyCase>
-        <WhyCase icon={Users2} tone="brand" tag="1999→2016 · 완주" title="삼례 나라슈퍼 사건 — 지적장애인 3인의 허위자백"
+        <WhyCase icon={Users2} tone="brand" tag="1999→2016 · 완주" title="삼례 나라슈퍼 사건, 지적장애인 3인의 허위자백"
           after="2016년 재심 무죄, 국가배상 판결."
           refs="출처: 재심 판결·언론 보도 종합">
           강도치사 사건에서 경찰이 <b>지적장애가 있는 청년 3명에게 허위 자백을 강요</b>해 옥살이를 시켰습니다. 진범의
@@ -160,7 +160,7 @@ export default async function WhyPage() {
         <div className="eyebrow">So, Policemap</div>
         <h2>처벌이 아니라 기록이 시스템을 바꿉니다</h2>
         <p className="sub" style={{ maxWidth: 720, marginBottom: 20 }}>
-          위 사건들의 공통점은 하나입니다 — 문제가 커지기 전까지, 아무도 지켜보지 않았다는 것. 폴리스맵은 수사 절차를
+          위 사건들의 공통점은 하나입니다. 문제가 커지기 전까지, 아무도 지켜보지 않았다는 것. 폴리스맵은 수사 절차를
           직접 경험한 시민의 구조화된 평가를 모아, 잘 하는 경찰에게는 신뢰를, 반복되는 문제에는 조기 경보를 만듭니다.
         </p>
         <div className="grid3">
@@ -176,7 +176,7 @@ export default async function WhyPage() {
 
       <section className="card hero compact" style={{ textAlign: 'center' }}>
         <h2>당신의 경험이 다음 실패를 막습니다</h2>
-        <p className="lead" style={{ margin: '10px auto 22px' }}>좋았던 수사도, 아쉬웠던 수사도 — 기록해 주세요.</p>
+        <p className="lead" style={{ margin: '10px auto 22px' }}>좋았던 수사도, 아쉬웠던 수사도, 기록해 주세요.</p>
         <div className="quick" style={{ justifyContent: 'center' }}>
           <Link href="/" className="btn gold">내 경찰서 찾아 평가하기</Link>
           <Link href="/remedy" className="btn ghost">권리구제 절차 알아보기</Link>

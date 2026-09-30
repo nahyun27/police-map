@@ -32,7 +32,7 @@ export default function GuidePage() {
         <div className="guidebox" style={{ display: 'flex', gap: 12, marginBottom: 0 }}>
           <Lightbulb size={18} style={{ color: 'var(--mid)', marginTop: 3 }} />
           <div>
-            <b>실무 팁</b> — 막연한 불만이 아니라 <b>구체적 사실(연락 두절 기간, 편파적 발언, 절차 위반 정황)</b>을 날짜와 함께 기재할수록 수용 가능성이 높습니다.
+            <b>실무 팁:</b> 막연한 불만이 아니라 <b>구체적 사실(연락 두절 기간, 편파적 발언, 절차 위반 정황)</b>을 날짜와 함께 기재할수록 수용 가능성이 높습니다.
           </div>
         </div>
       </Card>
@@ -46,7 +46,7 @@ export default function GuidePage() {
         <Card>
           <span className="badge brand">절차 3</span>
           <h3 style={{ marginTop: 10 }}>불송치 결정 이의신청</h3>
-          <p className="sub">형사소송법 제245조의7 — 고소인 등은 불송치 결정에 대해 해당 경찰서에 이의신청할 수 있고, 이 경우 사건은 검찰로 송치됩니다.</p>
+          <p className="sub">형사소송법 제245조의7: 고소인 등은 불송치 결정에 대해 해당 경찰서에 이의신청할 수 있고, 이 경우 사건은 검찰로 송치됩니다.</p>
         </Card>
         <Card>
           <span className="badge brand">절차 4</span>

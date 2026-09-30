@@ -7,7 +7,7 @@ import { REPORT_CATEGORIES } from '@/data/report';
 function buildDraft(v: {
   category: string; station: string; when: string; body: string; evidence: string; contact: string;
 }): string {
-  return `[제보] ${v.category} — ${v.station || '관서 미기재'}
+  return `[제보] ${v.category} · ${v.station || '관서 미기재'}
 
 1. 제보 유형: ${v.category}
 2. 관련 관서·부서: ${v.station || '(기재 요망)'}
@@ -88,11 +88,11 @@ export default function ReportForm({ stationName }: { stationName?: string }) {
           placeholder="예: 2026. 6. 고소장 접수 이후 담당 수사관이 3개월간 어떠한 조사도 진행하지 않았고, 진행상황 통지 요청에 대해 ..." />
       </div>
       <div className="field">
-        <label>보유 증거 <span className="tag">목록만 — 파일은 제보처에 직접 제출</span></label>
+        <label>보유 증거 <span className="tag">목록만, 파일은 제보처에 직접 제출</span></label>
         <input type="text" value={evidence} onChange={(e) => setEvidence(e.target.value)} placeholder="예: 수사진행상황통지서 2건, 통화녹음 1건, 문자 캡처" />
       </div>
       <div className="field">
-        <label>연락 방법 <span className="tag">제보처가 연락할 수단 — 비실명 원하면 비워두세요</span></label>
+        <label>연락 방법 <span className="tag">제보처가 연락할 수단, 비실명 원하면 비워두세요</span></label>
         <input type="text" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="예: 이메일 또는 안전한 연락처" />
       </div>
       <button className="btn" onClick={generate}><FileText size={16} />제보문 생성</button>

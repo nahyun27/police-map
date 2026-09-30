@@ -49,7 +49,7 @@ export default async function TakedownStatusPage({ params }: Props) {
           </div>
         ) : (
           <div className="guidebox" style={{ marginBottom: 0 }}>
-            <b>처리 결과</b> — {s.resolved_at && `${formatDate(s.resolved_at)} 처리 · `}
+            <b>처리 결과:</b> {s.resolved_at && `${formatDate(s.resolved_at)} 처리 · `}
             {s.resolution_note ?? (s.status === 'kept' ? '재검토 결과 게시가 유지되었습니다.' : '재검토 결과 삭제가 확정되었습니다.')}
           </div>
         )}

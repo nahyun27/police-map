@@ -153,10 +153,11 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 .tag.ad { background: #fff3d6; color: #8a5a00; }
 .stars { color: var(--star); letter-spacing: 1px; white-space: nowrap; }
 
-.score { display: inline-flex; align-items: center; gap: 4px; font-weight: 750; font-size: 13.5px; padding: 3px 10px 3px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+.score { display: inline-flex; align-items: center; gap: 6px; font-weight: 750; font-size: 13.5px; padding: 4px 10px; border-radius: 999px; font-variant-numeric: tabular-nums; }
 .score.good { background: var(--good-soft); color: var(--good); }
 .score.mid { background: var(--mid-soft); color: var(--mid); }
 .score.low { background: var(--low-soft); color: var(--low); }
+.score-stars { display: inline-flex; gap: 1px; }
 
 .bigscore { text-align: right; }
 .bigscore .num { font-size: 52px; font-weight: 800; letter-spacing: -0.05em; line-height: 1; font-variant-numeric: tabular-nums; }

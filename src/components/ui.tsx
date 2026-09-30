@@ -9,15 +9,20 @@ export function Stars({ value }: { value: number | null }) {
   return <span className="stars" aria-label={`5점 만점에 ${value.toFixed(1)}점`}>{'★'.repeat(f) + '☆'.repeat(5 - f)}</span>;
 }
 
-/** 평점 알약 — 3.8 이상 good, 3.2 이상 mid, 그 미만 low. value=null 이면 "평가 없음". */
+/** 평점(별 5개 채우기 + 숫자). 3.8 이상 good, 3.2 이상 mid, 그 미만 low. value=null 이면 "평가 없음". */
 export function Score({ value }: { value: number | null }) {
   if (value === null) {
-    return <span className="score" style={{ background: 'var(--line2)', color: 'var(--muted)' }}>평가 없음</span>;
+    return <span className="score" style={{ color: 'var(--muted)' }}>평가 없음</span>;
   }
   const tone = value >= 3.8 ? 'good' : value >= 3.2 ? 'mid' : 'low';
+  const filled = Math.max(0, Math.min(5, Math.round(value)));
   return (
-    <span className={`score ${tone}`}>
-      <Star size={12} fill="currentColor" strokeWidth={0} />
+    <span className={`score ${tone}`} aria-label={`5점 만점에 ${value.toFixed(1)}점`}>
+      <span className="score-stars" aria-hidden="true">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Star key={i} size={13} fill={i <= filled ? 'currentColor' : 'none'} strokeWidth={i <= filled ? 0 : 1.6} />
+        ))}
+      </span>
       {value.toFixed(1)}
     </span>
   );

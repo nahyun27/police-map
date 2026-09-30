@@ -120,7 +120,7 @@ export default function WriteForm({ stationId }: { stationId: number }) {
           placeholder="직무수행과 관련하여 직접 경험한 사실을 구체적으로 작성해 주세요." />
         {hit.length > 0 && (
           <div className="warn">
-            게시 불가 표현이 감지되었습니다: "{hit.join('", "')}" — 인신공격·경멸적 표현은 모욕죄에 해당할 수 있으며 게시가 거부됩니다. 사실 중심으로 수정해 주세요.
+            게시 불가 표현이 감지되었습니다: "{hit.join('", "')}". 인신공격·경멸적 표현은 모욕죄에 해당할 수 있으며 게시가 거부됩니다. 사실 중심으로 수정해 주세요.
           </div>
         )}
       </div>

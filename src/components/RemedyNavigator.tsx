@@ -66,7 +66,7 @@ export default function RemedyNavigator({ contextLabel, stationId }: { contextLa
             <p style={{ color: 'var(--ink2)' }}>{r.how}</p>
             <div className="guidebox" style={{ display: 'flex', gap: 12 }}>
               <Lightbulb size={18} style={{ color: 'var(--mid)', marginTop: 3 }} />
-              <div><b>실무 팁</b> — {r.tip}</div>
+              <div><b>실무 팁:</b> {r.tip}</div>
             </div>
             <div className="btn-row">
               <button className="btn"
