@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import { ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Scale, ShieldCheck } from 'lucide-react';
 import HeroSearch from '@/components/HeroSearch';
+import KoreaMap from '@/components/KoreaMap';
 import { Bars, Card, Score, Stars } from '@/components/ui';
 import { getRecentReviews, getRegions, getStats } from '@/lib/api';
 import { formatDate } from '@/lib/format';
-import { TILE } from '@/lib/tileLayout';
 
 // 백엔드의 실시간 데이터를 그리므로 빌드 시점에 정적 생성하지 않는다.
 export const dynamic = 'force-dynamic';
@@ -24,7 +24,6 @@ const WHY_CASES = [
 
 export default async function Home() {
   const [regions, recent, stats] = await Promise.all([getRegions(), getRecentReviews(3), getStats()]);
-  const regionMap = new Map(regions.map((r) => [r.id, r]));
 
   return (
     <>
@@ -63,18 +62,7 @@ export default async function Home() {
         <Card>
           <h2>지도에서 찾기</h2>
           <p className="sub">시·도경찰청을 선택하면 관할 경찰서 목록으로 이동합니다.</p>
-          <div className="tilemap">
-            {TILE.map((id, i) => {
-              const rg = id ? regionMap.get(id) : undefined;
-              if (!rg) return <div key={i} className="tile empty" />;
-              return (
-                <Link key={i} href={`/region/${rg.id}`} className="tile has">
-                  <b>{rg.name}</b>
-                  <small>{rg.station_count}서</small>
-                </Link>
-              );
-            })}
-          </div>
+          <KoreaMap regions={regions} />
         </Card>
 
         <Card>
