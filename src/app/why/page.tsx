@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import Link from 'next/link';
-import { Map, Scale, ShieldCheck, Star } from 'lucide-react';
-import { Card, PageHead } from '@/components/ui';
+import {
+  AlertTriangle, FileWarning, Gavel, Landmark, Link2, Map, PhoneOff,
+  Scale, ShieldAlert, ShieldCheck, Siren, Star, TrendingUp, Users2,
+} from 'lucide-react';
+import { Card } from '@/components/ui';
 import { getStats } from '@/lib/api';
 
 // 기피신청 통계를 실시간으로 반영하므로 빌드 시점에 정적 생성하지 않는다.
@@ -13,20 +16,46 @@ export const metadata: Metadata = {
   description: '수사의 실패는 언제나 있었습니다. 기록되지 않았을 뿐입니다 — 법원 판결과 국정조사로 이미 확인된 사건들의 기록.',
 };
 
+type Tone = 'danger' | 'brand';
+
 /**
- * 사건 카드 목록. 전부 법원 판결(재심 무죄·국가배상) 또는 국정조사·공식 조치로
+ * 사건 카드. 전부 법원 판결(재심 무죄·국가배상) 또는 국정조사·공식 조치로
  * 이미 확정된 사건만 담는다. 언론 보도만 있고 법원·국정조사 등 공식 확인이 없는
  * 사건은 의뢰인 확인 전까지 올리지 않는다(2026-09-30 결정).
  */
-function WhyCase({ tag, title, refs, after, children }: { tag: string; title: string; refs: string; after: string; children: ReactNode }) {
+function WhyCase({
+  icon: Icon, tone, tag, title, refs, after, children,
+}: {
+  icon: ComponentType<{ size?: number }>;
+  tone: Tone;
+  tag: string;
+  title: string;
+  refs: string;
+  after: string;
+  children: ReactNode;
+}) {
   return (
-    <Card>
+    <Card className={`why-case tone-${tone}`}>
+      <div className="ico"><Icon size={20} /></div>
       <span className="badge brand">{tag}</span>
-      <h3 style={{ marginTop: 10 }}>{title}</h3>
+      <h3>{title}</h3>
       <p style={{ color: 'var(--ink2)', fontSize: 14 }}>{children}</p>
       <div className="guidebox" style={{ marginBottom: 0 }}>{after}</div>
-      <p className="sub" style={{ marginTop: 10, fontSize: 12 }}>{refs}</p>
+      <div className="why-refs"><Link2 size={12} />{refs}</div>
     </Card>
+  );
+}
+
+function ChapterHead({ n, eyebrow, title, sub }: { n: string; eyebrow: string; title: string; sub: string }) {
+  return (
+    <div className="why-chapter-head">
+      <span className="chapter-chip">{n}</span>
+      <div>
+        <div className="eyebrow">{eyebrow}</div>
+        <h2>{title}</h2>
+        <p className="sub">{sub}</p>
+      </div>
+    </div>
   );
 }
 
@@ -43,7 +72,7 @@ export default async function WhyPage() {
 
   return (
     <>
-      <section className="card hero">
+      <section className="card hero solo">
         <div className="eyebrow">POLICEMAP.KR — 국민이 만드는 수사 감시 플랫폼</div>
         <h1>수사의 실패는 언제나 있었습니다.<br /><em>기록되지 않았을 뿐입니다.</em></h1>
         <p className="lead">
@@ -55,44 +84,48 @@ export default async function WhyPage() {
 
       <div className="grid2">
         {latestAppeal && (
-          <Card className="kpi">
-            <div className="num">{latestAppeal.value.toLocaleString()}건</div>
-            <div className="lbl">연간 수사관 기피신청({latestAppeal.year}) — 5년 새 2배</div>
-            <p className="sub" style={{ marginTop: 4 }}>2018년 2,425건 대비 · 언론 보도 종합</p>
+          <Card className="kpi why">
+            <div className="ico"><TrendingUp size={22} /></div>
+            <div>
+              <div className="num">{latestAppeal.value.toLocaleString()}건</div>
+              <div className="lbl">연간 수사관 기피신청({latestAppeal.year}) — 5년 새 2배</div>
+              <p className="sub" style={{ marginTop: 4 }}>2018년 2,425건 대비 · 언론 보도 종합</p>
+            </div>
           </Card>
         )}
-        <Card className="kpi">
-          <div className="num">3억 5천만 원</div>
-          <div className="lbl">층간소음 흉기난동 부실대응 국가배상 판결</div>
-          <p className="sub" style={{ marginTop: 4 }}>법원 판결 보도</p>
+        <Card className="kpi why">
+          <div className="ico"><Landmark size={22} /></div>
+          <div>
+            <div className="num">3억 5천만 원</div>
+            <div className="lbl">층간소음 흉기난동 부실대응 국가배상 판결</div>
+            <p className="sub" style={{ marginTop: 4 }}>법원 판결 보도</p>
+          </div>
         </Card>
       </div>
 
-      <PageHead
-        eyebrow="Chapter 01 · 국민이 치른 대가"
-        title="현장에서 물러선 경찰, 지켜지지 않은 신변보호"
-      />
+      <ChapterHead n="01" eyebrow="Chapter 01 · 국민이 치른 대가" title="현장에서 물러선 경찰, 지켜지지 않은 신변보호"
+        sub="현장 대응과 초동 조치의 실패가 되돌릴 수 없는 결과로 이어진 4건의 기록" />
       <div className="grid2">
-        <WhyCase tag="2021 · 인천" title="층간소음 흉기난동 — 현장을 이탈한 경찰"
+        <WhyCase icon={AlertTriangle} tone="danger" tag="2021 · 인천" title="층간소음 흉기난동 — 현장을 이탈한 경찰"
           after={'경찰관 2명 해임. 2026년 6월 법원, 국가·경찰의 배상책임 인정(3억 5천만 원). "경찰 믿을 수 있나"라는 사회적 공분의 기점.'}
           refs="출처: 서울신문 2022.1.7, 연합뉴스·네이트뉴스 2026.6.21">
           층간소음 갈등 끝에 이웃이 흉기를 휘두르는 동안, 출동해 있던 <b>경찰관들이 현장을 이탈</b>해 피해자가 중상을 입었습니다.
           지원 요청도, 즉각 대응도 없었습니다.
         </WhyCase>
-        <WhyCase tag="2021~2022 · 서울" title="신변보호 요청, 그 후의 살인들"
+        <WhyCase icon={ShieldAlert} tone="danger" tag="2021~2022 · 서울" title="신변보호 요청, 그 후의 살인들"
           after="스토킹처벌법 강화, 신변보호 시스템 개편의 계기가 되었습니다."
           refs="출처: 서울신문 2021.11.22, 위키백과·언론 보도 종합">
           신변보호를 받던 여성이 스마트워치로 두 차례 구조 신호를 보냈지만 위치 측정 실패로 살해됐고(중구), 신변보호 대상
           여성 대신 <b>그 가족이 보복 살해</b>당했으며(송파), 스토킹 피해를 고소했던 역무원은 신변보호가 연장되지 않은 채
           근무지에서 살해됐습니다(신당역, 2022). 세 사건 모두 "신고 이후"에 일어났습니다.
         </WhyCase>
-        <WhyCase tag="2022 · 서울" title="이태원 참사 — 묵살된 11건의 112 신고"
+        <WhyCase icon={Siren} tone="danger" tag="2022 · 서울" title="이태원 참사 — 묵살된 11건의 112 신고"
           after="서울경찰청장 등 지휘부 기소, 용산경찰서장 유죄 판결. 국정조사·특별수사로 대응 체계 전반 개편."
           refs="출처: 국정조사 결과·언론 보도 종합">
           참사 당일 저녁, 압사 위험을 알리는 <b>112 신고 11건이 접수됐지만 실질적 조치는 이뤄지지 않았습니다.</b> 159명이
           희생됐고, 경찰 지휘부의 사전 대비·당일 대응 실패가 수사와 재판의 대상이 됐습니다.
         </WhyCase>
-        <WhyCase tag="2012 · 수원" title="오원춘 사건 — 골든타임을 놓친 112"
+        <WhyCase icon={PhoneOff} tone="danger" tag="2012 · 수원" title="오원춘 사건 — 골든타임을 놓친 112"
           after="112 통합 시스템 개편, 위치추적 권한 확대 입법의 계기. 부실 대응 경찰관 다수 징계."
           refs="출처: 언론 보도 종합">
           납치된 피해자가 112에 전화해 위치를 설명하는 동안 <b>상담 요원은 정확한 위치를 파악하지 못했고, 현장 수색은
@@ -100,24 +133,22 @@ export default async function WhyPage() {
         </WhyCase>
       </div>
 
-      <PageHead
-        eyebrow="Chapter 02 · 조작과 은폐, 그리고 뒤늦은 무죄"
-        title="잘못된 수사는 무고한 시민의 인생을 빼앗았습니다"
-      />
-      <div className="grid2">
-        <WhyCase tag="1988→2020 · 화성" title="이춘재 8차 사건 — 20년을 빼앗긴 윤성여 씨"
+      <ChapterHead n="02" eyebrow="Chapter 02 · 조작과 은폐, 그리고 뒤늦은 무죄" title="잘못된 수사는 무고한 시민의 인생을 빼앗았습니다"
+        sub="강압수사와 조작된 증거로 수십 년 뒤에야 무죄가 밝혀진 3건의 기록" />
+      <div className="grid3">
+        <WhyCase icon={Gavel} tone="brand" tag="1988→2020 · 화성" title="이춘재 8차 사건 — 20년을 빼앗긴 윤성여 씨"
           after="2020년 재심 무죄. 법원, 당시 경찰 수사의 위법성을 정면으로 인정."
           refs="출처: 재심 판결·언론 보도 종합">
           경찰의 <b>강압수사와 조작된 증거</b>로 무고한 시민이 살인범으로 몰려 20년을 복역했습니다. 진범 이춘재의 자백 후
           재심에서 무죄가 선고되기까지 32년이 걸렸습니다.
         </WhyCase>
-        <WhyCase tag="2000→2016 · 익산" title="약촌오거리 사건 — 15살 소년의 10년"
+        <WhyCase icon={FileWarning} tone="brand" tag="2000→2016 · 익산" title="약촌오거리 사건 — 15살 소년의 10년"
           after="2016년 재심 무죄, 국가배상 판결. 영화 '재심'의 실화."
           refs="출처: 재심 판결·언론 보도 종합">
           택시기사 살인 사건에서 경찰은 <b>15세 소년을 폭행·협박해 허위 자백</b>을 받아냈고, 소년은 10년을 복역했습니다.
           진범이 검거될 기회도 수사기관이 스스로 덮었습니다.
         </WhyCase>
-        <WhyCase tag="1999→2016 · 완주" title="삼례 나라슈퍼 사건 — 지적장애인 3인의 허위자백"
+        <WhyCase icon={Users2} tone="brand" tag="1999→2016 · 완주" title="삼례 나라슈퍼 사건 — 지적장애인 3인의 허위자백"
           after="2016년 재심 무죄, 국가배상 판결."
           refs="출처: 재심 판결·언론 보도 종합">
           강도치사 사건에서 경찰이 <b>지적장애가 있는 청년 3명에게 허위 자백을 강요</b>해 옥살이를 시켰습니다. 진범의
@@ -134,7 +165,7 @@ export default async function WhyPage() {
         </p>
         <div className="grid3">
           {FEATURES.map(({ icon: Icon, title, body }) => (
-            <div key={title}>
+            <div className="feature" key={title}>
               <div className="ico"><Icon size={22} /></div>
               <h3>{title}</h3>
               <p className="sub">{body}</p>
