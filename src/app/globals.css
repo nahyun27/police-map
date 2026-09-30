@@ -269,7 +269,7 @@ table.list td a { font-weight: 650; color: var(--ink); }
 .sec-head h2 { margin: 0; }
 
 /* ---------- Korea map ---------- */
-.korea-map-wrap { display: flex; flex-direction: column; align-items: center; }
+.korea-map-wrap { display: flex; flex-direction: column; align-items: center; position: relative; }
 .korea-map { width: 100%; max-width: 360px; height: auto; margin: 6px auto 4px; }
 .kr-region {
   fill: var(--brand-soft); stroke: #fff; stroke-width: 1.4; cursor: pointer;
@@ -277,8 +277,21 @@ table.list td a { font-weight: 650; color: var(--ink); }
 }
 .kr-region:hover, .kr-region:focus-visible, .kr-region.active { fill: var(--brand); }
 .kr-region.empty { fill: var(--line2); cursor: default; pointer-events: none; }
+.kr-label {
+  font-size: 15px; font-weight: 600; fill: var(--brand-ink); paint-order: stroke;
+  stroke: #fff; stroke-width: 3px; stroke-linejoin: round; transition: fill .15s;
+}
+.kr-label.active { fill: #fff; stroke: var(--brand); }
 .korea-map-tip { min-height: 20px; font-size: 13.5px; color: var(--ink); margin-top: 6px; text-align: center; }
 .korea-map-tip .sub { color: var(--muted); }
+.korea-map-floating-tip {
+  position: absolute; transform: translate(-50%, -130%); pointer-events: none;
+  background: var(--navy); color: #fff; font-size: 12.5px; font-weight: 600;
+  padding: 6px 10px; border-radius: 9px; white-space: nowrap; box-shadow: var(--shadow-hover);
+  z-index: 5;
+}
+.korea-map-floating-tip .sub { color: #b9caff; font-weight: 500; }
+@media (max-width: 480px) { .kr-label { font-size: 13px; } }
 
 /* ---------- Feature cards ---------- */
 .feature .ico { width: 44px; height: 44px; border-radius: 13px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; margin-bottom: 18px; }
