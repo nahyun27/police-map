@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, BarChart3, ChevronRight, Scale, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Scale, ShieldCheck } from 'lucide-react';
 import HeroSearch from '@/components/HeroSearch';
 import { Bars, Card, Score, Stars } from '@/components/ui';
 import { getRecentReviews, getRegions, getStats } from '@/lib/api';
@@ -13,6 +13,13 @@ const FEATURES = [
   { to: '/policy', icon: ShieldCheck, title: '사실 기반 평가', body: '직무수행에 대한 구조화된 평가만 선검수 후 게시합니다. 인신공격과 사생활 정보는 게재하지 않습니다.', more: '운영원칙 보기' },
   { to: '/remedy', icon: Scale, title: '권리구제 내비게이터', body: '후기에서 멈추지 않도록, 겪은 문제에 맞는 공식 절차와 접수처를 안내합니다.', more: '내 상황에 맞는 절차 찾기' },
   { to: '/stats', icon: BarChart3, title: '공개 통계', body: '이용자 평가와 정보공개청구로 확보한 기피신청·수용률 통계를 함께 제공합니다.', more: '전국 통계 보기' },
+];
+
+// 법원 판결·국정조사로 이미 확정된 사건만 담는다(미확인 사건 제외, 2026-09-30 결정). 전문은 /why 참고.
+const WHY_CASES = [
+  { tag: '2021 · 인천', title: '층간소음 흉기난동 — 현장을 이탈한 경찰', body: '출동해 있던 경찰관들이 현장을 이탈해 피해자가 중상. 2026년 6월 법원, 국가·경찰의 배상책임 인정(3억 5천만 원).' },
+  { tag: '2022 · 서울', title: '이태원 참사 — 묵살된 11건의 112 신고', body: '압사 위험을 알리는 112 신고 11건이 접수됐지만 실질적 조치는 없었습니다. 서울경찰청장 등 지휘부 기소, 용산경찰서장 유죄.' },
+  { tag: '1988→2020 · 화성', title: '이춘재 8차 사건 — 20년을 빼앗긴 윤성여 씨', body: '강압수사와 조작된 증거로 무고한 시민이 20년을 복역. 2020년 재심에서 무죄, 법원이 수사의 위법성을 인정했습니다.' },
 ];
 
 export default async function Home() {
@@ -32,6 +39,7 @@ export default async function Home() {
         <HeroSearch />
 
         <div className="quick">
+          <Link href="/why" className="btn gold sm">왜 폴리스맵인가</Link>
           <Link href="/remedy" className="btn ghost sm">권리구제 내비게이터 <ArrowRight size={14} /></Link>
           <Link href="/guide" className="btn ghost sm">기피신청 안내</Link>
           <Link href="/stats" className="btn ghost sm">전국 통계</Link>
@@ -101,6 +109,27 @@ export default async function Home() {
           </Link>
         ))}
       </div>
+
+      <Card style={{ borderColor: '#f0c9c7', background: 'var(--low-soft)' }}>
+        <div className="eyebrow" style={{ color: 'var(--low)' }}>왜 폴리스맵인가</div>
+        <h2>기록되지 않은 실패는 반복됩니다</h2>
+        <p className="sub" style={{ maxWidth: 720, marginBottom: 18 }}>
+          아래 사건들의 공통점은 하나입니다 — 문제가 커지기 전까지, 아무도 지켜보지 않았다는 것. 모두 법원 판결·국정조사로
+          이미 확정된 기록입니다.
+        </p>
+        <div className="grid3">
+          {WHY_CASES.map((c) => (
+            <Link key={c.title} href="/why" className="card clickable-card" style={{ background: '#fff' }}>
+              <span className="badge" style={{ background: '#fff', color: 'var(--low)', border: '1px solid #f0c9c7' }}>{c.tag}</span>
+              <h3 style={{ marginTop: 10, fontSize: 15 }}>{c.title}</h3>
+              <p className="sub" style={{ fontSize: 13 }}>{c.body}</p>
+            </Link>
+          ))}
+        </div>
+        <Link href="/why" className="btn ghost sm" style={{ marginTop: 18, borderColor: 'var(--low)', color: 'var(--low)' }}>
+          전체 기록 보기 — 왜 폴리스맵인가 <ArrowUpRight size={14} />
+        </Link>
+      </Card>
 
       <Card className="flat">
         <h3>공지</h3>

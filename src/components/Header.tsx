@@ -7,6 +7,7 @@ import { MapPinned, Menu, Search, X } from 'lucide-react';
 
 const NAV = [
   { to: '/', label: '지도 탐색', end: true },
+  { to: '/why', label: '왜 폴리스맵인가' },
   { to: '/stats', label: '통계' },
   { to: '/guide', label: '권리구제 안내' },
   { to: '/remedy', label: '민원 연계' },
