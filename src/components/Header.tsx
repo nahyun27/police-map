@@ -10,6 +10,7 @@ const NAV = [
   { to: '/stats', label: '통계' },
   { to: '/guide', label: '권리구제 안내' },
   { to: '/remedy', label: '민원 연계' },
+  { to: '/report', label: '제보' },
   { to: '/policy', label: '운영원칙' },
 ];
 

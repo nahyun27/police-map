@@ -14,12 +14,14 @@ export const metadata: Metadata = { title: '권리구제 내비게이터', robot
 export default async function RemedyForStationPage({ params }: Props) {
   const { stationId } = await params;
   let contextLabel: string | undefined;
+  let numericId: number | undefined;
   try {
     const s = await getStation(stationId);
     contextLabel = s.name;
+    numericId = s.id;
   } catch (e) {
     // 존재하지 않는 경찰서면 맥락 없이 일반 내비게이터로 대체한다(에러로 막지 않는다).
     if (!(e instanceof ApiError && e.status === 404)) throw e;
   }
-  return <RemedyNavigator contextLabel={contextLabel} />;
+  return <RemedyNavigator contextLabel={contextLabel} stationId={numericId} />;
 }

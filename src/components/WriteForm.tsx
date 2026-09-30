@@ -136,9 +136,17 @@ export default function WriteForm({ stationId }: { stationId: number }) {
           <p style={{ marginTop: 6 }}>작성하신 평가는 커뮤니티 가이드라인 적합성 검수(24~48시간) 후 게시됩니다. 부적합 판정 시 사유와 함께 반려됩니다.</p>
           <hr className="divider" style={{ margin: '14px 0' }} />
           <p>비슷한 문제로 불편을 겪으셨다면 후기에서 멈추지 마세요.</p>
-          <button className="btn sm" style={{ marginTop: 10 }} onClick={() => router.push(`/remedy/${stationId}`)}>
-            이 경험을 공식 민원으로 이어가기 <ArrowRight size={14} />
-          </button>
+          <div className="btn-row" style={{ marginTop: 10 }}>
+            <button className="btn sm" onClick={() => router.push(`/remedy/${stationId}`)}>
+              공식 민원·권리구제 절차로 <ArrowRight size={14} />
+            </button>
+            <button className="btn line sm" onClick={() => router.push(`/report/${stationId}`)}>
+              특정 수사관 문제라면 언론·감독기관 제보로 <ArrowRight size={14} />
+            </button>
+          </div>
+          <p className="sub" style={{ marginTop: 10 }}>
+            개인 관련 상세 내용은 게시판이 아니라 검증 권한이 있는 곳으로 보내는 것이 안전하고 효과적입니다.
+          </p>
         </div>
       )}
     </>

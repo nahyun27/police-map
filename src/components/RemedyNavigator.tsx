@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Check, ExternalLink, FileText, Lightbulb, Share2 } from 'lucide-react';
+import { ArrowRight, Check, ExternalLink, FileText, Lightbulb, Share2 } from 'lucide-react';
 import { Card, TableWrap } from '@/components/ui';
 import { REMEDY } from '@/data/sample';
 
@@ -21,8 +21,11 @@ const BOARD: [string, number][] = [
   ['국민신문고 민원', 128], ['기피신청', 54], ['불송치 이의신청', 41], ['인권위 진정', 12],
 ];
 
-/** contextLabel: 특정 경찰서 페이지에서 넘어온 경우 그 경찰서명 */
-export default function RemedyNavigator({ contextLabel }: { contextLabel?: string }) {
+/**
+ * contextLabel: 특정 경찰서 페이지에서 넘어온 경우 그 경찰서명(표시용)
+ * stationId: 위와 같은 경우 그 경찰서 id(제보 안내로 맥락을 이어가는 링크에 사용)
+ */
+export default function RemedyNavigator({ contextLabel, stationId }: { contextLabel?: string; stationId?: number }) {
   const [sel, setSel] = useState<string | null>(null);
   const r = REMEDY.find((x) => x.id === sel);
 
@@ -82,6 +85,14 @@ export default function RemedyNavigator({ contextLabel }: { contextLabel?: strin
             </p>
           </div>
         )}
+      </Card>
+
+      <Card>
+        <h2>언론·감독기관에 알리고 싶은 사안인가요?</h2>
+        <p className="sub">중대 비위나 구조적 문제는 민원보다 제보가 효과적일 수 있습니다.</p>
+        <Link href={stationId ? `/report/${stationId}` : '/report'} className="btn line sm" style={{ marginTop: 8 }}>
+          제보 안내 및 작성 도우미로 <ArrowRight size={14} />
+        </Link>
       </Card>
 
       <Card>

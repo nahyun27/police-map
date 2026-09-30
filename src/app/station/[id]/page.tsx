@@ -55,6 +55,7 @@ export default async function StationPage({ params, searchParams }: Props) {
         <div className="btn-row" style={{ marginTop: 24 }}>
           <Link href={`/station/${s.id}/write`} className="btn">이 경찰서 평가 작성</Link>
           <Link href={`/remedy/${s.id}`} className="btn line">민원·권리구제 안내</Link>
+          <Link href={`/report/${s.id}`} className="btn line">언론·기관 제보</Link>
         </div>
       </Card>
 
