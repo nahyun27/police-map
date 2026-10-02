@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ClickableRow from '@/components/ClickableRow';
+import RegionMiniMap from '@/components/RegionMiniMap';
 import { Card, Crumb, PageHead, Score, TableWrap } from '@/components/ui';
 import { ApiError, getRegion } from '@/lib/api';
 
@@ -48,6 +49,7 @@ export default async function RegionPage({ params }: Props) {
           </p>
         </Card>
       )}
+      <RegionMiniMap regionId={id} stations={rg.stations} />
       <Card>
         <TableWrap>
           <table className="list">

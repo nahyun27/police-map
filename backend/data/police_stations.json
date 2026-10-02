@@ -4,7 +4,7 @@
   "generated": "2026-09-28",
   "source": "경찰청 전국경찰관서안내(2026.6.30 기준) 및 각 경찰서 홈페이지 부서별 연락처(2026.9.21~22 수집)",
   "station_count": 281,
-  "note": "개인 성명·연락처 미포함(관서·부서 단위). 부서 목록은 홈페이지 공개 기준이며 팀 번호 연속 구간은 1~n팀으로 축약. / 2026-09-29 보정: 고성경찰서 중복(강원 누락·경남 중복)을 경찰청 홈페이지·강원경찰청 홈페이지 기준으로 정정."
+  "note": "개인 성명·연락처 미포함(관서·부서 단위). 부서 목록은 홈페이지 공개 기준이며 팀 번호 연속 구간은 1~n팀으로 축약. / 2026-09-29 보정: 고성경찰서 중복(강원 누락·경남 중복)을 경찰청 홈페이지·강원경찰청 홈페이지 기준으로 정정. / 2026-10-02 보정: \"전남광주통합특별시\"(원자료 병합 과정에서 생긴 존재하지 않는 지명)를 광주/전남 각 관서의 실제 광역단체명(광주광역시/전라남도)으로 정정(29건, 지오코딩 작업 중 발견). / 2026-10-02 보정 2: 진도경찰서·예천경찰서 주소에 군(郡) 단위가 빠져 있어(\"전라남도 진도읍...\" -> \"전라남도 진도군 진도읍...\") 보완(지오코딩 작업 중 발견, 세종북부경찰서의 \"세종특별자치시 조치원읍\"은 세종시에 군/구 층위가 없어 원래 맞는 표기)."
  },
  "regions": [
   {
@@ -1548,7 +1548,7 @@
    "region": "광주",
    "type": "시도경찰청",
    "name": "광주경찰청",
-   "address": "전남광주통합특별시 광산구 용아로 112",
+   "address": "광주광역시 광산구 용아로 112",
    "website": "https://www.gjpolice.go.kr/",
    "departments": []
   },
@@ -1556,7 +1556,7 @@
    "region": "광주",
    "type": "경찰서",
    "name": "광주광산경찰서",
-   "address": "전남광주통합특별시 광산구 어등대로 551",
+   "address": "광주광역시 광산구 어등대로 551",
    "website": "https://www.gjpolice.go.kr/gs",
    "departments": [
     "청문감사인권관",
@@ -1579,7 +1579,7 @@
    "region": "광주",
    "type": "경찰서",
    "name": "광주남부경찰서",
-   "address": "전남광주통합특별시 남구 용대로74번안길 9-5",
+   "address": "광주광역시 남구 용대로74번안길 9-5",
    "website": "https://www.gjpolice.go.kr/nb",
    "departments": [
     "청문감사인권관",
@@ -1600,7 +1600,7 @@
    "region": "광주",
    "type": "경찰서",
    "name": "광주동부경찰서",
-   "address": "전남광주통합특별시 동구 예술길 33",
+   "address": "광주광역시 동구 예술길 33",
    "website": "https://www.gjpolice.go.kr/db",
    "departments": [
     "청문감사인권관",
@@ -1621,7 +1621,7 @@
    "region": "광주",
    "type": "경찰서",
    "name": "광주북부경찰서",
-   "address": "전남광주통합특별시 북구 서하로 172",
+   "address": "광주광역시 북구 서하로 172",
    "website": "https://www.gjpolice.go.kr/bb",
    "departments": [
     "청문감사인권관",
@@ -1643,7 +1643,7 @@
    "region": "광주",
    "type": "경찰서",
    "name": "광주서부경찰서",
-   "address": "전남광주통합특별시 서구 상무공원로 71",
+   "address": "광주광역시 서구 상무공원로 71",
    "website": "https://www.gjpolice.go.kr/sb",
    "departments": [
     "청문감사인권관",
@@ -4344,7 +4344,7 @@
    "region": "전남",
    "type": "시도경찰청",
    "name": "전남경찰청",
-   "address": "전남광주통합특별시 무안군 삼향읍 후광대로359번길 28",
+   "address": "전라남도 무안군 삼향읍 후광대로359번길 28",
    "website": "https://www.jnpolice.go.kr/",
    "departments": []
   },
@@ -4352,7 +4352,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "강진경찰서",
-   "address": "전남광주통합특별시 강진군 강진읍 탐진로 119",
+   "address": "전라남도 강진군 강진읍 탐진로 119",
    "website": "https://www.jnpolice.go.kr/gangjin",
    "departments": []
   },
@@ -4360,7 +4360,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "고흥경찰서",
-   "address": "전남광주통합특별시 고흥군 고흥읍 흥양길 42",
+   "address": "전라남도 고흥군 고흥읍 흥양길 42",
    "website": "https://www.jnpolice.go.kr/goheung",
    "departments": [
     "청문감사인권관",
@@ -4377,7 +4377,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "곡성경찰서",
-   "address": "전남광주통합특별시 곡성군 곡성읍 중앙로 161",
+   "address": "전라남도 곡성군 곡성읍 중앙로 161",
    "website": "https://www.jnpolice.go.kr/goksung",
    "departments": [
     "청문감사인권실",
@@ -4392,7 +4392,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "광양경찰서",
-   "address": "전남광주통합특별시 광양시 광양읍 제철로 16-16",
+   "address": "전라남도 광양시 광양읍 제철로 16-16",
    "website": "https://www.jnpolice.go.kr/gwangyang",
    "departments": [
     "여청수사팀",
@@ -4410,7 +4410,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "구례경찰서",
-   "address": "전남광주통합특별시 구례군 구례읍 봉성로 74",
+   "address": "전라남도 구례군 구례읍 봉성로 74",
    "website": "https://www.jnpolice.go.kr/gurye",
    "departments": []
   },
@@ -4418,7 +4418,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "나주경찰서",
-   "address": "전남광주통합특별시 나주시 영산로 5415-22",
+   "address": "전라남도 나주시 영산로 5415-22",
    "website": "https://www.jnpolice.go.kr/naju",
    "departments": [
     "청문감사인권관",
@@ -4436,7 +4436,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "담양경찰서",
-   "address": "전남광주통합특별시 담양군 담양읍 무정로 15",
+   "address": "전라남도 담양군 담양읍 무정로 15",
    "website": "https://www.jnpolice.go.kr/damyang",
    "departments": [
     "청문감사인권계",
@@ -4452,7 +4452,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "목포경찰서",
-   "address": "전남광주통합특별시 목포시 동명로 124",
+   "address": "전라남도 목포시 동명로 124",
    "website": "https://www.jnpolice.go.kr/mokpo",
    "departments": []
   },
@@ -4460,7 +4460,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "무안경찰서",
-   "address": "전남광주통합특별시 무안군 무안읍 무안로 479",
+   "address": "전라남도 무안군 무안읍 무안로 479",
    "website": "https://www.jnpolice.go.kr/muan",
    "departments": [
     "청문민원",
@@ -4478,7 +4478,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "보성경찰서",
-   "address": "전남광주통합특별시 보성군 보성읍 중앙로 88",
+   "address": "전라남도 보성군 보성읍 중앙로 88",
    "website": "https://www.jnpolice.go.kr/bosung",
    "departments": [
     "청문감사인권관",
@@ -4495,7 +4495,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "순천경찰서",
-   "address": "전남광주통합특별시 순천시 조비길 2",
+   "address": "전라남도 순천시 조비길 2",
    "website": "https://www.jnpolice.go.kr/suncheon",
    "departments": [
     "여성청소년범죄수사팀",
@@ -4518,7 +4518,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "신안경찰서",
-   "address": "전남광주통합특별시 신안군 암태면 승봉로 11-3",
+   "address": "전라남도 신안군 암태면 승봉로 11-3",
    "website": "https://www.jnpolice.go.kr/?pid=SA",
    "departments": [
     "청문감사인권계",
@@ -4533,7 +4533,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "여수경찰서",
-   "address": "전남광주통합특별시 여수시 하멜로 2",
+   "address": "전라남도 여수시 하멜로 2",
    "website": "https://www.jnpolice.go.kr/yeosu",
    "departments": [
     "수사4팀·지능범죄수사팀 등(표 일부만 공개)",
@@ -4546,7 +4546,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "영광경찰서",
-   "address": "전남광주통합특별시 영광군 영광읍 중앙로 211",
+   "address": "전라남도 영광군 영광읍 중앙로 211",
    "website": "https://www.jnpolice.go.kr/younggwang",
    "departments": [
     "청문감사인권계",
@@ -4562,7 +4562,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "영암경찰서",
-   "address": "전남광주통합특별시 영암군 영암읍 남문로 19",
+   "address": "전라남도 영암군 영암읍 남문로 19",
    "website": "https://www.jnpolice.go.kr/youngam",
    "departments": [
     "청문감사인권계",
@@ -4577,7 +4577,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "완도경찰서",
-   "address": "전남광주통합특별시 완도군 완도읍 농공단지길 32",
+   "address": "전라남도 완도군 완도읍 농공단지길 32",
    "website": "https://www.jnpolice.go.kr/wando",
    "departments": []
   },
@@ -4585,7 +4585,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "장성경찰서",
-   "address": "전남광주통합특별시 장성군 장성읍 영천로 164",
+   "address": "전라남도 장성군 장성읍 영천로 164",
    "website": "https://www.jnpolice.go.kr/jangsung",
    "departments": [
     "청문감사인권계",
@@ -4597,7 +4597,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "장흥경찰서",
-   "address": "전남광주통합특별시 장흥군 장흥읍 읍성로 123",
+   "address": "전라남도 장흥군 장흥읍 읍성로 123",
    "website": "https://www.jnpolice.go.kr/janghyung",
    "departments": [
     "청문감사인권계",
@@ -4612,7 +4612,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "진도경찰서",
-   "address": "전남광주통합특별시 진도읍 남산2길 33",
+   "address": "전라남도 진도군 진도읍 남산2길 33",
    "website": "https://www.jnpolice.go.kr/jindo",
    "departments": []
   },
@@ -4620,7 +4620,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "함평경찰서",
-   "address": "전남광주통합특별시 함평군 함평읍 중앙길 220",
+   "address": "전라남도 함평군 함평읍 중앙길 220",
    "website": "https://www.jnpolice.go.kr/hampyung",
    "departments": [
     "청문감사인권계",
@@ -4635,7 +4635,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "해남경찰서",
-   "address": "전남광주통합특별시 해남군 해남읍 영빈로 61",
+   "address": "전라남도 해남군 해남읍 영빈로 61",
    "website": "https://www.jnpolice.go.kr/haenam",
    "departments": [
     "청문감사인권관",
@@ -4653,7 +4653,7 @@
    "region": "전남",
    "type": "경찰서",
    "name": "화순경찰서",
-   "address": "전남광주통합특별시 화순군 화순읍 자치샘로 29",
+   "address": "전라남도 화순군 화순읍 자치샘로 29",
    "website": "https://www.jnpolice.go.kr/hwasun",
    "departments": [
     "청문감사인권계장",
@@ -4914,7 +4914,7 @@
    "region": "경북",
    "type": "경찰서",
    "name": "예천경찰서",
-   "address": "경북 예천읍 군청길 21",
+   "address": "경상북도 예천군 예천읍 군청길 21",
    "website": "https://www.gbpolice.go.kr/yecheon",
    "departments": [
     "청문감사인권계",

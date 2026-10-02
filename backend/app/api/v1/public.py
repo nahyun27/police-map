@@ -24,6 +24,7 @@ def _station_items(db: Session, stations: list[Station]) -> list[StationItem]:
         StationItem(
             id=s.id, name=s.name, address=s.address, website=s.website,
             department_count=len(s.departments), rating=sums.get(s.id, EMPTY),
+            lat=s.lat, lng=s.lng,
         )
         for s in stations
     ]
@@ -72,6 +73,7 @@ def get_station(station_id: int, page: int = Query(1, ge=1), size: int = Query(1
         region=_region_ref(s.region), departments=[d.name for d in s.departments],
         rating=station_summaries(db, [s.id]).get(s.id, EMPTY),
         reviews=Page(items=[review_public(r) for r in reviews], total=total, page=page, size=size),
+        lat=s.lat, lng=s.lng,
     )
 
 

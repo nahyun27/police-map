@@ -39,6 +39,8 @@ class StationItem(BaseModel):
     website: str | None
     department_count: int
     rating: RatingSummary
+    lat: float | None = None
+    lng: float | None = None
 
 
 class RegionDetail(RegionOut):
@@ -73,6 +75,8 @@ class StationDetail(BaseModel):
     departments: list[str]
     rating: RatingSummary
     reviews: Page[ReviewPublic]
+    lat: float | None = None
+    lng: float | None = None
 
 
 class RecentReview(ReviewPublic):

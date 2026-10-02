@@ -64,6 +64,8 @@ export interface StationItem {
   website: string | null;
   department_count: number;
   rating: RatingSummary;
+  lat: number | null;
+  lng: number | null;
 }
 
 export interface RegionDetail extends RegionOut {
@@ -105,6 +107,8 @@ export interface StationDetail {
   departments: string[];
   rating: RatingSummary;
   reviews: Page<ReviewPublic>;
+  lat: number | null;
+  lng: number | null;
 }
 
 export interface RecentReview extends ReviewPublic {

@@ -25,3 +25,8 @@ __pycache__/
 
 # 의뢰인이 직접 준 베타 프로토타입(제보 기능 초안 등) — 작업 참고용, 전체 관서 DB가 통째로 박혀 있어 저장소엔 두지 않음
 policemap_beta_*.html
+
+# 의뢰인이 준 원본 관서 DB 스프레드시트(여러 버전) — data/police_stations.json 으로 정식 반영됐고,
+# 일부 시트(성명공개 파일럿 등)에는 수사관 개인 성명이 들어 있어 저장소엔 두지 않음
+police_stations_db*.xlsx
+police_stations_db*.csv

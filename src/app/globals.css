@@ -294,6 +294,18 @@ table.list td a { font-weight: 650; color: var(--ink); }
 .korea-map-floating-tip .sub { color: #b9caff; font-weight: 500; }
 @media (max-width: 480px) { .kr-label { font-size: 13px; } }
 
+/* ---------- Region mini map (관서 위치 핀) ---------- */
+.region-mini-map-wrap { display: flex; justify-content: center; margin-top: 12px; }
+.region-mini-map { width: 100%; max-width: 420px; height: auto; }
+.region-mini-shape { fill: var(--brand-soft); stroke: #fff; stroke-width: 2; }
+.region-pin { cursor: pointer; outline: none; transform-box: fill-box; transform-origin: center; transition: transform .12s; }
+.region-pin:hover, .region-pin:focus-visible { transform: scale(1.35); }
+.pin-dot { stroke: #fff; }
+.region-pin.tone-good .pin-dot { fill: var(--good); }
+.region-pin.tone-mid .pin-dot { fill: var(--mid); }
+.region-pin.tone-low .pin-dot { fill: var(--low); }
+.region-pin.tone-none .pin-dot { fill: var(--muted); }
+
 /* ---------- Feature cards ---------- */
 .feature .ico { width: 44px; height: 44px; border-radius: 13px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; margin-bottom: 18px; }
 .feature h3 { font-size: 17px; margin-bottom: 8px; }

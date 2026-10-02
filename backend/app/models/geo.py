@@ -37,6 +37,10 @@ class Station(Base):
     website: Mapped[str | None] = mapped_column(String(200))
     # 공개 데이터 출처(경찰청 전국경찰관서안내 등). 화면에 "출처" 표기용.
     source: Mapped[str | None] = mapped_column(String(300))
+    # 주소 지오코딩 결과(scripts/geocode_stations.py). 지도에 핀을 찍을 때만 쓰고,
+    # 값이 없으면 지도에서 그 관서는 생략한다(화면 로직에서 null 허용 처리 필요).
+    lat: Mapped[float | None] = mapped_column()
+    lng: Mapped[float | None] = mapped_column()
     is_sample: Mapped[bool] = mapped_column(default=False)
 
     region: Mapped[Region] = relationship(back_populates="stations")
