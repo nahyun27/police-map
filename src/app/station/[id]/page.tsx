@@ -5,9 +5,6 @@ import { Bars, Card, Crumb, Score, Stars } from '@/components/ui';
 import { ApiError, getStation } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
-// 백엔드의 실시간 데이터를 그리므로 빌드 시점에 정적 생성하지 않는다.
-export const dynamic = 'force-dynamic';
-
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ page?: string }> };
 
 const PAGE_SIZE = 10;

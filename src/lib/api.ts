@@ -14,13 +14,22 @@ export class ApiError extends Error {
   }
 }
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+interface ApiFetchInit extends RequestInit {
+  /** 이 값을 주면 Next 의 Data Cache 에 N초간 캐시한다(프로덕션 빌드에서만 효과가 있음 —
+   * `next dev` 는 매번 새로 렌더링하고 절대 캐시하지 않는 게 Next.js 자체의 설계). 생략하면
+   * 기존처럼 항상 최신 데이터를 가져온다(no-store). 로그인 세션이 섞이는 관리자·쿠키 기반
+   * 요청에는 쓰지 않는다 — Data Cache 는 요청자와 무관하게 서버 전체에서 공유된다. */
+  revalidateSeconds?: number;
+}
+
+async function apiFetch<T>(path: string, init?: ApiFetchInit): Promise<T> {
+  const { revalidateSeconds, ...rest } = init ?? {};
   let res: Response;
   try {
     res = await fetch(`${API_BASE}/api/v1${path}`, {
-      ...init,
-      headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-      cache: 'no-store',
+      ...rest,
+      headers: { 'Content-Type': 'application/json', ...(rest.headers ?? {}) },
+      ...(revalidateSeconds !== undefined ? { next: { revalidate: revalidateSeconds } } : { cache: 'no-store' }),
       // 관리자 세션 쿠키를 함께 보낸다. 공개 API 는 쿠키를 보지 않으므로 무해하다.
       // (서버 컴포넌트의 Node fetch 에는 브라우저 쿠키 저장소가 없어 이 옵션이 영향을 주지 않는다.)
       credentials: 'include',
@@ -147,20 +156,22 @@ export interface StatsOverview {
   station_ranking: RankedStation[];
 }
 
-export const getRegions = () => apiFetch<RegionOut[]>('/regions');
-export const getRegion = (id: string) => apiFetch<RegionDetail>(`/regions/${encodeURIComponent(id)}`);
+// 공개·비로그인 조회는 짧게 캐시해서(프로덕션 빌드에서) 반복 방문·탭 전환이 즉시 뜨게 한다.
+// 평가 승인·삭제정정 처리 등은 최대 30초 정도 늦게 반영될 수 있다 — 이 사이트 성격상 허용 가능한 지연.
+export const getRegions = () => apiFetch<RegionOut[]>('/regions', { revalidateSeconds: 30 });
+export const getRegion = (id: string) => apiFetch<RegionDetail>(`/regions/${encodeURIComponent(id)}`, { revalidateSeconds: 30 });
 
 export function getStation(id: number | string, opts?: { page?: number; size?: number }) {
   const qs = new URLSearchParams();
   if (opts?.page) qs.set('page', String(opts.page));
   if (opts?.size) qs.set('size', String(opts.size));
   const suffix = qs.toString() ? `?${qs}` : '';
-  return apiFetch<StationDetail>(`/stations/${encodeURIComponent(String(id))}${suffix}`);
+  return apiFetch<StationDetail>(`/stations/${encodeURIComponent(String(id))}${suffix}`, { revalidateSeconds: 30 });
 }
 
-export const getRecentReviews = (limit = 3) => apiFetch<RecentReview[]>(`/reviews/recent?limit=${limit}`);
-export const search = (q: string) => apiFetch<SearchResult>(`/search?q=${encodeURIComponent(q)}`);
-export const getStats = () => apiFetch<StatsOverview>('/stats/overview');
+export const getRecentReviews = (limit = 3) => apiFetch<RecentReview[]>(`/reviews/recent?limit=${limit}`, { revalidateSeconds: 30 });
+export const search = (q: string) => apiFetch<SearchResult>(`/search?q=${encodeURIComponent(q)}`, { revalidateSeconds: 15 });
+export const getStats = () => apiFetch<StatsOverview>('/stats/overview', { revalidateSeconds: 60 });
 
 export interface ReviewRatingsIn {
   fair?: number | null;

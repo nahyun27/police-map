@@ -3,9 +3,6 @@ import RemedyNavigator from '@/components/RemedyNavigator';
 import { ApiError, getStation } from '@/lib/api';
 import { NOINDEX } from '@/lib/seo';
 
-// 백엔드의 실시간 데이터를 그리므로 빌드 시점에 정적 생성하지 않는다.
-export const dynamic = 'force-dynamic';
-
 type Props = { params: Promise<{ stationId: string }> };
 
 // 경찰서 맥락이 붙은 변형 페이지 — 색인 대상이 아니다(본 페이지는 /remedy).

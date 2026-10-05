@@ -36,9 +36,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
       </head>
       <body>
-        <div className="demo-banner">
-          개발 중인 프로토타입입니다. 경찰서 정보는 경찰청 공개자료를 기반으로 하며, <b>평가·통계 일부는 테스트용 샘플입니다.</b>
-        </div>
         <Header />
         <main>{children}</main>
         <Footer />

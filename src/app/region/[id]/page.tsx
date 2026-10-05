@@ -6,9 +6,6 @@ import RegionMiniMap from '@/components/RegionMiniMap';
 import { Card, Crumb, PageHead, Score, TableWrap } from '@/components/ui';
 import { ApiError, getRegion } from '@/lib/api';
 
-// 백엔드의 실시간 데이터를 그리므로 빌드 시점에 정적 생성하지 않는다.
-export const dynamic = 'force-dynamic';
-
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
