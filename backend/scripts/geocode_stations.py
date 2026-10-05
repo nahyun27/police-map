@@ -34,7 +34,7 @@ from app.models import Region, Station
 
 SNAPSHOT_FILE = Path(__file__).resolve().parent.parent / "data" / "station_coords.json"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
-USER_AGENT = "policemap-dev-geocoder/0.1 (contact: ops@policemap.kr)"
+USER_AGENT = "policemap-dev-geocoder/0.1 (contact: ops@policemap.co.kr)"
 RATE_LIMIT_SEC = 1.1  # Nominatim 사용 정책: 초당 1건 이하
 
 # 데이터의 지역 약칭 → 지오코딩 검색에 쓰는 정식 행정구역명.
