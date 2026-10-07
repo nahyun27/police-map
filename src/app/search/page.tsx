@@ -16,7 +16,8 @@ export const metadata: Metadata = { title: '검색', robots: NOINDEX };
 export default async function SearchPage({ searchParams }: Props) {
   const raw = (await searchParams).q;
   const q = (Array.isArray(raw) ? raw[0] : raw ?? '').trim();
-  const result = q ? await apiSearch(q) : null;
+  let failed = false;
+  const result = q ? await apiSearch(q).catch(() => { failed = true; return null; }) : null;
   const stations = result?.stations ?? [];
 
   return (
@@ -28,7 +29,7 @@ export default async function SearchPage({ searchParams }: Props) {
       />
       <Card>
         <h2><Building2 size={17} style={{ verticalAlign: -2, marginRight: 8, color: 'var(--brand)' }} />경찰서 ({stations.length})</h2>
-        {stations.length ? stations.map((s) => (
+        {failed ? <p className="sub">검색 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.</p> : stations.length ? stations.map((s) => (
           <div className="review" key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
             <div>
               <Link href={`/station/${s.id}`} style={{ fontWeight: 650 }}>{s.name}</Link>

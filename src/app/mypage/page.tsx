@@ -207,7 +207,9 @@ export default function MyPage() {
       <Card>
         <h2>내가 쓴 평가</h2>
         {error && <div className="warn">{error}</div>}
-        {data && data.items.length ? (
+        {data === null ? (
+          <p className="sub">불러오는 중…</p>
+        ) : data.items.length ? (
           data.items.map((r) => {
             const st = STATUS_LABEL[r.status];
             return (

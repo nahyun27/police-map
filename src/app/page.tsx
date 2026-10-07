@@ -4,7 +4,7 @@ import HeroSearch from '@/components/HeroSearch';
 import KoreaMap from '@/components/KoreaMap';
 import { MyRegionFeed } from '@/components/MyRegionFeed';
 import { Bars, Card, Score, Stars } from '@/components/ui';
-import { getPopularPosts, getRecentReviews, getRegions, getStats } from '@/lib/api';
+import { getPopularPosts, getRecentReviews, getRegions, getStats, type StatsOverview } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
 // 백엔드의 실시간 데이터를 그리므로 빌드 시점에 정적 생성하지 않는다.
@@ -23,9 +23,21 @@ const WHY_CASES = [
   { tag: '1988→2020 · 화성', title: '이춘재 8차 사건, 20년을 빼앗긴 윤성여 씨', body: '강압수사와 조작된 증거로 무고한 시민이 20년을 복역. 2020년 재심에서 무죄, 법원이 수사의 위법성을 인정했습니다.' },
 ];
 
+const EMPTY_STATS: StatsOverview = {
+  totals: { stations: 0, departments: 0, reviews: 0 },
+  national: { fair: null, proc: null, att: null, comm: null, speed: null, overall: null, count: 0 },
+  appeals_filed: [], appeal_acceptance_rate: null, station_ranking: [],
+};
+
 export default async function Home() {
+  // 네 데이터 소스를 하나로 묶어 Promise.all 하면 하나만 실패해도 홈 전체가 크래시 화면으로
+  // 떨어진다. 각자 독립적으로 실패를 흡수해서, 예컨대 통계 조회만 잠깐 안 되더라도 지도·최근
+  // 평가·인기 게시글은 정상적으로 보이게 한다.
   const [regions, recent, stats, popularPosts] = await Promise.all([
-    getRegions(), getRecentReviews(3), getStats(), getPopularPosts({ limit: 5 }),
+    getRegions().catch(() => []),
+    getRecentReviews(3).catch(() => []),
+    getStats().catch(() => EMPTY_STATS),
+    getPopularPosts({ limit: 5 }).catch(() => []),
   ]);
 
   return (

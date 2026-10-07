@@ -170,10 +170,10 @@ export function Engagement({
       </p>
       {!c.is_removed && (
         <div className="cmt-actions">
-          <button type="button" className={`link-btn ${c.my_vote === 1 ? 'on' : ''}`} onClick={() => voteComment(c.id, 1)}>
+          <button type="button" className={`link-btn ${c.my_vote === 1 ? 'on' : ''}`} onClick={() => voteComment(c.id, 1)} aria-label="추천">
             <ThumbsUp size={11} />{c.score}
           </button>
-          <button type="button" className={`link-btn ${c.my_vote === -1 ? 'on' : ''}`} onClick={() => voteComment(c.id, -1)}>
+          <button type="button" className={`link-btn ${c.my_vote === -1 ? 'on' : ''}`} onClick={() => voteComment(c.id, -1)} aria-label="비추천">
             <ThumbsDown size={11} />
           </button>
           {depth === 0 && (

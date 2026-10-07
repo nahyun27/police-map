@@ -43,9 +43,11 @@ export default async function BoardPage({ searchParams }: Props) {
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
   const f: Filters = { region, category, sort, period, q };
 
+  let failed = false;
   const [regions, posts] = await Promise.all([
-    getRegions(),
-    listPosts({ regionId: region, category: category as PostCategory | undefined, q, sort, page, size: PAGE_SIZE }),
+    getRegions().catch(() => []),
+    listPosts({ regionId: region, category: category as PostCategory | undefined, q, sort, page, size: PAGE_SIZE })
+      .catch(() => { failed = true; return { items: [], total: 0, page: 1, size: PAGE_SIZE }; }),
   ]);
   const totalPages = Math.max(1, Math.ceil(posts.total / posts.size));
 
@@ -113,7 +115,9 @@ export default async function BoardPage({ searchParams }: Props) {
             ))}
           </div>
         ) : (
-          <p className="sub">{q ? '검색 결과가 없습니다.' : '등록된 글이 없습니다. 첫 글을 남겨 보세요.'}</p>
+          <p className="sub">
+            {failed ? '목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.' : q ? '검색 결과가 없습니다.' : '등록된 글이 없습니다. 첫 글을 남겨 보세요.'}
+          </p>
         )}
         {totalPages > 1 && (
           <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>

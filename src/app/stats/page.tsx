@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import ClickableRow from '@/components/ClickableRow';
 import { Bars, Card, PageHead, Score } from '@/components/ui';
-import { getStats } from '@/lib/api';
+import { getStats, type StatsOverview } from '@/lib/api';
 
 // 백엔드의 실시간 데이터를 그리므로 빌드 시점에 정적 생성하지 않는다.
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,17 @@ export const metadata: Metadata = {
 };
 
 export default async function StatsPage() {
-  const stats = await getStats();
+  let stats: StatsOverview;
+  try {
+    stats = await getStats();
+  } catch {
+    return (
+      <>
+        <PageHead eyebrow="통계" title="전국 통계 대시보드" sub="이용자 평가 통계와 정보공개청구로 확보한 공식 통계를 함께 제공합니다." />
+        <Card><p className="sub">통계를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p></Card>
+      </>
+    );
+  }
   const appeals = stats.appeals_filed;
   const max = appeals.length ? Math.max(...appeals.map((a) => a.value)) : 1;
   const latestAppeal = appeals.at(-1);

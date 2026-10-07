@@ -67,8 +67,7 @@ const FEATURES = [
 ];
 
 export default async function WhyPage() {
-  const stats = await getStats();
-  const latestAppeal = stats.appeals_filed.at(-1);
+  const latestAppeal = await getStats().then((s) => s.appeals_filed.at(-1)).catch(() => undefined);
 
   return (
     <>
