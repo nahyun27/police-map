@@ -38,14 +38,18 @@ class CommentCreate(BaseModel):
 
 
 class CommentOut(BaseModel):
-    """소프트 삭제된 댓글은 body 를 "삭제된 댓글입니다"로 가려서 내려준다(행은 트리 유지를 위해 남김)."""
+    """소프트 삭제된 댓글은 body 를 "삭제된 댓글입니다"로 가려서 내려준다(행은 트리 유지를 위해
+    남김). removed_at 은 그 삭제 시각만 공개(조치자·사유는 감사 로그에서만 확인 가능)."""
     id: int
     author_nickname: str
     body: str
     is_removed: bool
     is_mine: bool
     parent_id: int | None
+    score: int = 0
+    my_vote: int = 0
     created_at: str | None
+    removed_at: str | None = None
     replies: list["CommentOut"] = []
 
 

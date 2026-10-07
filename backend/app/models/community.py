@@ -47,7 +47,9 @@ class ReviewComment(Base):
 
     삭제는 항상 소프트 삭제(is_removed)다. 하드 삭제하면 그 댓글에 달린 대댓글들이
     고아가 되므로, 본인 삭제든 관리자 삭제든 본문만 "삭제된 댓글입니다"로 가리고 행은 남긴다.
-    실제 조치자·사유는 감사 로그(audit_logs)에 남는다."""
+    실제 조치자·사유는 감사 로그(audit_logs)에 남는다. removed_at 은 공개 화면에 "삭제된
+    댓글입니다(OO일 삭제)"처럼 삭제 시각만 보여주기 위한 것 — 조용히 사라지면 은폐처럼
+    보일 수 있어 흔적은 남기되, 조치자가 누군지는 감사 로그에서만 확인 가능하게 한다."""
 
     __tablename__ = "review_comments"
 
@@ -57,6 +59,7 @@ class ReviewComment(Base):
     parent_id: Mapped[int | None] = mapped_column(ForeignKey("review_comments.id"), index=True)
     body: Mapped[str] = mapped_column(Text)
     is_removed: Mapped[bool] = mapped_column(default=False)
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -68,6 +71,19 @@ class ReviewVote(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     review_id: Mapped[int] = mapped_column(ForeignKey("reviews.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    value: Mapped[int] = mapped_column(SmallInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReviewCommentVote(Base):
+    """평가 댓글 추천/비추천. ReviewVote 와 동일한 규칙 — 댓글 정렬(추천순)에 쓴다."""
+
+    __tablename__ = "review_comment_votes"
+    __table_args__ = (UniqueConstraint("comment_id", "user_id"), _vote_check())
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    comment_id: Mapped[int] = mapped_column(ForeignKey("review_comments.id"), index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     value: Mapped[int] = mapped_column(SmallInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -96,7 +112,8 @@ class Post(Base):
 
 
 class PostComment(Base):
-    """게시판 글의 댓글. ReviewComment 와 동일한 규칙(로그인 필수, 대댓글 1단계, 소프트 삭제)."""
+    """게시판 글의 댓글. ReviewComment 와 동일한 규칙(로그인 필수, 대댓글 1단계, 소프트 삭제,
+    removed_at 으로 삭제 시각만 공개 — ReviewComment docstring 참고)."""
 
     __tablename__ = "post_comments"
 
@@ -106,6 +123,7 @@ class PostComment(Base):
     parent_id: Mapped[int | None] = mapped_column(ForeignKey("post_comments.id"), index=True)
     body: Mapped[str] = mapped_column(Text)
     is_removed: Mapped[bool] = mapped_column(default=False)
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -117,6 +135,19 @@ class PostVote(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     post_id: Mapped[int] = mapped_column(ForeignKey("posts.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    value: Mapped[int] = mapped_column(SmallInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PostCommentVote(Base):
+    """게시판 댓글 추천/비추천. ReviewCommentVote 와 동일한 규칙."""
+
+    __tablename__ = "post_comment_votes"
+    __table_args__ = (UniqueConstraint("comment_id", "user_id"), _vote_check())
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    comment_id: Mapped[int] = mapped_column(ForeignKey("post_comments.id"), index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     value: Mapped[int] = mapped_column(SmallInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

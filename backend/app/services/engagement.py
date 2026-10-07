@@ -60,20 +60,33 @@ def reply_rows(db: Session, review_ids: list[int]) -> dict[int, tuple[ReviewRepl
     return {r.review_id: (r, u) for r, u in rows}
 
 
-def comment_tree(rows: list[tuple], user_id: int | None) -> list[CommentOut]:
+_EMPTY_VOTE = VoteSummary(up=0, down=0, score=0, my_vote=0)
+
+
+def comment_tree(
+    rows: list[tuple], user_id: int | None, votes: dict[int, VoteSummary] | None = None, sort: str = "new",
+) -> list[CommentOut]:
     """rows: (댓글 ORM 객체, 작성자 닉네임) 튜플 목록, created_at 오름차순으로 전달해야
-    대댓글이 부모보다 먼저 뜨지 않는다(부모가 아직 안 들어왔으면 임시로 최상위 취급됨)."""
+    대댓글이 부모보다 먼저 뜨지 않는다(부모가 아직 안 들어왔으면 임시로 최상위 취급됨).
+    sort="top" 이면 최상위 댓글만 추천순으로 재정렬한다(대댓글은 항상 시간순 유지 —
+    하나의 대화 흐름이라 순서를 흔들면 맥락이 깨진다)."""
+    votes = votes or {}
     by_id: dict[int, CommentOut] = {}
     roots: list[CommentOut] = []
     for c, nickname in rows:
+        vote = votes.get(c.id, _EMPTY_VOTE)
         node = CommentOut(
             id=c.id, author_nickname=nickname, body=REMOVED_BODY if c.is_removed else c.body,
             is_removed=c.is_removed, is_mine=(user_id is not None and c.author_id == user_id),
-            parent_id=c.parent_id, created_at=c.created_at.isoformat() if c.created_at else None, replies=[],
+            parent_id=c.parent_id, score=vote.score, my_vote=vote.my_vote,
+            created_at=c.created_at.isoformat() if c.created_at else None,
+            removed_at=c.removed_at.isoformat() if c.removed_at else None, replies=[],
         )
         by_id[c.id] = node
         if c.parent_id and c.parent_id in by_id:
             by_id[c.parent_id].replies.append(node)
         else:
             roots.append(node)
+    if sort == "top":
+        roots.sort(key=lambda n: n.score, reverse=True)
     return roots

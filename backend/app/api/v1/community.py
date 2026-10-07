@@ -9,12 +9,16 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
 from app.core.rate_limit import comment_limiter, post_limiter, vote_limiter
-from app.models import Post, PostCategory, PostComment, PostScrap, PostVote, Region, RegionFollow, Station, User, UserRole
+from app.models import (
+    Post, PostCategory, PostComment, PostCommentVote, PostScrap, PostVote, Region, RegionFollow, Station, User,
+    UserRole,
+)
 from app.models.community import POST_CATEGORY_LABELS
 from app.schemas.community import (
     CommentCreate, CommentOut, PostCreate, PostOut, PostReceipt, RegionFollowOut, ScrapStatus, VoteIn, VoteSummary,
 )
 from app.schemas.public import Page
+from app.services import takedown as takedown_svc
 from app.services.audit import log_action
 from app.services.engagement import comment_counts, comment_tree, scrapped_set, vote_summaries
 
@@ -196,7 +200,10 @@ def delete_post(post_id: int, db: Session = Depends(get_db), user: User = Depend
 
 # ---------- 게시판 댓글 ----------
 @router.get("/posts/{post_id}/comments", response_model=list[CommentOut])
-def list_post_comments(post_id: int, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
+def list_post_comments(
+    post_id: int, sort: str = Query("new", pattern="^(new|top)$"),
+    db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
+):
     p = db.get(Post, post_id)
     if not p or p.is_removed:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
@@ -204,7 +211,9 @@ def list_post_comments(post_id: int, db: Session = Depends(get_db), user: User |
         select(PostComment, User.nickname).join(User, User.id == PostComment.author_id)
         .where(PostComment.post_id == post_id).order_by(PostComment.created_at.asc())
     ).all()
-    return comment_tree(rows, user.id if user else None)
+    ids = [c.id for c, _ in rows]
+    votes = vote_summaries(db, PostCommentVote, PostCommentVote.comment_id, ids, user.id if user else None)
+    return comment_tree(rows, user.id if user else None, votes, sort)
 
 
 @router.post(
@@ -238,8 +247,26 @@ def delete_post_comment(comment_id: int, db: Session = Depends(get_db), user: Us
     if comment.author_id != user.id and user.role != UserRole.admin:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "본인 댓글만 삭제할 수 있습니다.")
     comment.is_removed = True
+    comment.removed_at = takedown_svc.utcnow()
     log_action(db, user.id, "comment.remove", "post_comment", comment.id, {"self": comment.author_id == user.id})
     db.commit()
+
+
+@router.post("/post-comments/{comment_id}/vote", response_model=VoteSummary, dependencies=[Depends(vote_limiter)])
+def vote_post_comment(comment_id: int, body: VoteIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    comment = db.get(PostComment, comment_id)
+    if not comment or comment.is_removed:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "댓글을 찾을 수 없습니다.")
+    existing = db.scalar(select(PostCommentVote).where(PostCommentVote.comment_id == comment_id, PostCommentVote.user_id == user.id))
+    if body.value == 0:
+        if existing:
+            db.delete(existing)
+    elif existing:
+        existing.value = body.value
+    else:
+        db.add(PostCommentVote(comment_id=comment_id, user_id=user.id, value=body.value))
+    db.commit()
+    return vote_summaries(db, PostCommentVote, PostCommentVote.comment_id, [comment_id], user.id)[comment_id]
 
 
 @router.post("/posts/{post_id}/vote", response_model=VoteSummary, dependencies=[Depends(vote_limiter)])

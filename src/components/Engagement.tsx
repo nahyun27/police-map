@@ -7,32 +7,51 @@ import { Bookmark, MessageSquare, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-re
 import {
   ApiError, type CommentOut, type ReportTargetType,
   createPostComment, createReviewComment, deletePostComment, deleteReviewComment,
-  getPostComments, getReviewComments, scrapPost, scrapReview, unscrapPost, unscrapReview, votePost, voteReview,
+  getPostComments, getReviewComments, scrapPost, scrapReview, unscrapPost, unscrapReview,
+  votePost, votePostComment, voteReview, voteReviewComment,
 } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import { ReportButton } from '@/components/ReportButton';
 
 type Kind = 'review' | 'post';
+type CommentSort = 'new' | 'top';
 
 const COMMENT_REPORT_TYPE: Record<Kind, ReportTargetType> = { review: 'review_comment', post: 'post_comment' };
 
 const ACTIONS: Record<Kind, {
   vote: (id: number, value: 1 | -1 | 0) => Promise<{ score: number; my_vote: number }>;
-  list: (id: number) => Promise<CommentOut[]>;
+  list: (id: number, sort?: CommentSort) => Promise<CommentOut[]>;
   create: (id: number, body: string, parentId?: number) => Promise<CommentOut>;
   remove: (commentId: number) => Promise<void>;
+  commentVote: (commentId: number, value: 1 | -1 | 0) => Promise<{ score: number; my_vote: number }>;
   scrap: (id: number) => Promise<{ scrapped: boolean }>;
   unscrap: (id: number) => Promise<{ scrapped: boolean }>;
 }> = {
   review: {
     vote: voteReview, list: getReviewComments, create: createReviewComment, remove: deleteReviewComment,
-    scrap: scrapReview, unscrap: unscrapReview,
+    commentVote: voteReviewComment, scrap: scrapReview, unscrap: unscrapReview,
   },
   post: {
     vote: votePost, list: getPostComments, create: createPostComment, remove: deletePostComment,
-    scrap: scrapPost, unscrap: unscrapPost,
+    commentVote: votePostComment, scrap: scrapPost, unscrap: unscrapPost,
   },
 };
+
+/** 댓글 트리에서 id 가 일치하는 노드 하나만 새 값으로 바꾼 사본을 돌려준다(불변 업데이트). */
+function updateCommentNode(nodes: CommentOut[], id: number, patch: Partial<CommentOut>): CommentOut[] {
+  return nodes.map((n) => (
+    n.id === id ? { ...n, ...patch } : { ...n, replies: updateCommentNode(n.replies, id, patch) }
+  ));
+}
+
+function findComment(nodes: CommentOut[], id: number): CommentOut | undefined {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    const hit = findComment(n.replies, id);
+    if (hit) return hit;
+  }
+  return undefined;
+}
 
 /** 평가(리뷰)·게시판 글에 공통으로 붙는 추천/비추천 + 댓글(1단계 대댓글) UI.
  * 로그인 여부를 미리 조회하지 않고, 실제 조치 시 401 을 받으면 그때 로그인 안내를 띄운다
@@ -52,6 +71,7 @@ export function Engagement({
   const [scrapBusy, setScrapBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState<CommentOut[] | null>(null);
+  const [commentSort, setCommentSort] = useState<CommentSort>('new');
   const [loading, setLoading] = useState(false);
   const [authNeeded, setAuthNeeded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,9 +105,9 @@ export function Engagement({
     setScrapBusy(false);
   };
 
-  const loadComments = async () => {
+  const loadComments = async (sort: CommentSort = commentSort) => {
     setLoading(true);
-    try { setComments(await api.list(targetId)); } catch { setError('댓글을 불러오지 못했습니다.'); }
+    try { setComments(await api.list(targetId, sort)); } catch { setError('댓글을 불러오지 못했습니다.'); }
     setLoading(false);
   };
 
@@ -95,6 +115,23 @@ export function Engagement({
     const next = !open;
     setOpen(next);
     if (next && comments === null) loadComments();
+  };
+
+  const changeSort = (sort: CommentSort) => {
+    setCommentSort(sort);
+    loadComments(sort);
+  };
+
+  const voteComment = async (commentId: number, value: 1 | -1) => {
+    const current = comments ? findComment(comments, commentId) : undefined;
+    const next = current?.my_vote === value ? 0 : value;
+    try {
+      const sum = await api.commentVote(commentId, next);
+      setComments((cs) => (cs ? updateCommentNode(cs, commentId, { score: sum.score, my_vote: sum.my_vote }) : cs));
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) setAuthNeeded(true);
+      else setError('처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    }
   };
 
   const submit = async (body: string, parentId?: number) => {
@@ -128,9 +165,17 @@ export function Engagement({
         {!c.is_removed && <b>{c.author_nickname}</b>}
         {c.created_at && <span className="sub">{formatDate(c.created_at)}</span>}
       </div>
-      <p className={c.is_removed ? 'sub' : undefined}>{c.body}</p>
+      <p className={c.is_removed ? 'sub' : undefined}>
+        {c.body}{c.is_removed && c.removed_at && <span className="sub"> ({formatDate(c.removed_at)} 삭제)</span>}
+      </p>
       {!c.is_removed && (
         <div className="cmt-actions">
+          <button type="button" className={`link-btn ${c.my_vote === 1 ? 'on' : ''}`} onClick={() => voteComment(c.id, 1)}>
+            <ThumbsUp size={11} />{c.score}
+          </button>
+          <button type="button" className={`link-btn ${c.my_vote === -1 ? 'on' : ''}`} onClick={() => voteComment(c.id, -1)}>
+            <ThumbsDown size={11} />
+          </button>
           {depth === 0 && (
             <button type="button" className="link-btn" onClick={() => setReplyTo(replyTo === c.id ? null : c.id)}>답글</button>
           )}
@@ -176,6 +221,12 @@ export function Engagement({
       {error && <p className="warn">{error}</p>}
       {open && (
         <div className="cmt-list">
+          {comments && comments.length > 1 && (
+            <div className="btn-row" style={{ marginBottom: 8 }}>
+              <button type="button" className={`link-btn ${commentSort === 'new' ? 'on' : ''}`} onClick={() => changeSort('new')}>최신순</button>
+              <button type="button" className={`link-btn ${commentSort === 'top' ? 'on' : ''}`} onClick={() => changeSort('top')}>추천순</button>
+            </div>
+          )}
           {loading && <p className="sub">불러오는 중…</p>}
           {comments && comments.length === 0 && <p className="sub">첫 댓글을 남겨 보세요.</p>}
           {comments?.map((c) => renderComment(c))}

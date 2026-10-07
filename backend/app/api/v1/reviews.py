@@ -9,7 +9,10 @@ from app.core.deps import get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
 from app.core.rate_limit import comment_limiter, reply_limiter, review_limiter, vote_limiter
 from app.core.security import hash_case_number
-from app.models import Review, ReviewComment, ReviewReply, ReviewScrap, ReviewStatus, ReviewVote, Station, User, UserRole
+from app.models import (
+    Review, ReviewComment, ReviewCommentVote, ReviewReply, ReviewScrap, ReviewStatus, ReviewVote, Station, User,
+    UserRole,
+)
 from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
 from app.schemas.community import CommentCreate, CommentOut, ScrapStatus, VoteIn, VoteSummary
 from app.schemas.public import Page, RecentReview
@@ -179,13 +182,18 @@ def _published_or_404(db: Session, review_id: int) -> Review:
 
 
 @router.get("/{review_id}/comments", response_model=list[CommentOut])
-def list_review_comments(review_id: int, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
+def list_review_comments(
+    review_id: int, sort: str = Query("new", pattern="^(new|top)$"),
+    db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
+):
     _published_or_404(db, review_id)
     rows = db.execute(
         select(ReviewComment, User.nickname).join(User, User.id == ReviewComment.author_id)
         .where(ReviewComment.review_id == review_id).order_by(ReviewComment.created_at.asc())
     ).all()
-    return comment_tree(rows, user.id if user else None)
+    ids = [c.id for c, _ in rows]
+    votes = vote_summaries(db, ReviewCommentVote, ReviewCommentVote.comment_id, ids, user.id if user else None)
+    return comment_tree(rows, user.id if user else None, votes, sort)
 
 
 @router.post(
@@ -218,8 +226,26 @@ def delete_review_comment(comment_id: int, db: Session = Depends(get_db), user: 
     if comment.author_id != user.id and user.role != UserRole.admin:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "본인 댓글만 삭제할 수 있습니다.")
     comment.is_removed = True
+    comment.removed_at = takedown_svc.utcnow()
     log_action(db, user.id, "comment.remove", "review_comment", comment.id, {"self": comment.author_id == user.id})
     db.commit()
+
+
+@router.post("/comments/{comment_id}/vote", response_model=VoteSummary, dependencies=[Depends(vote_limiter)])
+def vote_review_comment(comment_id: int, body: VoteIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    comment = db.get(ReviewComment, comment_id)
+    if not comment or comment.is_removed:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "댓글을 찾을 수 없습니다.")
+    existing = db.scalar(select(ReviewCommentVote).where(ReviewCommentVote.comment_id == comment_id, ReviewCommentVote.user_id == user.id))
+    if body.value == 0:
+        if existing:
+            db.delete(existing)
+    elif existing:
+        existing.value = body.value
+    else:
+        db.add(ReviewCommentVote(comment_id=comment_id, user_id=user.id, value=body.value))
+    db.commit()
+    return vote_summaries(db, ReviewCommentVote, ReviewCommentVote.comment_id, [comment_id], user.id)[comment_id]
 
 
 @router.post("/{review_id}/vote", response_model=VoteSummary, dependencies=[Depends(vote_limiter)])

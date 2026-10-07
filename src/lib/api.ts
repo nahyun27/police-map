@@ -370,7 +370,10 @@ export interface CommentOut {
   is_removed: boolean;
   is_mine: boolean;
   parent_id: number | null;
+  score: number;
+  my_vote: number;
   created_at: string | null;
+  removed_at: string | null;
   replies: CommentOut[];
 }
 
@@ -396,7 +399,9 @@ export const createReport = (targetType: ReportTargetType, targetId: number, rea
   });
 
 export const voteReview = (reviewId: number, value: 1 | -1 | 0) => vote(`/reviews/${reviewId}/vote`, value);
-export const getReviewComments = (reviewId: number) => apiFetch<CommentOut[]>(`/reviews/${reviewId}/comments`);
+export const getReviewComments = (reviewId: number, sort: 'new' | 'top' = 'new') =>
+  apiFetch<CommentOut[]>(`/reviews/${reviewId}/comments?sort=${sort}`);
+export const voteReviewComment = (commentId: number, value: 1 | -1 | 0) => vote(`/reviews/comments/${commentId}/vote`, value);
 export const createReviewComment = (reviewId: number, body: string, parentId?: number) =>
   apiFetch<CommentOut>(`/reviews/${reviewId}/comments`, { method: 'POST', body: JSON.stringify({ body, parent_id: parentId ?? null }) });
 export const deleteReviewComment = (commentId: number) => apiFetch<void>(`/reviews/comments/${commentId}`, { method: 'DELETE' });
@@ -479,7 +484,9 @@ export const getPost = (id: number) => apiFetch<PostOut>(`/posts/${id}`);
 export const deletePost = (id: number) => apiFetch<void>(`/posts/${id}`, { method: 'DELETE' });
 export const incrementPostView = (id: number) => apiFetch<void>(`/posts/${id}/view`, { method: 'POST' });
 export const votePost = (postId: number, value: 1 | -1 | 0) => vote(`/posts/${postId}/vote`, value);
-export const getPostComments = (postId: number) => apiFetch<CommentOut[]>(`/posts/${postId}/comments`);
+export const getPostComments = (postId: number, sort: 'new' | 'top' = 'new') =>
+  apiFetch<CommentOut[]>(`/posts/${postId}/comments?sort=${sort}`);
+export const votePostComment = (commentId: number, value: 1 | -1 | 0) => vote(`/post-comments/${commentId}/vote`, value);
 export const createPostComment = (postId: number, body: string, parentId?: number) =>
   apiFetch<CommentOut>(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify({ body, parent_id: parentId ?? null }) });
 export const deletePostComment = (commentId: number) => apiFetch<void>(`/post-comments/${commentId}`, { method: 'DELETE' });

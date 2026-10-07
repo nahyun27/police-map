@@ -105,6 +105,33 @@ def test_review_comment_delete_is_soft_and_author_or_admin_only(db, client, worl
     assert a.delete(f"{API}/reviews/comments/{cid}").status_code == 204
     tree = a.get(f"{API}/reviews/{rid}/comments").json()
     assert tree[0]["is_removed"] is True and tree[0]["body"] == "삭제된 댓글입니다."
+    assert tree[0]["removed_at"] is not None  # 삭제 시각은 남긴다(조용히 사라지지 않음)
+
+
+def test_review_comment_vote_and_sort_top(user_client, world):
+    rid = world["reviews"][0].id
+    c1 = user_client.post(f"{API}/reviews/{rid}/comments", json={"body": "댓글1"}).json()["id"]
+    c2 = user_client.post(f"{API}/reviews/{rid}/comments", json={"body": "댓글2"}).json()["id"]
+
+    v = user_client.post(f"{API}/reviews/comments/{c2}/vote", json={"value": 1})
+    assert v.status_code == 200 and v.json() == {"up": 1, "down": 0, "score": 1, "my_vote": 1}
+
+    by_new = user_client.get(f"{API}/reviews/{rid}/comments").json()
+    assert [c["id"] for c in by_new] == [c1, c2]  # 기본은 작성순
+
+    by_top = user_client.get(f"{API}/reviews/{rid}/comments?sort=top").json()
+    assert [c["id"] for c in by_top] == [c2, c1]  # 추천순이면 c2 가 먼저
+
+    # 취소도 된다
+    cancel = user_client.post(f"{API}/reviews/comments/{c2}/vote", json={"value": 0})
+    assert cancel.json() == {"up": 0, "down": 0, "score": 0, "my_vote": 0}
+
+
+def test_review_comment_vote_requires_login(client, world):
+    rid = world["reviews"][0].id
+    cid_resp = client.post(f"{API}/reviews/{rid}/comments", json={"body": "익명시도"})
+    assert cid_resp.status_code == 401  # 애초에 댓글도 로그인 필요
+    assert client.post(f"{API}/reviews/comments/1/vote", json={"value": 1}).status_code == 401
 
 
 def test_review_vote_requires_login(client, world):
@@ -243,6 +270,24 @@ def test_post_comment_and_vote(user_client, world):
     assert v["score"] == 1
     detail = user_client.get(f"{API}/posts/{pid}").json()
     assert detail["score"] == 1 and detail["comment_count"] == 1
+
+
+def test_post_comment_vote_and_sort_top(user_client, world):
+    pid = user_client.post(f"{API}/posts", json=post_payload()).json()["id"]
+    c1 = user_client.post(f"{API}/posts/{pid}/comments", json={"body": "댓글1"}).json()["id"]
+    c2 = user_client.post(f"{API}/posts/{pid}/comments", json={"body": "댓글2"}).json()["id"]
+    user_client.post(f"{API}/post-comments/{c2}/vote", json={"value": 1})
+
+    by_top = user_client.get(f"{API}/posts/{pid}/comments?sort=top").json()
+    assert [c["id"] for c in by_top] == [c2, c1]
+
+
+def test_post_comment_delete_shows_removed_at(user_client, world):
+    pid = user_client.post(f"{API}/posts", json=post_payload()).json()["id"]
+    cid = user_client.post(f"{API}/posts/{pid}/comments", json={"body": "지울 댓글"}).json()["id"]
+    assert user_client.delete(f"{API}/post-comments/{cid}").status_code == 204
+    tree = user_client.get(f"{API}/posts/{pid}/comments").json()
+    assert tree[0]["is_removed"] is True and tree[0]["removed_at"] is not None
 
 
 def test_popular_posts_excludes_old_and_removed(user_client, world):
