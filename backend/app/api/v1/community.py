@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
-from app.core.rate_limit import comment_limiter, post_limiter, vote_limiter
+from app.core.rate_limit import comment_limiter, post_limiter, view_limiter, vote_limiter
 from app.models import (
     Post, PostCategory, PostComment, PostCommentVote, PostScrap, PostVote, Region, RegionFollow, Station, User,
     UserRole,
@@ -35,7 +35,7 @@ def list_my_regions(db: Session = Depends(get_db), user: User = Depends(get_curr
     return [RegionFollowOut(region_id=r.id, region_name=r.name, region_full_name=r.full_name) for r in rows]
 
 
-@router.post("/me/regions/{region_id}", response_model=RegionFollowOut, status_code=status.HTTP_201_CREATED)
+@router.post("/me/regions/{region_id}", response_model=RegionFollowOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(vote_limiter)])
 def follow_region(region_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     region = db.get(Region, region_id)
     if not region:
@@ -49,7 +49,7 @@ def follow_region(region_id: str, db: Session = Depends(get_db), user: User = De
     return RegionFollowOut(region_id=region.id, region_name=region.name, region_full_name=region.full_name)
 
 
-@router.delete("/me/regions/{region_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/me/regions/{region_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(vote_limiter)])
 def unfollow_region(region_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     follow = db.scalar(select(RegionFollow).where(RegionFollow.user_id == user.id, RegionFollow.region_id == region_id))
     if follow:
@@ -176,7 +176,7 @@ def get_post(post_id: int, db: Session = Depends(get_db), user: User | None = De
     return _post_out(db, p, votes[post_id], counts[post_id], nickname, uid, post_id in scrapped)
 
 
-@router.post("/posts/{post_id}/view", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/posts/{post_id}/view", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(view_limiter)])
 def increment_post_view(post_id: int, db: Session = Depends(get_db)):
     """조회수 증가 전용 — GET /posts/{id} 와 분리한 이유는, 그 글 상세 페이지 하나를 보는 동안에도
     (메타데이터 생성 + 서버 렌더 + 클라이언트 쪽 로그인 상태 보정) 여러 번 호출되기 때문이다.
@@ -325,7 +325,7 @@ def scrap_post(post_id: int, db: Session = Depends(get_db), user: User = Depends
     return ScrapStatus(scrapped=True)
 
 
-@router.delete("/posts/{post_id}/scrap", response_model=ScrapStatus)
+@router.delete("/posts/{post_id}/scrap", response_model=ScrapStatus, dependencies=[Depends(vote_limiter)])
 def unscrap_post(post_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     existing = db.scalar(select(PostScrap).where(PostScrap.post_id == post_id, PostScrap.user_id == user.id))
     if existing:

@@ -245,6 +245,14 @@ def test_post_view_unknown_post_is_silently_ignored(client):
     assert client.post(f"{API}/posts/9999/view").status_code == 204  # 조용히 무시(에러 아님)
 
 
+def test_post_view_is_rate_limited(user_client, client, world):
+    """로그인 없이도 호출되는 엔드포인트라, IP당 호출 횟수를 제한해 조회수 어뷰징을 막는다."""
+    pid = user_client.post(f"{API}/posts", json=post_payload()).json()["id"]
+    for _ in range(120):
+        assert client.post(f"{API}/posts/{pid}/view").status_code == 204
+    assert client.post(f"{API}/posts/{pid}/view").status_code == 429
+
+
 def test_post_delete_author_or_admin_only(db, client, admin_client, world):
     make_user(db, "a@example.com")
     make_user(db, "b@example.com")

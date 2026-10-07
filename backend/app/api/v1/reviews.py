@@ -123,7 +123,7 @@ def scrap_review(review_id: int, db: Session = Depends(get_db), user: User = Dep
     return ScrapStatus(scrapped=True)
 
 
-@router.delete("/{review_id}/scrap", response_model=ScrapStatus)
+@router.delete("/{review_id}/scrap", response_model=ScrapStatus, dependencies=[Depends(vote_limiter)])
 def unscrap_review(review_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     existing = db.scalar(select(ReviewScrap).where(ReviewScrap.review_id == review_id, ReviewScrap.user_id == user.id))
     if existing:
@@ -290,13 +290,17 @@ def create_reply(review_id: int, body: ReplyCreate, db: Session = Depends(get_db
     return reply_out(reply, user, user.id)
 
 
-@router.patch("/{review_id}/reply", response_model=ReplyOut)
+@router.patch("/{review_id}/reply", response_model=ReplyOut, dependencies=[Depends(reply_limiter)])
 def update_reply(review_id: int, body: ReplyCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    review = _published_or_404(db, review_id)
     reply = db.scalar(select(ReviewReply).where(ReviewReply.review_id == review_id))
     if not reply:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "해명을 찾을 수 없습니다.")
     if reply.author_id != user.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "본인이 작성한 해명만 수정할 수 있습니다.")
+    # 작성 당시엔 인증돼 있었어도 그 사이 인증이 취소·만료됐을 수 있으니 수정 시점에도 다시 확인한다
+    # (관리자가 인증을 취소하면 해당 해명은 즉시 삭제되므로 보통은 여기 닿지 않지만, 방어적으로 둔다).
+    _require_officer(user, review.station_id)
     banned = find_banned(body.body)
     if banned:
         raise HTTPException(422, {"message": "게시할 수 없는 표현이 포함되어 있습니다.", "banned": banned})
@@ -305,7 +309,7 @@ def update_reply(review_id: int, body: ReplyCreate, db: Session = Depends(get_db
     return reply_out(reply, user, user.id)
 
 
-@router.delete("/{review_id}/reply", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{review_id}/reply", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(reply_limiter)])
 def delete_reply(review_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """작성자 본인 또는 관리자만 삭제 가능. 하드 삭제라(모델 docstring 참고) 삭제 후 다른
     인증된 경찰관이 새로 해명을 달 수 있다."""

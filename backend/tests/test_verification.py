@@ -177,3 +177,44 @@ def test_reply_delete_then_another_officer_can_post(db, client, world):
 
     officer2 = _verified_officer_client(db, client, world, email="officer2@example.com")
     assert officer2.post(f"{API}/reviews/{rid}/reply", json={"body": "새 해명"}).status_code == 201
+
+
+def test_update_reply_requires_still_verified(db, client, world):
+    """작성 시점엔 인증돼 있었더라도, 그 사이 인증이 풀렸다면(전출 등) 수정은 다시 막혀야 한다."""
+    from app.models import User
+
+    officer = _verified_officer_client(db, client, world)
+    rid = world["reviews"][0].id
+    officer.post(f"{API}/reviews/{rid}/reply", json={"body": "원문"})
+
+    u = db.query(User).filter(User.email == "officer@example.com").first()
+    u.officer_station_id = None  # revoke 엔드포인트를 거치지 않고 인증 해제 상태만 흉내
+    db.commit()
+
+    r = officer.patch(f"{API}/reviews/{rid}/reply", json={"body": "수정 시도"})
+    assert r.status_code == 403
+
+
+def test_revoke_deletes_existing_reply(db, client, world):
+    """관리자가 인증을 취소하면, 그 경찰서 소속으로 이미 올린 해명도 함께 지워져야 한다
+    (취소된 뒤에도 "검증된 경찰관의 공식 해명"으로 계속 노출·수정되면 안 되므로)."""
+    from app.models import OfficerVerification, ReviewReply, User
+
+    officer = _verified_officer_client(db, client, world)
+    rid = world["reviews"][0].id
+    officer.post(f"{API}/reviews/{rid}/reply", json={"body": "원문"})
+    officer.post(f"{API}/auth/logout")
+
+    u = db.query(User).filter(User.email == "officer@example.com").first()
+    vid = db.query(OfficerVerification).filter(OfficerVerification.user_id == u.id).first().id
+
+    admin_c = login(client, "verify_admin@example.com")
+    r = admin_c.post(f"{API}/admin/officer-verifications/{vid}/revoke", json={"reason": "전출로 인한 인증 해제"})
+    assert r.status_code == 200
+
+    db.expire_all()
+    assert db.query(ReviewReply).filter(ReviewReply.review_id == rid).first() is None
+
+    pub = client.get(f"{API}/stations/{world['station'].id}").json()
+    hit = next(x for x in pub["reviews"]["items"] if x["id"] == rid)
+    assert hit["reply"] is None

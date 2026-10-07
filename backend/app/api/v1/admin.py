@@ -13,7 +13,7 @@ from app.core.database import get_db
 from app.core.deps import require_admin
 from app.models import (
     AuditLog, Department, Officer, OfficerAssignment, OfficerVerification, Region, Report, ReportStatus, Review,
-    ReviewStatus, Station, TakedownRequest, TakedownStatus, User, VerificationStatus,
+    ReviewReply, ReviewStatus, Station, TakedownRequest, TakedownStatus, User, VerificationStatus,
 )
 from app.models.officer import SOURCE_LABELS
 from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
@@ -183,14 +183,23 @@ def reject_verification(verification_id: int, body: RejectIn, admin: User = Depe
 
 @router.post("/officer-verifications/{verification_id}/revoke", response_model=AdminVerifyOut)
 def revoke_verification(verification_id: int, body: RejectIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    """이미 승인된 인증을 취소한다(전출·허위 신청 발각 등). 해당 계정의 해명 작성 권한이 즉시 사라진다
-    (기존에 작성해 둔 해명 자체는 남아 있다 — 필요하면 별도로 삭제)."""
+    """이미 승인된 인증을 취소한다(전출·허위 신청 발각 등). 해당 계정의 해명 작성 권한이 즉시 사라지고,
+    그 경찰서 소속으로 이미 써 둔 해명도 함께 삭제한다 — "검증된 경찰관의 공식 해명"이라는 신뢰가 깨진
+    뒤에도 글만 남아 수정 가능한 상태로 방치되면 안 되기 때문이다(하드 삭제라 다른 인증된 경찰관이
+    새로 해명을 달 수 있는 건 기존과 동일)."""
     v = db.get(OfficerVerification, verification_id)
     if not v or v.status != VerificationStatus.approved:
         raise HTTPException(404, "승인된 인증을 찾을 수 없습니다.")
     v.status, v.reviewed_by, v.reviewed_at, v.reject_reason = VerificationStatus.rejected, admin.id, takedown_svc.utcnow(), body.reason
     user = db.get(User, v.user_id)
     user.officer_station_id = user.officer_name = user.officer_rank = user.officer_department = user.officer_verified_at = None
+    stale_replies = db.scalars(
+        select(ReviewReply).join(Review, ReviewReply.review_id == Review.id)
+        .where(ReviewReply.author_id == v.user_id, Review.station_id == v.station_id)
+    ).all()
+    for reply in stale_replies:
+        log_action(db, admin.id, "reply.remove", "review_reply", reply.id, {"reason": "officer_verification_revoked"})
+        db.delete(reply)
     log_action(db, admin.id, "officer_verification_revoked", "officer_verification", v.id, {"reason": body.reason, "user_id": v.user_id})
     db.commit()
     return _admin_verify(v)
