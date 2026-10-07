@@ -412,6 +412,9 @@ export function getMyReviewScraps(opts?: { page?: number; size?: number }) {
 
 /* ===================== 게시판 ===================== */
 
+export type PostCategory = 'info' | 'question' | 'chat' | 'other';
+export type PopularPeriod = 'today' | 'week' | 'month' | 'all';
+
 export interface PostOut {
   id: number;
   author_nickname: string;
@@ -420,8 +423,11 @@ export interface PostOut {
   region_name: string;
   station_id: number | null;
   station_name: string | null;
+  category: PostCategory;
+  category_label: string;
   title: string;
   body: string;
+  view_count: number;
   comment_count: number;
   score: number;
   my_vote: number;
@@ -433,6 +439,7 @@ export interface PostOut {
 export interface PostCreatePayload {
   region_id: string;
   station_id?: number | null;
+  category: PostCategory;
   title: string;
   body: string;
 }
@@ -442,10 +449,15 @@ export interface PostReceipt {
   message: string;
 }
 
-export function listPosts(opts?: { regionId?: string; stationId?: number; sort?: 'new' | 'top'; page?: number; size?: number }) {
+export function listPosts(opts?: {
+  regionId?: string; stationId?: number; category?: PostCategory; q?: string; sort?: 'new' | 'top';
+  page?: number; size?: number;
+}) {
   const qs = new URLSearchParams();
   if (opts?.regionId) qs.set('region_id', opts.regionId);
   if (opts?.stationId) qs.set('station_id', String(opts.stationId));
+  if (opts?.category) qs.set('category', opts.category);
+  if (opts?.q) qs.set('q', opts.q);
   if (opts?.sort) qs.set('sort', opts.sort);
   if (opts?.page) qs.set('page', String(opts.page));
   if (opts?.size) qs.set('size', String(opts.size));
@@ -453,10 +465,10 @@ export function listPosts(opts?: { regionId?: string; stationId?: number; sort?:
   return apiFetch<Page<PostOut>>(`/posts${suffix}`);
 }
 
-export function getPopularPosts(opts?: { regionId?: string; days?: number; limit?: number }) {
+export function getPopularPosts(opts?: { regionId?: string; period?: PopularPeriod; limit?: number }) {
   const qs = new URLSearchParams();
   if (opts?.regionId) qs.set('region_id', opts.regionId);
-  if (opts?.days) qs.set('days', String(opts.days));
+  if (opts?.period) qs.set('period', opts.period);
   if (opts?.limit) qs.set('limit', String(opts.limit));
   const suffix = qs.toString() ? `?${qs}` : '';
   return apiFetch<PostOut[]>(`/posts/popular${suffix}`, { revalidateSeconds: 60 });
@@ -465,6 +477,7 @@ export function getPopularPosts(opts?: { regionId?: string; days?: number; limit
 export const createPost = (payload: PostCreatePayload) => apiFetch<PostReceipt>('/posts', { method: 'POST', body: JSON.stringify(payload) });
 export const getPost = (id: number) => apiFetch<PostOut>(`/posts/${id}`);
 export const deletePost = (id: number) => apiFetch<void>(`/posts/${id}`, { method: 'DELETE' });
+export const incrementPostView = (id: number) => apiFetch<void>(`/posts/${id}/view`, { method: 'POST' });
 export const votePost = (postId: number, value: 1 | -1 | 0) => vote(`/posts/${postId}/vote`, value);
 export const getPostComments = (postId: number) => apiFetch<CommentOut[]>(`/posts/${postId}/comments`);
 export const createPostComment = (postId: number, body: string, parentId?: number) =>

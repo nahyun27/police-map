@@ -97,17 +97,18 @@ export default async function Home() {
         <div className="sec-head">
           <div>
             <h2 style={{ marginBottom: 4 }}><Flame size={18} style={{ verticalAlign: -3, marginRight: 4, color: 'var(--star)' }} />인기 게시글</h2>
-            <p className="sub">최근 2주간 추천을 많이 받은 커뮤니티 글입니다.</p>
+            <p className="sub">최근 일주일간 추천을 많이 받은 커뮤니티 글입니다.</p>
           </div>
           <Link href="/board" className="btn line sm">게시판 전체보기</Link>
         </div>
         {popularPosts.length ? (
           <TableWrap>
             <table className="list">
-              <thead><tr><th>지역</th><th>제목</th><th>추천</th><th>댓글</th></tr></thead>
+              <thead><tr><th>글머리</th><th>지역</th><th>제목</th><th>추천</th><th>댓글</th></tr></thead>
               <tbody>
                 {popularPosts.map((p) => (
                   <tr key={p.id}>
+                    <td className="sub">{p.category_label}</td>
                     <td className="sub">{p.region_name}</td>
                     <td><Link href={`/board/${p.id}`}>{p.title}</Link></td>
                     <td className="sub">{p.score}</td>

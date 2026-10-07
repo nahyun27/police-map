@@ -178,6 +178,46 @@ def test_post_list_filters_and_sort(user_client, world):
     assert by_top["items"][0]["id"] == p2  # 추천 많은 글이 먼저
 
 
+def test_post_default_category_is_chat(user_client, world):
+    pid = user_client.post(f"{API}/posts", json=post_payload()).json()["id"]
+    detail = user_client.get(f"{API}/posts/{pid}").json()
+    assert detail["category"] == "chat" and detail["category_label"] == "잡담"
+
+
+def test_post_category_filter(user_client, world):
+    info_id = user_client.post(f"{API}/posts", json=post_payload(category="info", title="정보성 글")).json()["id"]
+    user_client.post(f"{API}/posts", json=post_payload(category="question", title="질문성 글"))
+
+    only_info = user_client.get(f"{API}/posts?region_id=seoul&category=info").json()
+    assert [x["id"] for x in only_info["items"]] == [info_id]
+
+
+def test_post_search_title_and_body(user_client, world):
+    pid = user_client.post(f"{API}/posts", json=post_payload(title="순찰 빈도 질문", body="새벽 시간대 순찰이 궁금해요")).json()["id"]
+    user_client.post(f"{API}/posts", json=post_payload(title="전혀 다른 제목", body="전혀 다른 내용"))
+
+    by_title = user_client.get(f"{API}/posts?region_id=seoul&q=순찰").json()
+    assert any(x["id"] == pid for x in by_title["items"])
+    by_body = user_client.get(f"{API}/posts?region_id=seoul&q=새벽").json()
+    assert any(x["id"] == pid for x in by_body["items"])
+    no_match = user_client.get(f"{API}/posts?region_id=seoul&q=이런내용없음").json()
+    assert no_match["items"] == []
+
+
+def test_post_view_count_increments_only_via_dedicated_endpoint(user_client, client, world):
+    pid = user_client.post(f"{API}/posts", json=post_payload()).json()["id"]
+    assert client.get(f"{API}/posts/{pid}").json()["view_count"] == 0  # GET 상세 조회만으로는 안 늘어남
+
+    assert client.post(f"{API}/posts/{pid}/view").status_code == 204
+    assert client.get(f"{API}/posts/{pid}").json()["view_count"] == 1
+    client.post(f"{API}/posts/{pid}/view")
+    assert client.get(f"{API}/posts/{pid}").json()["view_count"] == 2
+
+
+def test_post_view_unknown_post_is_silently_ignored(client):
+    assert client.post(f"{API}/posts/9999/view").status_code == 204  # 조용히 무시(에러 아님)
+
+
 def test_post_delete_author_or_admin_only(db, client, admin_client, world):
     make_user(db, "a@example.com")
     make_user(db, "b@example.com")
@@ -214,3 +254,25 @@ def test_popular_posts_excludes_old_and_removed(user_client, world):
     user_client.delete(f"{API}/posts/{pid}")
     popular_after = user_client.get(f"{API}/posts/popular?region_id=seoul").json()
     assert all(p["id"] != pid for p in popular_after)
+
+
+def test_popular_posts_period_filter(db, user_client, world):
+    from datetime import datetime, timedelta, timezone
+    from app.models import Post
+
+    pid = user_client.post(f"{API}/posts", json=post_payload(title="오래된 인기글")).json()["id"]
+    user_client.post(f"{API}/posts/{pid}/vote", json={"value": 1})
+    post = db.get(Post, pid)
+    post.created_at = datetime.now(timezone.utc) - timedelta(days=10)
+    db.commit()
+
+    today = user_client.get(f"{API}/posts/popular?region_id=seoul&period=today").json()
+    assert all(p["id"] != pid for p in today)
+    all_time = user_client.get(f"{API}/posts/popular?region_id=seoul&period=all").json()
+    assert any(p["id"] == pid for p in all_time)
+
+    # 게시판 목록의 sort=top 에도 같은 기간 필터가 적용된다
+    list_today = user_client.get(f"{API}/posts?region_id=seoul&sort=top&period=today").json()
+    assert all(x["id"] != pid for x in list_today["items"])
+    list_all = user_client.get(f"{API}/posts?region_id=seoul&sort=top&period=all").json()
+    assert any(x["id"] == pid for x in list_all["items"])

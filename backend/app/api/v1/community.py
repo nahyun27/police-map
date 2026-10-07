@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -9,7 +9,8 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
 from app.core.rate_limit import comment_limiter, post_limiter, vote_limiter
-from app.models import Post, PostComment, PostScrap, PostVote, Region, RegionFollow, Station, User, UserRole
+from app.models import Post, PostCategory, PostComment, PostScrap, PostVote, Region, RegionFollow, Station, User, UserRole
+from app.models.community import POST_CATEGORY_LABELS
 from app.schemas.community import (
     CommentCreate, CommentOut, PostCreate, PostOut, PostReceipt, RegionFollowOut, ScrapStatus, VoteIn, VoteSummary,
 )
@@ -61,8 +62,9 @@ def _post_out(
         id=p.id, author_nickname=author_nickname, is_mine=(user_id is not None and p.author_id == user_id),
         region_id=p.region_id, region_name=p.region.name, station_id=p.station_id,
         station_name=p.station.name if p.station else None,
-        title=p.title, body=p.body, comment_count=comment_count, score=vote.score, my_vote=vote.my_vote,
-        is_scrapped=is_scrapped,
+        category=p.category.value, category_label=POST_CATEGORY_LABELS[p.category],
+        title=p.title, body=p.body, view_count=p.view_count, comment_count=comment_count, score=vote.score,
+        my_vote=vote.my_vote, is_scrapped=is_scrapped,
         created_at=p.created_at.isoformat() if p.created_at else None,
         updated_at=p.updated_at.isoformat() if p.updated_at else None,
     )
@@ -75,9 +77,15 @@ def _score_subq():
     )
 
 
+_PERIOD_DAYS = {"today": 1, "week": 7, "month": 30}
+
+
 @router.get("/posts", response_model=Page[PostOut])
 def list_posts(
-    region_id: str | None = None, station_id: int | None = None, sort: str = Query("new", pattern="^(new|top)$"),
+    region_id: str | None = None, station_id: int | None = None, category: PostCategory | None = None,
+    q: str | None = Query(None, max_length=50, description="제목·본문 검색어"),
+    sort: str = Query("new", pattern="^(new|top)$"),
+    period: str = Query("all", pattern="^(today|week|month|all)$", description="sort=top 일 때만 적용되는 베스트 기간"),
     page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=50),
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
 ):
@@ -86,6 +94,13 @@ def list_posts(
         base = base.where(Post.region_id == region_id)
     if station_id:
         base = base.where(Post.station_id == station_id)
+    if category:
+        base = base.where(Post.category == category)
+    if q := (q.strip() if q else None):
+        base = base.where((Post.title.contains(q, autoescape=True)) | (Post.body.contains(q, autoescape=True)))
+    if sort == "top" and period != "all":
+        since = datetime.now(timezone.utc) - timedelta(days=_PERIOD_DAYS[period])
+        base = base.where(Post.created_at >= since)
     total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
     order = (_score_subq().desc(), Post.created_at.desc(), Post.id.desc()) if sort == "top" else (Post.created_at.desc(), Post.id.desc())
     posts = db.scalars(base.order_by(*order).offset((page - 1) * size).limit(size)).all()
@@ -102,12 +117,15 @@ def list_posts(
 
 @router.get("/posts/popular", response_model=list[PostOut])
 def popular_posts(
-    region_id: str | None = None, days: int = Query(14, ge=1, le=90), limit: int = Query(5, ge=1, le=20),
+    region_id: str | None = None, period: str = Query("week", pattern="^(today|week|month|all)$"),
+    limit: int = Query(5, ge=1, le=20),
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
 ):
-    """최근 N일 내 글 중 추천 점수 상위 — 홈 "인기글" 위젯용."""
-    since = datetime.now(timezone.utc) - timedelta(days=days)
-    base = select(Post).where(Post.is_removed.is_(False), Post.created_at >= since)
+    """기간별(오늘/주간/월간/전체) 추천 점수 상위 — 홈 "인기글" 위젯 + 게시판 베스트용."""
+    base = select(Post).where(Post.is_removed.is_(False))
+    if period != "all":
+        since = datetime.now(timezone.utc) - timedelta(days=_PERIOD_DAYS[period])
+        base = base.where(Post.created_at >= since)
     if region_id:
         base = base.where(Post.region_id == region_id)
     posts = db.scalars(base.order_by(_score_subq().desc(), Post.created_at.desc(), Post.id.desc()).limit(limit)).all()
@@ -132,7 +150,10 @@ def create_post(body: PostCreate, db: Session = Depends(get_db), user: User = De
     banned = find_banned(f"{body.title}\n{body.body}")
     if banned:
         raise HTTPException(422, {"message": "게시할 수 없는 표현이 포함되어 있습니다.", "banned": banned})
-    post = Post(author_id=user.id, region_id=body.region_id, station_id=body.station_id, title=body.title, body=body.body)
+    post = Post(
+        author_id=user.id, region_id=body.region_id, station_id=body.station_id, category=body.category,
+        title=body.title, body=body.body,
+    )
     db.add(post)
     db.commit()
     return PostReceipt(id=post.id, message="게시되었습니다.")
@@ -149,6 +170,16 @@ def get_post(post_id: int, db: Session = Depends(get_db), user: User | None = De
     scrapped = scrapped_set(db, PostScrap, PostScrap.post_id, [post_id], uid)
     nickname = db.scalar(select(User.nickname).where(User.id == p.author_id))
     return _post_out(db, p, votes[post_id], counts[post_id], nickname, uid, post_id in scrapped)
+
+
+@router.post("/posts/{post_id}/view", status_code=status.HTTP_204_NO_CONTENT)
+def increment_post_view(post_id: int, db: Session = Depends(get_db)):
+    """조회수 증가 전용 — GET /posts/{id} 와 분리한 이유는, 그 글 상세 페이지 하나를 보는 동안에도
+    (메타데이터 생성 + 서버 렌더 + 클라이언트 쪽 로그인 상태 보정) 여러 번 호출되기 때문이다.
+    이 엔드포인트는 프론트에서 실제 화면이 한 번 그려질 때 딱 한 번만 호출한다."""
+    if db.scalar(select(Post.id).where(Post.id == post_id, Post.is_removed.is_(False))):
+        db.execute(update(Post).where(Post.id == post_id).values(view_count=Post.view_count + 1))
+        db.commit()
 
 
 @router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)

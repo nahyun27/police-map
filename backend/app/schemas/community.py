@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field, model_validator
 
+from app.models import PostCategory
+
 
 class RegionFollowOut(BaseModel):
     region_id: str
@@ -53,6 +55,7 @@ CommentOut.model_rebuild()
 class PostCreate(BaseModel):
     region_id: str
     station_id: int | None = None
+    category: PostCategory = PostCategory.chat
     title: str = Field(min_length=2, max_length=200)
     body: str = Field(min_length=1, max_length=5000)
 
@@ -75,8 +78,11 @@ class PostOut(BaseModel):
     region_name: str
     station_id: int | None
     station_name: str | None
+    category: str
+    category_label: str
     title: str
     body: str
+    view_count: int
     comment_count: int
     score: int
     my_vote: int

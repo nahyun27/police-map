@@ -1,10 +1,26 @@
+import enum
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, SmallInteger, String, Text, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, SmallInteger, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.models.geo import Region, Station
+
+
+class PostCategory(str, enum.Enum):
+    info = "info"
+    question = "question"
+    chat = "chat"
+    other = "other"
+
+
+POST_CATEGORY_LABELS = {
+    PostCategory.info: "정보공유",
+    PostCategory.question: "질문",
+    PostCategory.chat: "잡담",
+    PostCategory.other: "기타",
+}
 
 # 추천/비추천 값은 +1/-1 둘 중 하나만 허용한다(0은 "투표 취소"를 뜻하며 행 자체를 지운다).
 # CheckConstraint 객체는 테이블마다 새로 만든다 — 하나를 여러 __table_args__ 에 공유하면
@@ -67,8 +83,10 @@ class Post(Base):
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     region_id: Mapped[str] = mapped_column(ForeignKey("regions.id"), index=True)
     station_id: Mapped[int | None] = mapped_column(ForeignKey("stations.id"), index=True)
+    category: Mapped[PostCategory] = mapped_column(Enum(PostCategory, native_enum=False, length=20), default=PostCategory.chat, index=True)
     title: Mapped[str] = mapped_column(String(200))
     body: Mapped[str] = mapped_column(Text)
+    view_count: Mapped[int] = mapped_column(default=0)
     is_removed: Mapped[bool] = mapped_column(default=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

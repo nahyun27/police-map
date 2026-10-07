@@ -6,8 +6,12 @@ import { Send } from 'lucide-react';
 import { Card, Crumb, PageHead } from '@/components/ui';
 import {
   ApiError, createPost, getMe, getRegion, getRegions,
-  type RegionDetail, type RegionOut, type StationItem,
+  type PostCategory, type RegionDetail, type RegionOut, type StationItem,
 } from '@/lib/api';
+
+const CATEGORY_OPTIONS: [PostCategory, string][] = [
+  ['info', '정보공유'], ['question', '질문'], ['chat', '잡담'], ['other', '기타'],
+];
 
 function errorMessage(e: unknown): string {
   if (e instanceof ApiError) {
@@ -26,6 +30,7 @@ export default function BoardWritePage() {
   const [regionId, setRegionId] = useState('');
   const [stations, setStations] = useState<StationItem[]>([]);
   const [stationId, setStationId] = useState('');
+  const [category, setCategory] = useState<PostCategory>('chat');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -54,7 +59,8 @@ export default function BoardWritePage() {
     setSubmitting(true);
     try {
       const r = await createPost({
-        region_id: regionId, station_id: stationId ? Number(stationId) : null, title: title.trim(), body: body.trim(),
+        region_id: regionId, station_id: stationId ? Number(stationId) : null, category,
+        title: title.trim(), body: body.trim(),
       });
       router.replace(`/board/${r.id}`);
     } catch (e) {
@@ -88,6 +94,12 @@ export default function BoardWritePage() {
               </select>
             </div>
           )}
+          <div className="field">
+            <label>글머리</label>
+            <select className="sel" style={{ width: '100%' }} value={category} onChange={(e) => setCategory(e.target.value as PostCategory)}>
+              {CATEGORY_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
           <div className="field">
             <label>제목</label>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} minLength={2} maxLength={200} required />
