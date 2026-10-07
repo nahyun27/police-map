@@ -4,9 +4,49 @@ API = "/api/v1"
 
 
 def test_no_login_required(client, world):
-    """2026-09 의뢰인 결정: 기본은 익명 비로그인. 회원가입은 향후 과금 단계에서만."""
+    """2026-09 의뢰인 결정: 기본은 익명 비로그인. 2026-10 결정으로 로그인 회원가입도 병행하지만,
+    비로그인 제출은 그대로 계속 지원한다."""
     r = client.post(f"{API}/reviews", json=review_payload(world["station"].id))
     assert r.status_code == 201
+
+
+def test_logged_in_submission_appears_in_mine(user_client, world):
+    r = user_client.post(f"{API}/reviews", json=review_payload(world["station"].id))
+    assert r.status_code == 201
+    review_id = r.json()["id"]
+
+    mine = user_client.get(f"{API}/reviews/mine")
+    assert mine.status_code == 200
+    items = mine.json()["items"]
+    assert any(x["id"] == review_id for x in items)
+    hit = next(x for x in items if x["id"] == review_id)
+    assert hit["status"] == "pending"
+    assert "case_number" not in hit  # 본인 것이어도 공개 스키마 원칙상 사건번호는 안 돌려준다
+
+
+def test_anonymous_submission_not_in_anyones_mine(user_client, client, world):
+    r = client.post(f"{API}/reviews", json=review_payload(world["station"].id))  # 비로그인 제출
+    assert r.status_code == 201
+    mine = user_client.get(f"{API}/reviews/mine").json()
+    assert all(x["body"] != review_payload(world["station"].id)["body"] for x in mine["items"])
+    assert mine["total"] == 0
+
+
+def test_mine_requires_login(client, world):
+    assert client.get(f"{API}/reviews/mine").status_code == 401
+
+
+def test_mine_only_shows_own_reviews(db, client, world):
+    from conftest import login, make_user
+
+    make_user(db, "a@example.com")
+    make_user(db, "b@example.com")
+    a = login(client, "a@example.com")
+    a.post(f"{API}/reviews", json=review_payload(world["station"].id))
+    a.post(f"{API}/auth/logout")
+
+    b = login(client, "b@example.com")
+    assert b.get(f"{API}/reviews/mine").json()["total"] == 0
 
 
 def test_submit_is_pending_and_not_public(client, world):

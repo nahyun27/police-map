@@ -36,3 +36,22 @@ class ReviewReceipt(BaseModel):
     id: int
     status: str
     message: str
+
+
+class MyReviewOut(BaseModel):
+    """로그인한 본인이 작성한 평가 — 검수 상태·반려 사유까지 본인에게만 보여준다.
+    사건번호는 공개 응답에 절대 넣지 않는다는 원칙을 여기도 그대로 지킨다(본인 확인용으로도 굳이 안 보여줌)."""
+    id: int
+    station_id: int
+    station_name: str
+    role: str
+    role_label: str
+    case_type: str
+    case_type_label: str
+    ratings: dict[str, int | None]
+    overall: float | None
+    body: str
+    status: str
+    reject_reason: str | None
+    created_at: str | None
+    published_at: str | None

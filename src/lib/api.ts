@@ -232,7 +232,7 @@ export interface TakedownStatusOut {
 
 export const getTakedownStatus = (code: string) => apiFetch<TakedownStatusOut>(`/takedown-requests/${encodeURIComponent(code)}`);
 
-/* ===================== 인증 (관리자 전용) ===================== */
+/* ===================== 인증 (일반 회원 + 관리자 공용) ===================== */
 
 export interface UserOut {
   id: number;
@@ -242,10 +242,37 @@ export interface UserOut {
   identity_verified: boolean;
 }
 
+export const register = (email: string, password: string, nickname: string) =>
+  apiFetch<UserOut>('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, nickname }) });
 export const login = (email: string, password: string) =>
   apiFetch<UserOut>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
 export const logout = () => apiFetch<void>('/auth/logout', { method: 'POST' });
 export const getMe = () => apiFetch<UserOut>('/auth/me');
+
+export interface MyReviewOut {
+  id: number;
+  station_id: number;
+  station_name: string;
+  role: string;
+  role_label: string;
+  case_type: string;
+  case_type_label: string;
+  ratings: Record<string, number | null>;
+  overall: number | null;
+  body: string;
+  status: 'pending' | 'published' | 'rejected' | 'blinded' | 'removed';
+  reject_reason: string | null;
+  created_at: string | null;
+  published_at: string | null;
+}
+
+export function getMyReviews(opts?: { page?: number; size?: number }) {
+  const qs = new URLSearchParams();
+  if (opts?.page) qs.set('page', String(opts.page));
+  if (opts?.size) qs.set('size', String(opts.size));
+  const suffix = qs.toString() ? `?${qs}` : '';
+  return apiFetch<Page<MyReviewOut>>(`/reviews/mine${suffix}`);
+}
 
 /* ===================== 관리자 ===================== */
 

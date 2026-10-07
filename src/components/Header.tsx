@@ -3,7 +3,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { MapPinned, Menu, Search, X } from 'lucide-react';
+import { MapPinned, Menu, Search, User, X } from 'lucide-react';
+import { getMe, type UserOut } from '@/lib/api';
 
 const NAV = [
   { to: '/', label: '지도 탐색', end: true },
@@ -20,9 +21,14 @@ export default function Header() {
   const pathname = usePathname();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<UserOut | null | undefined>(undefined); // undefined=확인 중
 
   useEffect(() => {
     setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    getMe().then(setUser).catch(() => setUser(null));
   }, [pathname]);
 
   const onSearch = (e: FormEvent) => {
@@ -55,6 +61,16 @@ export default function Header() {
             <Search size={16} />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="경찰서·수사관 검색" aria-label="검색" />
           </form>
+          <div className="hauth">
+            {user === undefined ? null : user ? (
+              <Link href="/mypage" className="hauth-user"><User size={15} />{user.nickname}님</Link>
+            ) : (
+              <>
+                <Link href="/login">로그인</Link>
+                <Link href="/signup" className="btn sm">회원가입</Link>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </header>
