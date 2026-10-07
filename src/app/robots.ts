@@ -4,7 +4,10 @@ import { ALLOW_INDEXING, SITE_URL } from '@/lib/seo';
 export default function robots(): MetadataRoute.Robots {
   if (!ALLOW_INDEXING) return { rules: { userAgent: '*', disallow: '/' } };
   return {
-    rules: { userAgent: '*', allow: '/', disallow: ['/search', '/station/*/write', '/remedy/', '/report/', '/takedown', '/admin', '/mypage'] },
+    rules: {
+      userAgent: '*', allow: '/',
+      disallow: ['/search', '/station/*/write', '/board/write', '/remedy/', '/report/', '/takedown', '/admin', '/mypage'],
+    },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

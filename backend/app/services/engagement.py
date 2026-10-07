@@ -1,0 +1,55 @@
+"""평가(리뷰)·게시판 글에 공통으로 쓰는 추천/비추천 집계 + 댓글 트리 변환.
+
+ReviewVote/PostVote, ReviewComment/PostComment 는 대상 FK 이름만 다를 뿐 구조가 완전히
+같아서(값/작성자/부모-자식), 집계·트리 변환 로직을 여기서 공유한다."""
+from sqlalchemy import case, func, select
+from sqlalchemy.orm import InstrumentedAttribute, Session
+
+from app.schemas.community import CommentOut, VoteSummary
+
+REMOVED_BODY = "삭제된 댓글입니다."
+
+
+def vote_summaries(
+    db: Session, vote_model, fk_col: InstrumentedAttribute, target_ids: list[int], user_id: int | None,
+) -> dict[int, VoteSummary]:
+    result = {tid: VoteSummary(up=0, down=0, score=0, my_vote=0) for tid in target_ids}
+    if not target_ids:
+        return result
+    up = func.sum(case((vote_model.value == 1, 1), else_=0))
+    down = func.sum(case((vote_model.value == -1, 1), else_=0))
+    for tid, u, d in db.execute(select(fk_col, up, down).where(fk_col.in_(target_ids)).group_by(fk_col)).all():
+        u, d = int(u or 0), int(d or 0)
+        result[tid] = VoteSummary(up=u, down=d, score=u - d, my_vote=0)
+    if user_id is not None:
+        mine = db.execute(select(fk_col, vote_model.value).where(fk_col.in_(target_ids), vote_model.user_id == user_id)).all()
+        for tid, v in mine:
+            result[tid].my_vote = v
+    return result
+
+
+def comment_counts(db: Session, comment_model, fk_col: InstrumentedAttribute, target_ids: list[int]) -> dict[int, int]:
+    """댓글 수(소프트 삭제된 것 포함 — 화면에 "삭제된 댓글입니다" 자리로 그대로 보이므로)."""
+    if not target_ids:
+        return {}
+    counts = dict(db.execute(select(fk_col, func.count(comment_model.id)).where(fk_col.in_(target_ids)).group_by(fk_col)).all())
+    return {tid: int(counts.get(tid, 0)) for tid in target_ids}
+
+
+def comment_tree(rows: list[tuple], user_id: int | None) -> list[CommentOut]:
+    """rows: (댓글 ORM 객체, 작성자 닉네임) 튜플 목록, created_at 오름차순으로 전달해야
+    대댓글이 부모보다 먼저 뜨지 않는다(부모가 아직 안 들어왔으면 임시로 최상위 취급됨)."""
+    by_id: dict[int, CommentOut] = {}
+    roots: list[CommentOut] = []
+    for c, nickname in rows:
+        node = CommentOut(
+            id=c.id, author_nickname=nickname, body=REMOVED_BODY if c.is_removed else c.body,
+            is_removed=c.is_removed, is_mine=(user_id is not None and c.author_id == user_id),
+            parent_id=c.parent_id, created_at=c.created_at.isoformat() if c.created_at else None, replies=[],
+        )
+        by_id[c.id] = node
+        if c.parent_id and c.parent_id in by_id:
+            by_id[c.parent_id].replies.append(node)
+        else:
+            roots.append(node)
+    return roots

@@ -3,7 +3,7 @@ import { getRegion, getRegions } from '@/lib/api';
 import { SITE_URL } from '@/lib/seo';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const fixed = ['', '/why', '/stats', '/guide', '/remedy', '/report', '/policy'];
+  const fixed = ['', '/board', '/why', '/stats', '/guide', '/remedy', '/report', '/policy'];
   const entries: MetadataRoute.Sitemap = fixed.map((p) => ({ url: `${SITE_URL}${p}` }));
   try {
     const regions = await getRegions();

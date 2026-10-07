@@ -63,6 +63,9 @@ class ReviewPublic(BaseModel):
     overall: float | None
     body: str
     published_at: str | None
+    comment_count: int = 0
+    score: int = 0  # 추천 - 비추천
+    my_vote: int = 0  # 로그인 + 투표한 경우만 1/-1, 그 외 0
 
 
 class StationDetail(BaseModel):

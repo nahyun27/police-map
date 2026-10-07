@@ -3,10 +3,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LogOut } from 'lucide-react';
+import { LogOut, X } from 'lucide-react';
 import { Card, PageHead, Score, TableWrap } from '@/components/ui';
 import { formatDate } from '@/lib/format';
-import { ApiError, getMe, getMyReviews, logout, type MyReviewOut, type Page, type UserOut } from '@/lib/api';
+import {
+  ApiError, followRegion, getMe, getMyRegions, getMyReviews, getRegions, logout, unfollowRegion,
+  type MyReviewOut, type Page, type RegionFollowOut, type RegionOut, type UserOut,
+} from '@/lib/api';
 
 const STATUS_LABEL: Record<MyReviewOut['status'], { label: string; tone: string }> = {
   pending: { label: '검수 대기', tone: 'mid' },
@@ -17,6 +20,76 @@ const STATUS_LABEL: Record<MyReviewOut['status'], { label: string; tone: string 
 };
 
 const SIZE = 20;
+
+function RegionFollows() {
+  const [all, setAll] = useState<RegionOut[]>([]);
+  const [mine, setMine] = useState<RegionFollowOut[] | null>(null);
+  const [adding, setAdding] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([getRegions(), getMyRegions()])
+      .then(([a, m]) => { setAll(a); setMine(m); })
+      .catch(() => setError('지역 정보를 불러오지 못했습니다.'));
+  }, []);
+
+  const followedIds = new Set((mine ?? []).map((r) => r.region_id));
+  const options = all.filter((r) => !followedIds.has(r.id));
+
+  const add = async () => {
+    if (!adding) return;
+    setBusy(true); setError(null);
+    try {
+      const f = await followRegion(adding);
+      setMine((m) => [...(m ?? []), f]);
+      setAdding('');
+    } catch { setError('등록하지 못했습니다. 잠시 후 다시 시도해 주세요.'); }
+    setBusy(false);
+  };
+
+  const remove = async (regionId: string) => {
+    setBusy(true); setError(null);
+    try {
+      await unfollowRegion(regionId);
+      setMine((m) => (m ?? []).filter((r) => r.region_id !== regionId));
+    } catch { setError('삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.'); }
+    setBusy(false);
+  };
+
+  return (
+    <Card>
+      <h2>관심 지역</h2>
+      <p className="sub">등록하면 홈 화면 상단에 그 지역 경찰서의 새 평가 소식을 먼저 보여드립니다.</p>
+      {error && <div className="warn">{error}</div>}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '14px 0' }}>
+        {mine === null ? (
+          <p className="sub">불러오는 중…</p>
+        ) : mine.length === 0 ? (
+          <p className="sub">등록된 관심 지역이 없습니다.</p>
+        ) : (
+          mine.map((r) => (
+            <span key={r.region_id} className="badge brand chip">
+              {r.region_name}
+              <button type="button" onClick={() => remove(r.region_id)} disabled={busy} aria-label={`${r.region_name} 관심 지역 해제`}>
+                <X size={12} />
+              </button>
+            </span>
+          ))
+        )}
+      </div>
+      {options.length > 0 && (
+        <div className="btn-row">
+          <select className="sel" value={adding} onChange={(e) => setAdding(e.target.value)} aria-label="지역 선택">
+            <option value="">지역 선택</option>
+            {options.map((r) => <option key={r.id} value={r.id}>{r.full_name}</option>)}
+          </select>
+          <button type="button" className="btn line sm" onClick={add} disabled={!adding || busy}>추가</button>
+        </div>
+      )}
+    </Card>
+  );
+}
 
 export default function MyPage() {
   const router = useRouter();
@@ -64,13 +137,15 @@ export default function MyPage() {
         <button className="btn line sm" onClick={doLogout}><LogOut size={14} />로그아웃</button>
       </Card>
 
+      <RegionFollows />
+
       <Card>
         <h2>내가 쓴 평가</h2>
         {error && <div className="warn">{error}</div>}
         <TableWrap>
           <table className="list">
             <thead>
-              <tr><th>경찰서</th><th>구분</th><th>평점</th><th>상태</th><th>작성일</th></tr>
+              <tr><th>경찰서</th><th>구분</th><th>평점</th><th>추천</th><th>댓글</th><th>상태</th><th>작성일</th></tr>
             </thead>
             <tbody>
               {data && data.items.length ? (
@@ -81,16 +156,18 @@ export default function MyPage() {
                       <td><Link href={`/station/${r.station_id}`}>{r.station_name}</Link></td>
                       <td className="sub">{r.role_label} · {r.case_type_label}</td>
                       <td><Score value={r.overall} /></td>
+                      <td className="sub">{r.score > 0 ? `+${r.score}` : r.score}</td>
+                      <td className="sub">{r.comment_count}</td>
                       <td><span className={`badge ${st.tone}`}>{st.label}</span></td>
                       <td className="sub">{formatDate(r.created_at)}</td>
                     </tr>
                   );
                 })
               ) : (
-                <tr><td colSpan={5} className="sub">아직 작성한 평가가 없습니다.</td></tr>
+                <tr><td colSpan={7} className="sub">아직 작성한 평가가 없습니다.</td></tr>
               )}
               {data && data.items.some((r) => r.status === 'rejected' && r.reject_reason) && (
-                <tr><td colSpan={5}>
+                <tr><td colSpan={7}>
                   <div className="guidebox" style={{ marginBottom: 0 }}>
                     <b>반려 사유</b>
                     {data.items.filter((r) => r.status === 'rejected' && r.reject_reason).map((r) => (

@@ -6,12 +6,15 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
-from app.core.rate_limit import review_limiter
+from app.core.rate_limit import comment_limiter, review_limiter, vote_limiter
 from app.core.security import hash_case_number
-from app.models import Review, ReviewStatus, Station, User
+from app.models import Review, ReviewComment, ReviewStatus, ReviewVote, Station, User, UserRole
 from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
+from app.schemas.community import CommentCreate, CommentOut, VoteIn, VoteSummary
 from app.schemas.public import Page
 from app.schemas.review import MyReviewOut, ReviewCreate, ReviewReceipt
+from app.services.audit import log_action
+from app.services.engagement import comment_counts, comment_tree, vote_summaries
 from app.services.ratings import DIMS
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
@@ -42,12 +45,16 @@ def list_my_reviews(
     rows = db.scalars(
         select(Review).where(base).order_by(Review.created_at.desc()).offset((page - 1) * size).limit(size)
     ).all()
+    ids = [r.id for r in rows]
+    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, user.id)
+    counts = comment_counts(db, ReviewComment, ReviewComment.review_id, ids)
     items = [
         MyReviewOut(
             id=r.id, station_id=r.station_id, station_name=r.station.name,
             role=r.role.value, role_label=ROLE_LABELS[r.role], case_type=r.case_type.value, case_type_label=CASE_TYPE_LABELS[r.case_type],
             ratings=_ratings_dict(r), overall=_overall(r), body=r.body, status=r.status.value, reject_reason=r.reject_reason,
             created_at=_iso(r.created_at), published_at=_iso(r.published_at),
+            comment_count=counts[r.id], score=votes[r.id].score,
         )
         for r in rows
     ]
@@ -90,3 +97,69 @@ def create_review(body: ReviewCreate, db: Session = Depends(get_db), user: User 
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "같은 사건번호로 이미 제출된 평가가 있습니다.")
     return ReviewReceipt(id=review.id, status=review.status.value, message="접수되었습니다. 검수(24~48시간) 후 게시됩니다.")
+
+
+def _published_or_404(db: Session, review_id: int) -> Review:
+    r = db.get(Review, review_id)
+    if not r or r.status != ReviewStatus.published:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "평가를 찾을 수 없습니다.")
+    return r
+
+
+@router.get("/{review_id}/comments", response_model=list[CommentOut])
+def list_review_comments(review_id: int, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
+    _published_or_404(db, review_id)
+    rows = db.execute(
+        select(ReviewComment, User.nickname).join(User, User.id == ReviewComment.author_id)
+        .where(ReviewComment.review_id == review_id).order_by(ReviewComment.created_at.asc())
+    ).all()
+    return comment_tree(rows, user.id if user else None)
+
+
+@router.post(
+    "/{review_id}/comments", response_model=CommentOut, status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(comment_limiter)],
+)
+def create_review_comment(review_id: int, body: CommentCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    _published_or_404(db, review_id)
+    banned = find_banned(body.body)
+    if banned:
+        raise HTTPException(422, {"message": "게시할 수 없는 표현이 포함되어 있습니다.", "banned": banned})
+    parent = None
+    if body.parent_id is not None:
+        parent = db.get(ReviewComment, body.parent_id)
+        if not parent or parent.review_id != review_id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "댓글을 찾을 수 없습니다.")
+        if parent.parent_id is not None:
+            raise HTTPException(422, "대댓글에는 답글을 달 수 없습니다.")
+    comment = ReviewComment(review_id=review_id, author_id=user.id, parent_id=body.parent_id, body=body.body)
+    db.add(comment)
+    db.commit()
+    return comment_tree([(comment, user.nickname)], user.id)[0]
+
+
+@router.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_review_comment(comment_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    comment = db.get(ReviewComment, comment_id)
+    if not comment or comment.is_removed:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "댓글을 찾을 수 없습니다.")
+    if comment.author_id != user.id and user.role != UserRole.admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "본인 댓글만 삭제할 수 있습니다.")
+    comment.is_removed = True
+    log_action(db, user.id, "comment.remove", "review_comment", comment.id, {"self": comment.author_id == user.id})
+    db.commit()
+
+
+@router.post("/{review_id}/vote", response_model=VoteSummary, dependencies=[Depends(vote_limiter)])
+def vote_review(review_id: int, body: VoteIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    _published_or_404(db, review_id)
+    existing = db.scalar(select(ReviewVote).where(ReviewVote.review_id == review_id, ReviewVote.user_id == user.id))
+    if body.value == 0:
+        if existing:
+            db.delete(existing)
+    elif existing:
+        existing.value = body.value
+    else:
+        db.add(ReviewVote(review_id=review_id, user_id=user.id, value=body.value))
+    db.commit()
+    return vote_summaries(db, ReviewVote, ReviewVote.review_id, [review_id], user.id)[review_id]

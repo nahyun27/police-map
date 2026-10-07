@@ -55,3 +55,5 @@ class MyReviewOut(BaseModel):
     reject_reason: str | None
     created_at: str | None
     published_at: str | None
+    comment_count: int = 0
+    score: int = 0

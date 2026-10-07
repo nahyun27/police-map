@@ -4,11 +4,13 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1._present import review_public
 from app.core.database import get_db
-from app.models import Department, PublicStatistic, Region, Review, ReviewStatus, Station
+from app.core.deps import get_current_user_optional
+from app.models import Department, PublicStatistic, Region, Review, ReviewComment, ReviewStatus, ReviewVote, Station, User
 from app.schemas.public import (
     Page, RankedStation, RecentReview, RegionDetail, RegionOut, RegionRef, SearchResult, StationDetail, StationItem,
     StatsOverview, Totals, YearValue,
 )
+from app.services.engagement import comment_counts, vote_summaries
 from app.services.ratings import EMPTY, national_summary, station_summaries, visible_reviews
 
 router = APIRouter(tags=["public"])
@@ -59,7 +61,10 @@ def get_region(region_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/stations/{station_id}", response_model=StationDetail)
-def get_station(station_id: int, page: int = Query(1, ge=1), size: int = Query(10, ge=1, le=50), db: Session = Depends(get_db)):
+def get_station(
+    station_id: int, page: int = Query(1, ge=1), size: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
+):
     s = db.get(Station, station_id)
     if not s:
         raise HTTPException(404, "경찰서를 찾을 수 없습니다.")
@@ -68,24 +73,37 @@ def get_station(station_id: int, page: int = Query(1, ge=1), size: int = Query(1
     reviews = db.scalars(
         select(Review).where(*base).order_by(Review.published_at.desc(), Review.id.desc()).offset((page - 1) * size).limit(size)
     ).all()
+    ids = [r.id for r in reviews]
+    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, user.id if user else None)
+    counts = comment_counts(db, ReviewComment, ReviewComment.review_id, ids)
     return StationDetail(
         id=s.id, name=s.name, address=s.address, website=s.website, source=s.source,
         region=_region_ref(s.region), departments=[d.name for d in s.departments],
         rating=station_summaries(db, [s.id]).get(s.id, EMPTY),
-        reviews=Page(items=[review_public(r) for r in reviews], total=total, page=page, size=size),
+        reviews=Page(
+            items=[review_public(r, votes[r.id], counts[r.id]) for r in reviews], total=total, page=page, size=size,
+        ),
         lat=s.lat, lng=s.lng,
     )
 
 
 @router.get("/reviews/recent", response_model=list[RecentReview])
-def recent_reviews(limit: int = Query(3, ge=1, le=20), db: Session = Depends(get_db)):
-    rows = db.execute(
-        visible_reviews(Review, Station)
-        .join(Station, Station.id == Review.station_id)
-        .order_by(Review.published_at.desc(), Review.id.desc())
-        .limit(limit)
-    ).all()
-    return [RecentReview(**review_public(r).model_dump(), station_id=s.id, station_name=s.name) for r, s in rows]
+def recent_reviews(
+    limit: int = Query(3, ge=1, le=20), region: str | None = Query(None, description="쉼표로 구분된 지역 id 목록"),
+    db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
+):
+    q = visible_reviews(Review, Station).join(Station, Station.id == Review.station_id)
+    if region:
+        region_ids = [r for r in region.split(",") if r]
+        q = q.where(Station.region_id.in_(region_ids))
+    rows = db.execute(q.order_by(Review.published_at.desc(), Review.id.desc()).limit(limit)).all()
+    ids = [r.id for r, _ in rows]
+    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, user.id if user else None)
+    counts = comment_counts(db, ReviewComment, ReviewComment.review_id, ids)
+    return [
+        RecentReview(**review_public(r, votes[r.id], counts[r.id]).model_dump(), station_id=s.id, station_name=s.name)
+        for r, s in rows
+    ]
 
 
 @router.get("/search", response_model=SearchResult)

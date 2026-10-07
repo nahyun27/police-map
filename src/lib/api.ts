@@ -97,6 +97,9 @@ export interface ReviewPublic {
   overall: number | null;
   body: string;
   published_at: string | null;
+  comment_count: number;
+  score: number;
+  my_vote: number;
 }
 
 export interface Page<T> {
@@ -169,7 +172,11 @@ export function getStation(id: number | string, opts?: { page?: number; size?: n
   return apiFetch<StationDetail>(`/stations/${encodeURIComponent(String(id))}${suffix}`, { revalidateSeconds: 30 });
 }
 
-export const getRecentReviews = (limit = 3) => apiFetch<RecentReview[]>(`/reviews/recent?limit=${limit}`, { revalidateSeconds: 30 });
+export function getRecentReviews(limit = 3, regionIds?: string[]) {
+  const qs = new URLSearchParams({ limit: String(limit) });
+  if (regionIds?.length) qs.set('region', regionIds.join(','));
+  return apiFetch<RecentReview[]>(`/reviews/recent?${qs}`, { revalidateSeconds: 30 });
+}
 export const search = (q: string) => apiFetch<SearchResult>(`/search?q=${encodeURIComponent(q)}`, { revalidateSeconds: 15 });
 export const getStats = () => apiFetch<StatsOverview>('/stats/overview', { revalidateSeconds: 60 });
 
@@ -264,6 +271,8 @@ export interface MyReviewOut {
   reject_reason: string | null;
   created_at: string | null;
   published_at: string | null;
+  comment_count: number;
+  score: number;
 }
 
 export function getMyReviews(opts?: { page?: number; size?: number }) {
@@ -273,6 +282,109 @@ export function getMyReviews(opts?: { page?: number; size?: number }) {
   const suffix = qs.toString() ? `?${qs}` : '';
   return apiFetch<Page<MyReviewOut>>(`/reviews/mine${suffix}`);
 }
+
+/* ===================== 관심 지역 ===================== */
+
+export interface RegionFollowOut {
+  region_id: string;
+  region_name: string;
+  region_full_name: string;
+}
+
+export const getMyRegions = () => apiFetch<RegionFollowOut[]>('/me/regions');
+export const followRegion = (regionId: string) =>
+  apiFetch<RegionFollowOut>(`/me/regions/${encodeURIComponent(regionId)}`, { method: 'POST' });
+export const unfollowRegion = (regionId: string) =>
+  apiFetch<void>(`/me/regions/${encodeURIComponent(regionId)}`, { method: 'DELETE' });
+
+/* ===================== 추천/비추천 · 댓글 (평가 + 게시판 공용) ===================== */
+
+export interface VoteSummary {
+  up: number;
+  down: number;
+  score: number;
+  my_vote: number;
+}
+
+export interface CommentOut {
+  id: number;
+  author_nickname: string;
+  body: string;
+  is_removed: boolean;
+  is_mine: boolean;
+  parent_id: number | null;
+  created_at: string | null;
+  replies: CommentOut[];
+}
+
+const vote = (path: string, value: 1 | -1 | 0) =>
+  apiFetch<VoteSummary>(path, { method: 'POST', body: JSON.stringify({ value }) });
+
+export const voteReview = (reviewId: number, value: 1 | -1 | 0) => vote(`/reviews/${reviewId}/vote`, value);
+export const getReviewComments = (reviewId: number) => apiFetch<CommentOut[]>(`/reviews/${reviewId}/comments`);
+export const createReviewComment = (reviewId: number, body: string, parentId?: number) =>
+  apiFetch<CommentOut>(`/reviews/${reviewId}/comments`, { method: 'POST', body: JSON.stringify({ body, parent_id: parentId ?? null }) });
+export const deleteReviewComment = (commentId: number) => apiFetch<void>(`/reviews/comments/${commentId}`, { method: 'DELETE' });
+
+/* ===================== 게시판 ===================== */
+
+export interface PostOut {
+  id: number;
+  author_nickname: string;
+  is_mine: boolean;
+  region_id: string;
+  region_name: string;
+  station_id: number | null;
+  station_name: string | null;
+  title: string;
+  body: string;
+  comment_count: number;
+  score: number;
+  my_vote: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface PostCreatePayload {
+  region_id: string;
+  station_id?: number | null;
+  title: string;
+  body: string;
+}
+
+export interface PostReceipt {
+  id: number;
+  message: string;
+}
+
+export function listPosts(opts?: { regionId?: string; stationId?: number; sort?: 'new' | 'top'; page?: number; size?: number }) {
+  const qs = new URLSearchParams();
+  if (opts?.regionId) qs.set('region_id', opts.regionId);
+  if (opts?.stationId) qs.set('station_id', String(opts.stationId));
+  if (opts?.sort) qs.set('sort', opts.sort);
+  if (opts?.page) qs.set('page', String(opts.page));
+  if (opts?.size) qs.set('size', String(opts.size));
+  const suffix = qs.toString() ? `?${qs}` : '';
+  return apiFetch<Page<PostOut>>(`/posts${suffix}`);
+}
+
+export function getPopularPosts(opts?: { regionId?: string; days?: number; limit?: number }) {
+  const qs = new URLSearchParams();
+  if (opts?.regionId) qs.set('region_id', opts.regionId);
+  if (opts?.days) qs.set('days', String(opts.days));
+  if (opts?.limit) qs.set('limit', String(opts.limit));
+  const suffix = qs.toString() ? `?${qs}` : '';
+  return apiFetch<PostOut[]>(`/posts/popular${suffix}`, { revalidateSeconds: 60 });
+}
+
+export const createPost = (payload: PostCreatePayload) => apiFetch<PostReceipt>('/posts', { method: 'POST', body: JSON.stringify(payload) });
+export const getPost = (id: number) => apiFetch<PostOut>(`/posts/${id}`);
+export const deletePost = (id: number) => apiFetch<void>(`/posts/${id}`, { method: 'DELETE' });
+export const votePost = (postId: number, value: 1 | -1 | 0) => vote(`/posts/${postId}/vote`, value);
+export const getPostComments = (postId: number) => apiFetch<CommentOut[]>(`/posts/${postId}/comments`);
+export const createPostComment = (postId: number, body: string, parentId?: number) =>
+  apiFetch<CommentOut>(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify({ body, parent_id: parentId ?? null }) });
+export const deletePostComment = (commentId: number) => apiFetch<void>(`/post-comments/${commentId}`, { method: 'DELETE' });
 
 /* ===================== 관리자 ===================== */
 

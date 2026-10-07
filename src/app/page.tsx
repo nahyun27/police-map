@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Scale, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Flame, Scale, ShieldCheck } from 'lucide-react';
 import HeroSearch from '@/components/HeroSearch';
 import KoreaMap from '@/components/KoreaMap';
-import { Bars, Card, Score, Stars } from '@/components/ui';
-import { getRecentReviews, getRegions, getStats } from '@/lib/api';
+import { MyRegionFeed } from '@/components/MyRegionFeed';
+import { Bars, Card, Score, Stars, TableWrap } from '@/components/ui';
+import { getPopularPosts, getRecentReviews, getRegions, getStats } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
 // 백엔드의 실시간 데이터를 그리므로 빌드 시점에 정적 생성하지 않는다.
@@ -23,7 +24,9 @@ const WHY_CASES = [
 ];
 
 export default async function Home() {
-  const [regions, recent, stats] = await Promise.all([getRegions(), getRecentReviews(3), getStats()]);
+  const [regions, recent, stats, popularPosts] = await Promise.all([
+    getRegions(), getRecentReviews(3), getStats(), getPopularPosts({ limit: 5 }),
+  ]);
 
   return (
     <>
@@ -58,6 +61,8 @@ export default async function Home() {
         </div>
       </section>
 
+      <MyRegionFeed />
+
       <div className="grid2">
         <Card>
           <h2>지도에서 찾기</h2>
@@ -86,6 +91,35 @@ export default async function Home() {
           )) : <p className="sub">아직 등록된 평가가 없습니다. 첫 평가의 주인공이 되어 주세요.</p>}
         </Card>
       </div>
+
+      <Card>
+        <div className="sec-head">
+          <div>
+            <h2 style={{ marginBottom: 4 }}><Flame size={18} style={{ verticalAlign: -3, marginRight: 4, color: 'var(--star)' }} />인기 게시글</h2>
+            <p className="sub">최근 2주간 추천을 많이 받은 커뮤니티 글입니다.</p>
+          </div>
+          <Link href="/board" className="btn line sm">게시판 전체보기</Link>
+        </div>
+        {popularPosts.length ? (
+          <TableWrap>
+            <table className="list">
+              <thead><tr><th>지역</th><th>제목</th><th>추천</th><th>댓글</th></tr></thead>
+              <tbody>
+                {popularPosts.map((p) => (
+                  <tr key={p.id}>
+                    <td className="sub">{p.region_name}</td>
+                    <td><Link href={`/board/${p.id}`}>{p.title}</Link></td>
+                    <td className="sub">{p.score}</td>
+                    <td className="sub">{p.comment_count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableWrap>
+        ) : (
+          <p className="sub">아직 추천받은 글이 없습니다. <Link href="/board/write">첫 글을 남겨 보세요</Link>.</p>
+        )}
+      </Card>
 
       <div className="grid3">
         {FEATURES.map(({ to, icon: Icon, title, body, more }) => (
