@@ -29,6 +29,16 @@ def vote_summaries(
     return result
 
 
+def scrapped_set(
+    db: Session, scrap_model, fk_col: InstrumentedAttribute, target_ids: list[int], user_id: int | None,
+) -> set[int]:
+    """target_ids 중 user_id 가 스크랩한 것들의 id 집합. 비로그인이면 항상 빈 집합."""
+    if not target_ids or user_id is None:
+        return set()
+    rows = db.execute(select(fk_col).where(fk_col.in_(target_ids), scrap_model.user_id == user_id)).all()
+    return {r[0] for r in rows}
+
+
 def comment_counts(db: Session, comment_model, fk_col: InstrumentedAttribute, target_ids: list[int]) -> dict[int, int]:
     """댓글 수(소프트 삭제된 것 포함 — 화면에 "삭제된 댓글입니다" 자리로 그대로 보이므로)."""
     if not target_ids:

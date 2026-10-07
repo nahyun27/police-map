@@ -367,6 +367,7 @@ table.list td a { font-weight: 650; color: var(--ink); }
 .vote-btn:hover { border-color: var(--brand); color: var(--brand); }
 .vote-btn.active.up { background: var(--good-soft); border-color: var(--good); color: var(--good); }
 .vote-btn.active.down { background: var(--low-soft); border-color: var(--low); color: var(--low); }
+.vote-btn.active.scrap { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); }
 .engage-bar > b { min-width: 20px; text-align: center; font-size: 13.5px; }
 .engage-bar > b.up { color: var(--good); }
 .engage-bar > b.down { color: var(--low); }

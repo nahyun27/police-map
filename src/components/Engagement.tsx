@@ -3,11 +3,11 @@
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageSquare, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
+import { Bookmark, MessageSquare, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
 import {
   ApiError, type CommentOut,
   createPostComment, createReviewComment, deletePostComment, deleteReviewComment,
-  getPostComments, getReviewComments, votePost, voteReview,
+  getPostComments, getReviewComments, scrapPost, scrapReview, unscrapPost, unscrapReview, votePost, voteReview,
 } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
@@ -18,22 +18,35 @@ const ACTIONS: Record<Kind, {
   list: (id: number) => Promise<CommentOut[]>;
   create: (id: number, body: string, parentId?: number) => Promise<CommentOut>;
   remove: (commentId: number) => Promise<void>;
+  scrap: (id: number) => Promise<{ scrapped: boolean }>;
+  unscrap: (id: number) => Promise<{ scrapped: boolean }>;
 }> = {
-  review: { vote: voteReview, list: getReviewComments, create: createReviewComment, remove: deleteReviewComment },
-  post: { vote: votePost, list: getPostComments, create: createPostComment, remove: deletePostComment },
+  review: {
+    vote: voteReview, list: getReviewComments, create: createReviewComment, remove: deleteReviewComment,
+    scrap: scrapReview, unscrap: unscrapReview,
+  },
+  post: {
+    vote: votePost, list: getPostComments, create: createPostComment, remove: deletePostComment,
+    scrap: scrapPost, unscrap: unscrapPost,
+  },
 };
 
 /** 평가(리뷰)·게시판 글에 공통으로 붙는 추천/비추천 + 댓글(1단계 대댓글) UI.
  * 로그인 여부를 미리 조회하지 않고, 실제 조치 시 401 을 받으면 그때 로그인 안내를 띄운다
  * (목록에 여러 개가 함께 뜨는 화면에서 카드마다 /auth/me 를 따로 호출하지 않기 위함). */
 export function Engagement({
-  kind, targetId, initialScore, initialMyVote, initialCommentCount,
-}: { kind: Kind; targetId: number; initialScore: number; initialMyVote: number; initialCommentCount: number }) {
+  kind, targetId, initialScore, initialMyVote, initialCommentCount, initialScrapped = false,
+}: {
+  kind: Kind; targetId: number; initialScore: number; initialMyVote: number; initialCommentCount: number;
+  initialScrapped?: boolean;
+}) {
   const pathname = usePathname();
   const api = ACTIONS[kind];
   const [score, setScore] = useState(initialScore);
   const [myVote, setMyVote] = useState(initialMyVote);
   const [commentCount, setCommentCount] = useState(initialCommentCount);
+  const [scrapped, setScrapped] = useState(initialScrapped);
+  const [scrapBusy, setScrapBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState<CommentOut[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -55,6 +68,18 @@ export function Engagement({
       if (e instanceof ApiError && e.status === 401) setAuthNeeded(true);
       else setError('처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
     }
+  };
+
+  const toggleScrap = async () => {
+    setAuthNeeded(false); setError(null); setScrapBusy(true);
+    try {
+      const r = scrapped ? await api.unscrap(targetId) : await api.scrap(targetId);
+      setScrapped(r.scrapped);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) setAuthNeeded(true);
+      else setError('처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    }
+    setScrapBusy(false);
   };
 
   const loadComments = async () => {
@@ -132,6 +157,12 @@ export function Engagement({
           <ThumbsDown size={14} />
         </button>
         <button type="button" className="link-btn" onClick={toggleOpen}><MessageSquare size={14} />댓글 {commentCount}</button>
+        <button
+          type="button" className={`vote-btn scrap-btn ${scrapped ? 'active scrap' : ''}`} onClick={toggleScrap}
+          disabled={scrapBusy} aria-label={scrapped ? '스크랩 해제' : '스크랩'} style={{ marginLeft: 'auto' }}
+        >
+          <Bookmark size={14} fill={scrapped ? 'currentColor' : 'none'} />
+        </button>
       </div>
       {authNeeded && <p className="warn">로그인 후 이용할 수 있습니다. <Link href={loginLink}>로그인</Link></p>}
       {error && <p className="warn">{error}</p>}

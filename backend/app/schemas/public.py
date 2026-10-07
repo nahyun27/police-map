@@ -70,6 +70,7 @@ class ReviewPublic(BaseModel):
     my_vote: int = 0  # 로그인 + 투표한 경우만 1/-1, 그 외 0
     evidence_verified: bool = False  # 운영자가 증빙자료를 확인했을 때만 true(공개 배지용)
     reply: ReplyOut | None = None  # 인증된 경찰관의 공식 해명(있으면)
+    is_scrapped: bool = False  # 로그인 + 스크랩한 경우만 true
 
 
 class StationDetail(BaseModel):

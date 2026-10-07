@@ -45,9 +45,10 @@ export function PostDetail({ initial }: { initial: PostOut }) {
       )}
       {error && <div className="warn">{error}</div>}
       <Engagement
-        key={`post-${post.id}-${post.my_vote}`}
+        key={`post-${post.id}-${post.my_vote}-${post.is_scrapped}`}
         kind="post" targetId={post.id}
         initialScore={post.score} initialMyVote={post.my_vote} initialCommentCount={post.comment_count}
+        initialScrapped={post.is_scrapped}
       />
     </>
   );

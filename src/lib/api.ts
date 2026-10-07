@@ -113,6 +113,7 @@ export interface ReviewPublic {
   my_vote: number;
   evidence_verified: boolean;
   reply: ReplyOut | null;
+  is_scrapped: boolean;
 }
 
 export interface Page<T> {
@@ -293,6 +294,7 @@ export interface MyReviewOut {
   evidence_note: string | null;
   evidence_verified: boolean;
   reply: ReplyOut | null;
+  is_scrapped: boolean;
 }
 
 export function getMyReviews(opts?: { page?: number; size?: number }) {
@@ -375,11 +377,24 @@ export interface CommentOut {
 const vote = (path: string, value: 1 | -1 | 0) =>
   apiFetch<VoteSummary>(path, { method: 'POST', body: JSON.stringify({ value }) });
 
+export interface ScrapStatus {
+  scrapped: boolean;
+}
+
 export const voteReview = (reviewId: number, value: 1 | -1 | 0) => vote(`/reviews/${reviewId}/vote`, value);
 export const getReviewComments = (reviewId: number) => apiFetch<CommentOut[]>(`/reviews/${reviewId}/comments`);
 export const createReviewComment = (reviewId: number, body: string, parentId?: number) =>
   apiFetch<CommentOut>(`/reviews/${reviewId}/comments`, { method: 'POST', body: JSON.stringify({ body, parent_id: parentId ?? null }) });
 export const deleteReviewComment = (commentId: number) => apiFetch<void>(`/reviews/comments/${commentId}`, { method: 'DELETE' });
+export const scrapReview = (reviewId: number) => apiFetch<ScrapStatus>(`/reviews/${reviewId}/scrap`, { method: 'POST' });
+export const unscrapReview = (reviewId: number) => apiFetch<ScrapStatus>(`/reviews/${reviewId}/scrap`, { method: 'DELETE' });
+export function getMyReviewScraps(opts?: { page?: number; size?: number }) {
+  const qs = new URLSearchParams();
+  if (opts?.page) qs.set('page', String(opts.page));
+  if (opts?.size) qs.set('size', String(opts.size));
+  const suffix = qs.toString() ? `?${qs}` : '';
+  return apiFetch<Page<RecentReview>>(`/reviews/scraps${suffix}`);
+}
 
 /* ===================== 게시판 ===================== */
 
@@ -396,6 +411,7 @@ export interface PostOut {
   comment_count: number;
   score: number;
   my_vote: number;
+  is_scrapped: boolean;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -440,6 +456,15 @@ export const getPostComments = (postId: number) => apiFetch<CommentOut[]>(`/post
 export const createPostComment = (postId: number, body: string, parentId?: number) =>
   apiFetch<CommentOut>(`/posts/${postId}/comments`, { method: 'POST', body: JSON.stringify({ body, parent_id: parentId ?? null }) });
 export const deletePostComment = (commentId: number) => apiFetch<void>(`/post-comments/${commentId}`, { method: 'DELETE' });
+export const scrapPost = (postId: number) => apiFetch<ScrapStatus>(`/posts/${postId}/scrap`, { method: 'POST' });
+export const unscrapPost = (postId: number) => apiFetch<ScrapStatus>(`/posts/${postId}/scrap`, { method: 'DELETE' });
+export function getMyPostScraps(opts?: { page?: number; size?: number }) {
+  const qs = new URLSearchParams();
+  if (opts?.page) qs.set('page', String(opts.page));
+  if (opts?.size) qs.set('size', String(opts.size));
+  const suffix = qs.toString() ? `?${qs}` : '';
+  return apiFetch<Page<PostOut>>(`/me/scraps/posts${suffix}`);
+}
 
 /* ===================== 관리자 ===================== */
 

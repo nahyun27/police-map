@@ -34,6 +34,7 @@ export function ReviewList({ stationId, stationName, items }: { stationId: numbe
           <Engagement
             kind="review" targetId={rv.id}
             initialScore={rv.score} initialMyVote={rv.my_vote} initialCommentCount={rv.comment_count}
+            initialScrapped={rv.is_scrapped}
           />
           <Link href={`/takedown/review/${rv.id}?station=${encodeURIComponent(stationName)}`} className="sub" style={{ display: 'inline-block', marginTop: 8 }}>
             이 게시물 삭제·정정 요청

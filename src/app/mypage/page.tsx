@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LogOut, ShieldCheck, X } from 'lucide-react';
+import { Bookmark, LogOut, ShieldCheck, X } from 'lucide-react';
 import { Card, PageHead, Score, TableWrap } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import {
-  ApiError, followRegion, getMe, getMyRegions, getMyReviews, getRegions, logout, unfollowRegion,
-  type MyReviewOut, type Page, type RegionFollowOut, type RegionOut, type UserOut,
+  ApiError, followRegion, getMe, getMyRegions, getMyReviews, getMyReviewScraps, getMyPostScraps, getRegions,
+  logout, unfollowRegion,
+  type MyReviewOut, type Page, type PostOut, type RecentReview, type RegionFollowOut, type RegionOut, type UserOut,
 } from '@/lib/api';
 
 const STATUS_LABEL: Record<MyReviewOut['status'], { label: string; tone: string }> = {
@@ -91,6 +92,58 @@ function RegionFollows() {
   );
 }
 
+function MyScraps() {
+  const [reviews, setReviews] = useState<RecentReview[] | null>(null);
+  const [posts, setPosts] = useState<PostOut[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([getMyReviewScraps({ size: 10 }), getMyPostScraps({ size: 10 })])
+      .then(([r, p]) => { setReviews(r.items); setPosts(p.items); })
+      .catch(() => setError('스크랩 목록을 불러오지 못했습니다.'));
+  }, []);
+
+  if (reviews !== null && posts !== null && reviews.length === 0 && posts.length === 0) return null;
+
+  return (
+    <Card>
+      <h2><Bookmark size={18} style={{ verticalAlign: -3, marginRight: 4 }} />내 스크랩</h2>
+      {error && <div className="warn">{error}</div>}
+      {reviews === null || posts === null ? (
+        <p className="sub">불러오는 중…</p>
+      ) : (
+        <>
+          {reviews.length > 0 && (
+            <>
+              <p className="sub" style={{ marginTop: 10, fontWeight: 700 }}>스크랩한 평가</p>
+              {reviews.map((rv) => (
+                <div className="review" key={rv.id}>
+                  <div className="meta"><span className="badge">{rv.role_label}</span>{rv.station_name} · {formatDate(rv.published_at)}</div>
+                  <p>
+                    {rv.body ? rv.body.slice(0, 70) + (rv.body.length > 70 ? '…' : '') : '(서술 없음, 별점만 등록)'}{' '}
+                    <Link href={`/station/${rv.station_id}`}>더보기</Link>
+                  </p>
+                </div>
+              ))}
+            </>
+          )}
+          {posts.length > 0 && (
+            <>
+              <p className="sub" style={{ marginTop: 10, fontWeight: 700 }}>스크랩한 게시글</p>
+              {posts.map((p) => (
+                <div className="review" key={p.id}>
+                  <div className="meta">{p.region_name}{p.station_name ? ` · ${p.station_name}` : ''} · {formatDate(p.created_at)}</div>
+                  <p><Link href={`/board/${p.id}`}>{p.title}</Link></p>
+                </div>
+              ))}
+            </>
+          )}
+        </>
+      )}
+    </Card>
+  );
+}
+
 export default function MyPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserOut | null>(null);
@@ -149,6 +202,7 @@ export default function MyPage() {
       </Card>
 
       <RegionFollows />
+      <MyScraps />
 
       <Card>
         <h2>내가 쓴 평가</h2>

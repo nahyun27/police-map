@@ -19,6 +19,10 @@ class VoteSummary(BaseModel):
     my_vote: int  # 비로그인/미투표는 0
 
 
+class ScrapStatus(BaseModel):
+    scrapped: bool
+
+
 class CommentCreate(BaseModel):
     body: str = Field(min_length=1, max_length=1000)
     parent_id: int | None = None
@@ -76,6 +80,7 @@ class PostOut(BaseModel):
     comment_count: int
     score: int
     my_vote: int
+    is_scrapped: bool
     created_at: str | None
     updated_at: str | None
 

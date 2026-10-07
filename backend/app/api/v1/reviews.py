@@ -3,22 +3,22 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.v1._present import reply_out
+from app.api.v1._present import reply_out, review_public
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
 from app.core.rate_limit import comment_limiter, reply_limiter, review_limiter, vote_limiter
 from app.core.security import hash_case_number
-from app.models import Review, ReviewComment, ReviewReply, ReviewStatus, ReviewVote, Station, User, UserRole
+from app.models import Review, ReviewComment, ReviewReply, ReviewScrap, ReviewStatus, ReviewVote, Station, User, UserRole
 from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
-from app.schemas.community import CommentCreate, CommentOut, VoteIn, VoteSummary
-from app.schemas.public import Page
+from app.schemas.community import CommentCreate, CommentOut, ScrapStatus, VoteIn, VoteSummary
+from app.schemas.public import Page, RecentReview
 from app.schemas.review import MyReviewOut, ReviewCreate, ReviewReceipt
 from app.schemas.verification import ReplyCreate, ReplyOut
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
-from app.services.engagement import comment_counts, comment_tree, reply_rows, vote_summaries
-from app.services.ratings import DIMS
+from app.services.engagement import comment_counts, comment_tree, reply_rows, scrapped_set, vote_summaries
+from app.services.ratings import DIMS, visible_reviews
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
 
@@ -52,6 +52,7 @@ def list_my_reviews(
     votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, user.id)
     counts = comment_counts(db, ReviewComment, ReviewComment.review_id, ids)
     replies = reply_rows(db, ids)
+    scrapped = scrapped_set(db, ReviewScrap, ReviewScrap.review_id, ids, user.id)
     items = [
         MyReviewOut(
             id=r.id, station_id=r.station_id, station_name=r.station.name,
@@ -61,10 +62,71 @@ def list_my_reviews(
             comment_count=counts[r.id], score=votes[r.id].score,
             evidence_note=r.evidence_note, evidence_verified=r.evidence_verified,
             reply=reply_out(*replies[r.id], user.id) if r.id in replies else None,
+            is_scrapped=r.id in scrapped,
         )
         for r in rows
     ]
     return Page(items=items, total=total, page=page, size=size)
+
+
+@router.get("/scraps", response_model=Page[RecentReview])
+def list_my_scraps(
+    page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=50),
+    user: User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    """내가 스크랩한 평가 목록(최신 스크랩순). 평가가 사후에 삭제되면 스크랩도 같이 사라진다
+    (FK CASCADE 가 아니라 애플리케이션 레벨로, visible_reviews 필터에서 자연히 제외된다)."""
+    q = (
+        select(ReviewScrap.review_id, ReviewScrap.created_at)
+        .where(ReviewScrap.user_id == user.id).order_by(ReviewScrap.created_at.desc(), ReviewScrap.id.desc())
+    )
+    scrap_rows = db.execute(q).all()
+    ordered_ids = [rid for rid, _ in scrap_rows]
+    total = len(ordered_ids)
+    page_ids = ordered_ids[(page - 1) * size: (page - 1) * size + size]
+    if not page_ids:
+        return Page(items=[], total=total, page=page, size=size)
+
+    rows = db.execute(
+        visible_reviews(Review, Station).join(Station, Station.id == Review.station_id).where(Review.id.in_(page_ids))
+    ).all()
+    by_id = {r.id: (r, s) for r, s in rows}
+    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, page_ids, user.id)
+    counts = comment_counts(db, ReviewComment, ReviewComment.review_id, page_ids)
+    replies = reply_rows(db, page_ids)
+    items = []
+    for rid in page_ids:  # 스크랩한 순서 유지(삭제된 평가는 조용히 건너뜀)
+        if rid not in by_id:
+            continue
+        r, s = by_id[rid]
+        items.append(RecentReview(
+            **review_public(
+                r, votes[rid], counts[rid], reply_out(*replies[rid], user.id) if rid in replies else None, True,
+            ).model_dump(),
+            station_id=s.id, station_name=s.name,
+        ))
+    return Page(items=items, total=total, page=page, size=size)
+
+
+@router.post("/{review_id}/scrap", response_model=ScrapStatus, dependencies=[Depends(vote_limiter)])
+def scrap_review(review_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    _published_or_404(db, review_id)
+    if not db.scalar(select(ReviewScrap.id).where(ReviewScrap.review_id == review_id, ReviewScrap.user_id == user.id)):
+        db.add(ReviewScrap(review_id=review_id, user_id=user.id))
+        try:
+            db.commit()
+        except IntegrityError:  # 동시 요청으로 중복 등록된 경우 — 이미 스크랩된 것으로 취급
+            db.rollback()
+    return ScrapStatus(scrapped=True)
+
+
+@router.delete("/{review_id}/scrap", response_model=ScrapStatus)
+def unscrap_review(review_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    existing = db.scalar(select(ReviewScrap).where(ReviewScrap.review_id == review_id, ReviewScrap.user_id == user.id))
+    if existing:
+        db.delete(existing)
+        db.commit()
+    return ScrapStatus(scrapped=False)
 
 
 @router.post("", response_model=ReviewReceipt, status_code=status.HTTP_201_CREATED, dependencies=[Depends(review_limiter)])

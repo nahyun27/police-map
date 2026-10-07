@@ -102,3 +102,27 @@ class PostVote(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     value: Mapped[int] = mapped_column(SmallInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReviewScrap(Base):
+    """평가 스크랩(나중에 다시 보려고 저장) — 추천과 달리 찬반 의미가 없는 단순 저장 표시."""
+
+    __tablename__ = "review_scraps"
+    __table_args__ = (UniqueConstraint("review_id", "user_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    review_id: Mapped[int] = mapped_column(ForeignKey("reviews.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PostScrap(Base):
+    """게시판 글 스크랩. ReviewScrap 과 동일한 규칙."""
+
+    __tablename__ = "post_scraps"
+    __table_args__ = (UniqueConstraint("post_id", "user_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

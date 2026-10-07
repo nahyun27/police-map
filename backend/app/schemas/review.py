@@ -65,3 +65,4 @@ class MyReviewOut(BaseModel):
     evidence_note: str | None = None
     evidence_verified: bool = False
     reply: ReplyOut | None = None
+    is_scrapped: bool = False

@@ -9,13 +9,13 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
 from app.core.rate_limit import comment_limiter, post_limiter, vote_limiter
-from app.models import Post, PostComment, PostVote, Region, RegionFollow, Station, User, UserRole
+from app.models import Post, PostComment, PostScrap, PostVote, Region, RegionFollow, Station, User, UserRole
 from app.schemas.community import (
-    CommentCreate, CommentOut, PostCreate, PostOut, PostReceipt, RegionFollowOut, VoteIn, VoteSummary,
+    CommentCreate, CommentOut, PostCreate, PostOut, PostReceipt, RegionFollowOut, ScrapStatus, VoteIn, VoteSummary,
 )
 from app.schemas.public import Page
 from app.services.audit import log_action
-from app.services.engagement import comment_counts, comment_tree, vote_summaries
+from app.services.engagement import comment_counts, comment_tree, scrapped_set, vote_summaries
 
 router = APIRouter(tags=["community"])
 
@@ -53,12 +53,16 @@ def unfollow_region(region_id: str, db: Session = Depends(get_db), user: User = 
 
 
 # ---------- 게시판 ----------
-def _post_out(db: Session, p: Post, vote: VoteSummary, comment_count: int, author_nickname: str, user_id: int | None) -> PostOut:
+def _post_out(
+    db: Session, p: Post, vote: VoteSummary, comment_count: int, author_nickname: str, user_id: int | None,
+    is_scrapped: bool = False,
+) -> PostOut:
     return PostOut(
         id=p.id, author_nickname=author_nickname, is_mine=(user_id is not None and p.author_id == user_id),
         region_id=p.region_id, region_name=p.region.name, station_id=p.station_id,
         station_name=p.station.name if p.station else None,
         title=p.title, body=p.body, comment_count=comment_count, score=vote.score, my_vote=vote.my_vote,
+        is_scrapped=is_scrapped,
         created_at=p.created_at.isoformat() if p.created_at else None,
         updated_at=p.updated_at.isoformat() if p.updated_at else None,
     )
@@ -87,10 +91,12 @@ def list_posts(
     posts = db.scalars(base.order_by(*order).offset((page - 1) * size).limit(size)).all()
 
     ids = [p.id for p in posts]
-    votes = vote_summaries(db, PostVote, PostVote.post_id, ids, user.id if user else None)
+    uid = user.id if user else None
+    votes = vote_summaries(db, PostVote, PostVote.post_id, ids, uid)
     counts = comment_counts(db, PostComment, PostComment.post_id, ids)
+    scrapped = scrapped_set(db, PostScrap, PostScrap.post_id, ids, uid)
     nicknames = dict(db.execute(select(User.id, User.nickname).where(User.id.in_({p.author_id for p in posts}))).all())
-    items = [_post_out(db, p, votes[p.id], counts[p.id], nicknames[p.author_id], user.id if user else None) for p in posts]
+    items = [_post_out(db, p, votes[p.id], counts[p.id], nicknames[p.author_id], uid, p.id in scrapped) for p in posts]
     return Page(items=items, total=total, page=page, size=size)
 
 
@@ -106,10 +112,12 @@ def popular_posts(
         base = base.where(Post.region_id == region_id)
     posts = db.scalars(base.order_by(_score_subq().desc(), Post.created_at.desc(), Post.id.desc()).limit(limit)).all()
     ids = [p.id for p in posts]
-    votes = vote_summaries(db, PostVote, PostVote.post_id, ids, user.id if user else None)
+    uid = user.id if user else None
+    votes = vote_summaries(db, PostVote, PostVote.post_id, ids, uid)
     counts = comment_counts(db, PostComment, PostComment.post_id, ids)
+    scrapped = scrapped_set(db, PostScrap, PostScrap.post_id, ids, uid)
     nicknames = dict(db.execute(select(User.id, User.nickname).where(User.id.in_({p.author_id for p in posts}))).all())
-    return [_post_out(db, p, votes[p.id], counts[p.id], nicknames[p.author_id], user.id if user else None) for p in posts]
+    return [_post_out(db, p, votes[p.id], counts[p.id], nicknames[p.author_id], uid, p.id in scrapped) for p in posts]
 
 
 @router.post("/posts", response_model=PostReceipt, status_code=status.HTTP_201_CREATED, dependencies=[Depends(post_limiter)])
@@ -135,10 +143,12 @@ def get_post(post_id: int, db: Session = Depends(get_db), user: User | None = De
     p = db.get(Post, post_id)
     if not p or p.is_removed:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
-    votes = vote_summaries(db, PostVote, PostVote.post_id, [post_id], user.id if user else None)
+    uid = user.id if user else None
+    votes = vote_summaries(db, PostVote, PostVote.post_id, [post_id], uid)
     counts = comment_counts(db, PostComment, PostComment.post_id, [post_id])
+    scrapped = scrapped_set(db, PostScrap, PostScrap.post_id, [post_id], uid)
     nickname = db.scalar(select(User.nickname).where(User.id == p.author_id))
-    return _post_out(db, p, votes[post_id], counts[post_id], nickname, user.id if user else None)
+    return _post_out(db, p, votes[post_id], counts[post_id], nickname, uid, post_id in scrapped)
 
 
 @router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -216,3 +226,51 @@ def vote_post(post_id: int, body: VoteIn, db: Session = Depends(get_db), user: U
         db.add(PostVote(post_id=post_id, user_id=user.id, value=body.value))
     db.commit()
     return vote_summaries(db, PostVote, PostVote.post_id, [post_id], user.id)[post_id]
+
+
+@router.get("/me/scraps/posts", response_model=Page[PostOut])
+def list_my_post_scraps(
+    page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=50),
+    user: User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    scrap_rows = db.execute(
+        select(PostScrap.post_id).where(PostScrap.user_id == user.id).order_by(PostScrap.created_at.desc(), PostScrap.id.desc())
+    ).all()
+    ordered_ids = [pid for pid, in scrap_rows]
+    total = len(ordered_ids)
+    page_ids = ordered_ids[(page - 1) * size: (page - 1) * size + size]
+    if not page_ids:
+        return Page(items=[], total=total, page=page, size=size)
+
+    posts = {p.id: p for p in db.scalars(select(Post).where(Post.id.in_(page_ids), Post.is_removed.is_(False))).all()}
+    votes = vote_summaries(db, PostVote, PostVote.post_id, page_ids, user.id)
+    counts = comment_counts(db, PostComment, PostComment.post_id, page_ids)
+    nicknames = dict(db.execute(select(User.id, User.nickname).where(User.id.in_({p.author_id for p in posts.values()}))).all())
+    items = [
+        _post_out(db, posts[pid], votes[pid], counts[pid], nicknames[posts[pid].author_id], user.id, True)
+        for pid in page_ids if pid in posts  # 삭제된 글은 조용히 건너뜀(스크랩한 순서 유지)
+    ]
+    return Page(items=items, total=total, page=page, size=size)
+
+
+@router.post("/posts/{post_id}/scrap", response_model=ScrapStatus, dependencies=[Depends(vote_limiter)])
+def scrap_post(post_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    p = db.get(Post, post_id)
+    if not p or p.is_removed:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
+    if not db.scalar(select(PostScrap.id).where(PostScrap.post_id == post_id, PostScrap.user_id == user.id)):
+        db.add(PostScrap(post_id=post_id, user_id=user.id))
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+    return ScrapStatus(scrapped=True)
+
+
+@router.delete("/posts/{post_id}/scrap", response_model=ScrapStatus)
+def unscrap_post(post_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    existing = db.scalar(select(PostScrap).where(PostScrap.post_id == post_id, PostScrap.user_id == user.id))
+    if existing:
+        db.delete(existing)
+        db.commit()
+    return ScrapStatus(scrapped=False)

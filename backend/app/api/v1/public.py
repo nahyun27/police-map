@@ -5,12 +5,14 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.v1._present import reply_out, review_public
 from app.core.database import get_db
 from app.core.deps import get_current_user_optional
-from app.models import Department, PublicStatistic, Region, Review, ReviewComment, ReviewStatus, ReviewVote, Station, User
+from app.models import (
+    Department, PublicStatistic, Region, Review, ReviewComment, ReviewScrap, ReviewStatus, ReviewVote, Station, User,
+)
 from app.schemas.public import (
     Page, RankedStation, RecentReview, RegionDetail, RegionOut, RegionRef, SearchResult, StationDetail, StationItem,
     StatsOverview, Totals, YearValue,
 )
-from app.services.engagement import comment_counts, reply_rows, vote_summaries
+from app.services.engagement import comment_counts, reply_rows, scrapped_set, vote_summaries
 from app.services.ratings import EMPTY, national_summary, station_summaries, visible_reviews
 
 router = APIRouter(tags=["public"])
@@ -74,12 +76,16 @@ def get_station(
         select(Review).where(*base).order_by(Review.published_at.desc(), Review.id.desc()).offset((page - 1) * size).limit(size)
     ).all()
     ids = [r.id for r in reviews]
-    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, user.id if user else None)
+    uid = user.id if user else None
+    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, uid)
     counts = comment_counts(db, ReviewComment, ReviewComment.review_id, ids)
     replies = reply_rows(db, ids)
-    uid = user.id if user else None
+    scrapped = scrapped_set(db, ReviewScrap, ReviewScrap.review_id, ids, uid)
     items = [
-        review_public(r, votes[r.id], counts[r.id], reply_out(*replies[r.id], uid) if r.id in replies else None)
+        review_public(
+            r, votes[r.id], counts[r.id], reply_out(*replies[r.id], uid) if r.id in replies else None,
+            r.id in scrapped,
+        )
         for r in reviews
     ]
     return StationDetail(
@@ -102,14 +108,16 @@ def recent_reviews(
         q = q.where(Station.region_id.in_(region_ids))
     rows = db.execute(q.order_by(Review.published_at.desc(), Review.id.desc()).limit(limit)).all()
     ids = [r.id for r, _ in rows]
-    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, user.id if user else None)
+    uid = user.id if user else None
+    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, uid)
     counts = comment_counts(db, ReviewComment, ReviewComment.review_id, ids)
     replies = reply_rows(db, ids)
-    uid = user.id if user else None
+    scrapped = scrapped_set(db, ReviewScrap, ReviewScrap.review_id, ids, uid)
     return [
         RecentReview(
             **review_public(
                 r, votes[r.id], counts[r.id], reply_out(*replies[r.id], uid) if r.id in replies else None,
+                r.id in scrapped,
             ).model_dump(),
             station_id=s.id, station_name=s.name,
         )
