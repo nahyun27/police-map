@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { ShieldCheck } from 'lucide-react';
 import { Card } from '@/components/ui';
 import { getMyRegions, getRecentReviews, type RecentReview, type RegionFollowOut } from '@/lib/api';
 import { formatDate } from '@/lib/format';
@@ -53,6 +54,7 @@ export function MyRegionFeed() {
           <div className="review" key={rv.id}>
             <div className="meta">
               <span className="badge">{rv.role_label}</span>{rv.station_name} · {formatDate(rv.published_at)}
+              {rv.evidence_verified && <span className="badge good"><ShieldCheck size={11} />증빙확인</span>}
             </div>
             <p>
               {rv.body ? rv.body.slice(0, 70) + (rv.body.length > 70 ? '…' : '') : '(서술 없음, 별점만 등록)'}{' '}

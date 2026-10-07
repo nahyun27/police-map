@@ -66,6 +66,7 @@ class ReviewPublic(BaseModel):
     comment_count: int = 0
     score: int = 0  # 추천 - 비추천
     my_vote: int = 0  # 로그인 + 투표한 경우만 1/-1, 그 외 0
+    evidence_verified: bool = False  # 운영자가 증빙자료를 확인했을 때만 true(공개 배지용)
 
 
 class StationDetail(BaseModel):

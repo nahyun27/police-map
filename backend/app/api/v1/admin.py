@@ -17,7 +17,7 @@ from app.models import (
 )
 from app.models.officer import SOURCE_LABELS
 from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
-from app.schemas.admin import OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate
+from app.schemas.admin import EvidenceVerifyIn, OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate
 from app.schemas.public import Page
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
@@ -40,6 +40,8 @@ class AdminReview(BaseModel):
     status: str
     reject_reason: str | None
     created_at: str | None
+    evidence_note: str | None
+    evidence_verified: bool
 
 
 def _admin_review(r: Review) -> AdminReview:
@@ -47,7 +49,7 @@ def _admin_review(r: Review) -> AdminReview:
         id=r.id, station_id=r.station_id, station_name=r.station.name,
         role=r.role.value, role_label=ROLE_LABELS[r.role], case_type=r.case_type.value, case_type_label=CASE_TYPE_LABELS[r.case_type],
         case_number=r.case_number, ratings=ratings_dict(r), body=r.body, status=r.status.value, reject_reason=r.reject_reason,
-        created_at=iso(r.created_at),
+        created_at=iso(r.created_at), evidence_note=r.evidence_note, evidence_verified=r.evidence_verified,
     )
 
 
@@ -87,6 +89,36 @@ def reject_review(review_id: int, body: RejectIn, admin: User = Depends(require_
     r = _pending_review(db, review_id)
     r.status, r.reviewed_by, r.reviewed_at, r.reject_reason = ReviewStatus.rejected, admin.id, takedown_svc.utcnow(), body.reason
     log_action(db, admin.id, "review_rejected", "review", r.id, {"reason": body.reason})
+    db.commit()
+    return _admin_review(r)
+
+
+@router.post("/reviews/{review_id}/remove", response_model=AdminReview)
+def remove_review(review_id: int, body: RejectIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """2026-10 결정 이후 즉시 게시된 평가를 운영자가 사후에 내리는 조치(게시판 글 삭제와 같은 성격).
+    pending 대기열 건은 approve/reject 로 처리하므로 여기 대상이 아니다."""
+    r = db.get(Review, review_id)
+    if not r:
+        raise HTTPException(404, "평가를 찾을 수 없습니다.")
+    if r.status not in (ReviewStatus.published, ReviewStatus.blinded):
+        raise HTTPException(409, f"사후 삭제 대상이 아닙니다(현재: {r.status.value}).")
+    r.status, r.reviewed_by, r.reviewed_at, r.reject_reason = ReviewStatus.removed, admin.id, takedown_svc.utcnow(), body.reason
+    log_action(db, admin.id, "review_removed_by_admin", "review", r.id, {"reason": body.reason})
+    db.commit()
+    return _admin_review(r)
+
+
+@router.patch("/reviews/{review_id}/evidence", response_model=AdminReview)
+def set_review_evidence(review_id: int, body: EvidenceVerifyIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """제출 시 작성자가 남긴 증빙 메모를 운영자가 실제로 확인했을 때만 켠다(공개 화면 "증빙확인" 배지).
+    서류 자체를 플랫폼이 받는 기능은 아직 없다 — 별도 경로(이메일 등)로 확인했다는 전제."""
+    r = db.get(Review, review_id)
+    if not r:
+        raise HTTPException(404, "평가를 찾을 수 없습니다.")
+    r.evidence_verified = body.verified
+    r.evidence_verified_by = admin.id if body.verified else None
+    r.evidence_verified_at = takedown_svc.utcnow() if body.verified else None
+    log_action(db, admin.id, "review_evidence_verified" if body.verified else "review_evidence_unverified", "review", r.id)
     db.commit()
     return _admin_review(r)
 

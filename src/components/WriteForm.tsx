@@ -50,6 +50,7 @@ export default function WriteForm({ stationId }: { stationId: number }) {
   const [caseNo, setCaseNo] = useState('');
   const [pick, setPick] = useState<Record<keyof ReviewRatingsIn, number>>({ fair: 0, proc: 0, att: 0, comm: 0, speed: 0 });
   const [text, setText] = useState('');
+  const [evidenceNote, setEvidenceNote] = useState('');
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +73,7 @@ export default function WriteForm({ stationId }: { stationId: number }) {
         case_number: caseNo.trim() || null,
         ratings: Object.fromEntries(Object.entries(pick).map(([k, v]) => [k, v || null])),
         body: text,
+        evidence_note: evidenceNote.trim() || null,
       });
       setDone(true);
     } catch (e) {
@@ -103,6 +105,13 @@ export default function WriteForm({ stationId }: { stationId: number }) {
         <input type="text" value={caseNo} onChange={(e) => setCaseNo(e.target.value)}
           placeholder="예: 2026-형제-00000 (입력하지 않아도 제출할 수 있습니다)" />
       </div>
+      <div className="field">
+        <label>증빙 자료 <span className="tag">선택 · 비공개</span></label>
+        <input
+          type="text" value={evidenceNote} onChange={(e) => setEvidenceNote(e.target.value)} maxLength={300}
+          placeholder="예: 불기소 결정문 사본 보유 (운영진이 확인하면 '증빙확인' 배지가 붙습니다)"
+        />
+      </div>
 
       <div className="form-section">2. 항목별 평가</div>
       <div className="grid2" style={{ marginBottom: 0 }}>
@@ -127,13 +136,16 @@ export default function WriteForm({ stationId }: { stationId: number }) {
 
       {error && <div className="warn">{error}</div>}
       <button className="btn lg" onClick={submit} disabled={submitting}>
-        {submitting ? '제출 중…' : '검수 요청(제출)'}
+        {submitting ? '게시 중…' : '게시하기'}
       </button>
 
       {done && (
         <div className="modal-ok">
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontWeight: 700 }}><CheckCircle2 size={20} />제출 완료</div>
-          <p style={{ marginTop: 6 }}>작성하신 평가는 커뮤니티 가이드라인 적합성 검수(24~48시간) 후 게시됩니다. 부적합 판정 시 사유와 함께 반려됩니다.</p>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontWeight: 700 }}><CheckCircle2 size={20} />게시 완료</div>
+          <p style={{ marginTop: 6 }}>
+            작성하신 평가가 바로 게시되었습니다. 금칙어가 섞여 있으면 자동으로 거부되고, 그 외 문제가 있는 게시물은
+            운영진이 사후에 조치합니다. 증빙 자료를 남겼다면 운영진 확인 후 "증빙확인" 배지가 붙습니다.
+          </p>
           <hr className="divider" style={{ margin: '14px 0' }} />
           <p>비슷한 문제로 불편을 겪으셨다면 후기에서 멈추지 마세요.</p>
           <div className="btn-row" style={{ marginTop: 10 }}>

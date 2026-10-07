@@ -19,6 +19,8 @@ class ReviewCreate(BaseModel):
     case_number: str | None = Field(default=None, max_length=100)
     ratings: RatingsIn
     body: str = Field(default="", max_length=2000)
+    # 선택 입력. 실제 서류를 받는 기능은 아직 없고, 운영자가 확인 후 수동으로 증빙배지를 달아 준다.
+    evidence_note: str | None = Field(default=None, max_length=300)
 
     @model_validator(mode="after")
     def _normalize(self):
@@ -29,6 +31,8 @@ class ReviewCreate(BaseModel):
         if self.case_number is not None and len(self.case_number) < 4:
             raise ValueError("사건번호는 4자 이상으로 입력하거나 비워 주세요.")
         self.body = self.body.strip()
+        if self.evidence_note is not None:
+            self.evidence_note = self.evidence_note.strip() or None
         return self
 
 
@@ -57,3 +61,5 @@ class MyReviewOut(BaseModel):
     published_at: str | None
     comment_count: int = 0
     score: int = 0
+    evidence_note: str | None = None
+    evidence_verified: bool = False

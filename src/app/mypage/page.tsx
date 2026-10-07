@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LogOut, X } from 'lucide-react';
+import { LogOut, ShieldCheck, X } from 'lucide-react';
 import { Card, PageHead, Score, TableWrap } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import {
@@ -158,7 +158,10 @@ export default function MyPage() {
                       <td><Score value={r.overall} /></td>
                       <td className="sub">{r.score > 0 ? `+${r.score}` : r.score}</td>
                       <td className="sub">{r.comment_count}</td>
-                      <td><span className={`badge ${st.tone}`}>{st.label}</span></td>
+                      <td>
+                        <span className={`badge ${st.tone}`}>{st.label}</span>
+                        {r.evidence_verified && <span className="badge good"><ShieldCheck size={11} />증빙확인</span>}
+                      </td>
                       <td className="sub">{formatDate(r.created_at)}</td>
                     </tr>
                   );

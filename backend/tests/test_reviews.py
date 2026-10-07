@@ -20,7 +20,7 @@ def test_logged_in_submission_appears_in_mine(user_client, world):
     items = mine.json()["items"]
     assert any(x["id"] == review_id for x in items)
     hit = next(x for x in items if x["id"] == review_id)
-    assert hit["status"] == "pending"
+    assert hit["status"] == "published"  # 2026-10 결정: 제출 즉시 게시
     assert "case_number" not in hit  # 본인 것이어도 공개 스키마 원칙상 사건번호는 안 돌려준다
 
 
@@ -49,17 +49,18 @@ def test_mine_only_shows_own_reviews(db, client, world):
     assert b.get(f"{API}/reviews/mine").json()["total"] == 0
 
 
-def test_submit_is_pending_and_not_public(client, world):
+def test_submit_is_published_immediately_and_public(client, world):
+    """2026-10 결정: 사전 검수 없이 제출 즉시 게시한다(게시판과 동일한 방식)."""
     r = client.post(f"{API}/reviews", json=review_payload(world["station"].id))
     assert r.status_code == 201
     body = r.json()
-    assert body["status"] == "pending" and "id" in body
+    assert body["status"] == "published" and "id" in body
     assert "case_number" not in r.text  # 제출 응답에도 사건번호를 되돌려주지 않는다
-    # 공개 API 어디에도 나타나지 않고 평점 집계에도 반영되지 않는다(기존 게시 평가 2건 그대로)
+    # 공개 API 에 바로 나타나고 평점 집계에도 즉시 반영된다(기존 게시 평가 2건 + 방금 1건)
     pub = client.get(f"{API}/stations/{world['station'].id}").json()
-    assert pub["reviews"]["total"] == 2 and pub["rating"]["count"] == 2
-    assert all("절차에 따라" not in x["body"] for x in pub["reviews"]["items"])
-    assert client.get(f"{API}/stats/overview").json()["totals"]["reviews"] == 2
+    assert pub["reviews"]["total"] == 3 and pub["rating"]["count"] == 3
+    assert any("절차에 따라" in x["body"] for x in pub["reviews"]["items"])
+    assert client.get(f"{API}/stats/overview").json()["totals"]["reviews"] == 3
 
 
 def test_banned_expression_rejected_with_list(client, world):
@@ -115,3 +116,13 @@ def test_duplicate_same_case_is_409_even_if_formatted_differently(client, world)
 
 def test_unknown_station_is_404(client):
     assert client.post(f"{API}/reviews", json=review_payload(9999)).status_code == 404
+
+
+def test_evidence_note_is_optional_and_unverified_until_admin_acts(user_client, world):
+    """제출 시 증빙 메모를 남겨도 운영자가 확인하기 전에는 공개 배지(evidence_verified)가 뜨지 않는다."""
+    rid = user_client.post(f"{API}/reviews", json=review_payload(world["station"].id, evidence_note="불기소 결정문 사본 보유")).json()["id"]
+    mine = next(x for x in user_client.get(f"{API}/reviews/mine").json()["items"] if x["id"] == rid)
+    assert mine["evidence_note"] == "불기소 결정문 사본 보유" and mine["evidence_verified"] is False
+    pub = next(x for x in user_client.get(f"{API}/stations/{world['station'].id}").json()["reviews"]["items"] if x["id"] == rid)
+    assert pub["evidence_verified"] is False
+    assert "evidence_note" not in pub  # 공개 응답에는 메모 원문을 노출하지 않는다(배지 여부만)

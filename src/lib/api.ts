@@ -100,6 +100,7 @@ export interface ReviewPublic {
   comment_count: number;
   score: number;
   my_vote: number;
+  evidence_verified: boolean;
 }
 
 export interface Page<T> {
@@ -195,6 +196,7 @@ export interface ReviewCreatePayload {
   case_number?: string | null;
   ratings: ReviewRatingsIn;
   body?: string;
+  evidence_note?: string | null;
 }
 
 export interface ReviewReceipt {
@@ -273,6 +275,8 @@ export interface MyReviewOut {
   published_at: string | null;
   comment_count: number;
   score: number;
+  evidence_note: string | null;
+  evidence_verified: boolean;
 }
 
 export function getMyReviews(opts?: { page?: number; size?: number }) {
@@ -402,6 +406,8 @@ export interface AdminReview {
   status: string;
   reject_reason: string | null;
   created_at: string | null;
+  evidence_note: string | null;
+  evidence_verified: boolean;
 }
 
 export const listAdminReviews = (opts: { status: string; page?: number; size?: number }) => {
@@ -413,6 +419,11 @@ export const listAdminReviews = (opts: { status: string; page?: number; size?: n
 export const approveReview = (id: number) => apiFetch<AdminReview>(`/admin/reviews/${id}/approve`, { method: 'POST' });
 export const rejectReview = (id: number, reason: string) =>
   apiFetch<AdminReview>(`/admin/reviews/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
+// 2026-10 결정 이후 즉시 게시된 평가를 운영자가 사후에 내리는 조치(approve/reject 는 레거시 대기열 전용).
+export const removeReview = (id: number, reason: string) =>
+  apiFetch<AdminReview>(`/admin/reviews/${id}/remove`, { method: 'POST', body: JSON.stringify({ reason }) });
+export const setReviewEvidence = (id: number, verified: boolean) =>
+  apiFetch<AdminReview>(`/admin/reviews/${id}/evidence`, { method: 'PATCH', body: JSON.stringify({ verified }) });
 
 export interface AdminTakedown {
   id: number;

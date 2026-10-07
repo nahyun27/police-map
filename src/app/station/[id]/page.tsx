@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ShieldCheck } from 'lucide-react';
 import { Engagement } from '@/components/Engagement';
 import { Bars, Card, Crumb, Score, Stars } from '@/components/ui';
 import { ApiError, getStation } from '@/lib/api';
@@ -92,7 +93,8 @@ export default async function StationPage({ params, searchParams }: Props) {
           s.reviews.items.map((rv) => (
             <div className="review" key={rv.id}>
               <div className="meta">
-                <span className="badge brand">{rv.role_label}</span><span className="badge">{rv.case_type_label}</span>{formatDate(rv.published_at)} · 검수 완료
+                <span className="badge brand">{rv.role_label}</span><span className="badge">{rv.case_type_label}</span>{formatDate(rv.published_at)}
+                {rv.evidence_verified && <span className="badge good"><ShieldCheck size={11} />증빙확인</span>}
               </div>
               <div className="head"><Score value={rv.overall} /></div>
               <p>{rv.body || '(서술 없음, 별점만 등록)'}</p>

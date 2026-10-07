@@ -106,6 +106,21 @@ def world(db):
     return {"station": station, "station2": station2, "officer": officer, "reviews": reviews}
 
 
+def pending_review(db, station_id: int, **over):
+    """2026-10 결정 이후로는 API(POST /reviews)로 더 이상 pending 평가를 만들 수 없다(즉시 게시로
+    바뀜) — 그 결정 이전부터 쌓여 있던 검수 대기열을 흉내내려는 테스트는 DB 에 직접 넣는다."""
+    defaults = dict(
+        station_id=station_id, role=ReviewRole.complainant, case_type=CaseType.fraud,
+        fair=4, proc=4, att=4, comm=4, speed=4, body="검수 대기열 테스트 평가", status=ReviewStatus.pending,
+    )
+    defaults.update(over)
+    r = Review(**defaults)
+    db.add(r)
+    db.commit()
+    db.refresh(r)
+    return r
+
+
 def review_payload(station_id: int, **over):
     body = {
         "station_id": station_id, "role": "complainant", "case_type": "fraud", "case_number": "2026-형제-12345",

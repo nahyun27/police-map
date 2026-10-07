@@ -26,5 +26,5 @@ def review_public(r: Review, vote: VoteSummary = _EMPTY_VOTE, comment_count: int
         id=r.id, role=r.role.value, role_label=ROLE_LABELS[r.role], case_type=r.case_type.value,
         case_type_label=CASE_TYPE_LABELS[r.case_type], ratings=ratings_dict(r), overall=review_overall(r),
         body=r.body, published_at=iso(r.published_at),
-        comment_count=comment_count, score=vote.score, my_vote=vote.my_vote,
+        comment_count=comment_count, score=vote.score, my_vote=vote.my_vote, evidence_verified=r.evidence_verified,
     )

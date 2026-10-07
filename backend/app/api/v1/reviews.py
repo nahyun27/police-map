@@ -13,6 +13,7 @@ from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
 from app.schemas.community import CommentCreate, CommentOut, VoteIn, VoteSummary
 from app.schemas.public import Page
 from app.schemas.review import MyReviewOut, ReviewCreate, ReviewReceipt
+from app.services import takedown as takedown_svc
 from app.services.audit import log_action
 from app.services.engagement import comment_counts, comment_tree, vote_summaries
 from app.services.ratings import DIMS
@@ -55,6 +56,7 @@ def list_my_reviews(
             ratings=_ratings_dict(r), overall=_overall(r), body=r.body, status=r.status.value, reject_reason=r.reject_reason,
             created_at=_iso(r.created_at), published_at=_iso(r.published_at),
             comment_count=counts[r.id], score=votes[r.id].score,
+            evidence_note=r.evidence_note, evidence_verified=r.evidence_verified,
         )
         for r in rows
     ]
@@ -63,8 +65,10 @@ def list_my_reviews(
 
 @router.post("", response_model=ReviewReceipt, status_code=status.HTTP_201_CREATED, dependencies=[Depends(review_limiter)])
 def create_review(body: ReviewCreate, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
-    """평가 제출. 로그인 없이도 익명으로 작성 가능하고, 항상 '검수 대기'로 저장된다.
-    운영진 승인 전에는 어디에도 공개되지 않는다. 남용 방지는 IP 기준 속도 제한으로만 한다.
+    """평가 제출. 로그인 없이도 익명으로 작성 가능하고, 2026-10 결정으로 사전 검수 없이 즉시
+    게시된다(게시판과 동일한 방식 — 명예훼손 등 게시물 책임은 작성자 본인이 진다). 금칙어
+    자동 필터만 1차로 걸러내고, 문제가 생기면 관리자가 사후 삭제하거나 당사자가 삭제·정정
+    요청을 넣을 수 있다. 남용 방지는 IP 기준 속도 제한으로 한다.
     로그인한 상태로 제출하면 author_id 가 채워져 본인 계정의 "내가 쓴 글"에서 보인다 — 단,
     공개 화면에는 어느 쪽이든 작성자 신원이 절대 드러나지 않는다(역할 라벨만 표시)."""
     station = db.get(Station, body.station_id)
@@ -85,9 +89,11 @@ def create_review(body: ReviewCreate, db: Session = Depends(get_db), user: User 
         if dup:
             raise HTTPException(status.HTTP_409_CONFLICT, "같은 사건번호로 이미 제출된 평가가 있습니다.")
 
+    now = takedown_svc.utcnow()
     review = Review(
         station_id=station.id, author_id=user.id if user else None, role=body.role, case_type=body.case_type,
-        case_number=body.case_number, case_number_hash=case_hash, body=body.body, status=ReviewStatus.pending,
+        case_number=body.case_number, case_number_hash=case_hash, body=body.body,
+        evidence_note=body.evidence_note, status=ReviewStatus.published, published_at=now,
         **body.ratings.model_dump(),
     )
     db.add(review)
@@ -96,7 +102,7 @@ def create_review(body: ReviewCreate, db: Session = Depends(get_db), user: User 
     except IntegrityError:  # 동시 요청으로 중복이 통과한 경우
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "같은 사건번호로 이미 제출된 평가가 있습니다.")
-    return ReviewReceipt(id=review.id, status=review.status.value, message="접수되었습니다. 검수(24~48시간) 후 게시됩니다.")
+    return ReviewReceipt(id=review.id, status=review.status.value, message="게시되었습니다.")
 
 
 def _published_or_404(db: Session, review_id: int) -> Review:

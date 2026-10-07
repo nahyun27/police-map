@@ -1,4 +1,4 @@
-from conftest import review_payload
+from conftest import pending_review, review_payload
 
 API = "/api/v1"
 
@@ -12,22 +12,24 @@ def test_admin_endpoints_require_admin(client, user_client):
 
 
 def _submit(client, station_id, **over):
-    """평가 제출은 로그인이 필요 없다(2026-09 결정: 기본 익명)."""
+    """평가 제출은 로그인이 필요 없고(2026-09 결정: 기본 익명), 2026-10 결정으로 제출 즉시 게시된다.
+    이 헬퍼로 만든 건은 이미 published 라 approve/reject 대상이 아니다 — 그런 레거시 대기열
+    테스트는 conftest.pending_review() 로 DB 에 직접 pending 행을 만들어 쓴다."""
     r = client.post(f"{API}/reviews", json=review_payload(station_id, **over))
     assert r.status_code == 201, r.text
     return r.json()["id"]
 
 
-def test_queue_shows_case_number_only_to_admin_oldest_first(client, admin_client, world):
-    first = _submit(client, world["station"].id, case_number="사건-AAAA")
-    second = _submit(client, world["station2"].id, case_number="사건-BBBB")
+def test_queue_shows_case_number_only_to_admin_oldest_first(db, admin_client, world):
+    first = pending_review(db, world["station"].id, case_number="사건-AAAA").id
+    second = pending_review(db, world["station2"].id, case_number="사건-BBBB").id
     q = admin_client.get(f"{API}/admin/reviews").json()
     assert q["total"] == 2 and [i["id"] for i in q["items"]] == [first, second]
     assert q["items"][0]["case_number"] == "사건-AAAA" and q["items"][0]["status"] == "pending"
 
 
-def test_approve_publishes_and_updates_aggregates(client, admin_client, world):
-    rid = _submit(client, world["station2"].id, ratings={"fair": 5, "proc": 3})  # 종합 (5+3)/2 = 4.0
+def test_approve_publishes_and_updates_aggregates(db, client, admin_client, world):
+    rid = pending_review(db, world["station2"].id, fair=5, proc=3, att=None, comm=None, speed=None).id  # 종합 (5+3)/2 = 4.0
     assert client.get(f"{API}/stations/{world['station2'].id}").json()["rating"]["count"] == 0
     r = admin_client.post(f"{API}/admin/reviews/{rid}/approve")
     assert r.status_code == 200 and r.json()["status"] == "published"
@@ -36,8 +38,8 @@ def test_approve_publishes_and_updates_aggregates(client, admin_client, world):
     assert admin_client.post(f"{API}/admin/reviews/{rid}/approve").status_code == 409  # 재승인 불가
 
 
-def test_reject_requires_reason_and_stays_private(client, admin_client, world):
-    rid = _submit(client, world["station2"].id)
+def test_reject_requires_reason_and_stays_private(db, client, admin_client, world):
+    rid = pending_review(db, world["station2"].id).id
     assert admin_client.post(f"{API}/admin/reviews/{rid}/reject", json={"reason": "짧"}).status_code == 422
     assert admin_client.post(f"{API}/admin/reviews/{rid}/reject", json={"reason": "직무와 무관한 내용이 포함되어 있습니다"}).status_code == 200
     assert client.get(f"{API}/stations/{world['station2'].id}").json()["rating"]["count"] == 0
@@ -46,18 +48,18 @@ def test_reject_requires_reason_and_stays_private(client, admin_client, world):
     assert admin_client.post(f"{API}/admin/reviews/{rid}/approve").status_code == 409  # 반려 후 승인 불가
 
 
-def test_admin_list_filter_by_status(client, admin_client, world):
-    rid = _submit(client, world["station"].id)
-    admin_client.post(f"{API}/admin/reviews/{rid}/approve")
+def test_admin_list_filter_by_status(db, admin_client, world):
+    rid = pending_review(db, world["station"].id).id
+    assert admin_client.post(f"{API}/admin/reviews/{rid}/approve").status_code == 200
     assert admin_client.get(f"{API}/admin/reviews").json()["total"] == 0
     assert admin_client.get(f"{API}/admin/reviews", params={"status": "published"}).json()["total"] == 3  # 시드 2 + 방금 1
     assert admin_client.get(f"{API}/admin/reviews", params={"status": "bogus"}).status_code == 422
 
 
-def test_audit_log_records_every_admin_action(client, admin_client, world):
-    rid = _submit(client, world["station"].id)
+def test_audit_log_records_every_admin_action(db, admin_client, world):
+    rid = pending_review(db, world["station"].id).id
     admin_client.post(f"{API}/admin/reviews/{rid}/approve")
-    rid2 = _submit(client, world["station2"].id)
+    rid2 = pending_review(db, world["station2"].id).id
     admin_client.post(f"{API}/admin/reviews/{rid2}/reject", json={"reason": "사유가 충분히 긴 반려 사유"})
     logs = admin_client.get(f"{API}/admin/audit-logs").json()
     assert [l["action"] for l in logs["items"]] == ["review_rejected", "review_approved"]  # 최신순
@@ -65,6 +67,43 @@ def test_audit_log_records_every_admin_action(client, admin_client, world):
     assert admin_client.get(f"{API}/admin/audit-logs", params={"action": "review_approved"}).json()["total"] == 1
     # 감사 로그는 읽기 전용: 수정·삭제 경로가 없다
     assert admin_client.delete(f"{API}/admin/audit-logs/1").status_code in (404, 405)
+
+
+def test_submit_is_published_immediately_and_appears_publicly(client, world):
+    """2026-10 결정: 평가는 더 이상 검수 대기를 거치지 않고 제출 즉시 게시된다(게시판과 동일한 방식)."""
+    rid = _submit(client, world["station"].id, body="즉시게시 회귀 테스트")
+    pub = client.get(f"{API}/stations/{world['station'].id}").json()
+    assert pub["rating"]["count"] == 3  # 시드 2 + 방금 1
+    assert any(x["id"] == rid and x["body"] == "즉시게시 회귀 테스트" for x in pub["reviews"]["items"])
+
+
+def test_admin_can_remove_published_review_post_hoc(client, admin_client, world):
+    rid = world["reviews"][0].id  # 이미 published 된 시드 평가
+    assert admin_client.post(f"{API}/admin/reviews/{rid}/remove", json={"reason": "직무와 무관한 허위 사실"}).status_code == 200
+    assert client.get(f"{API}/stations/{world['station'].id}").json()["rating"]["count"] == 1  # 시드 2건 중 1건만 남음
+    removed = admin_client.get(f"{API}/admin/reviews", params={"status": "removed"}).json()["items"][0]
+    assert removed["id"] == rid and "직무와 무관" in removed["reject_reason"]
+    # 이미 삭제된 건 다시 삭제 불가, 대기열 상태가 아닌 건 approve/reject 대상도 아니다
+    assert admin_client.post(f"{API}/admin/reviews/{rid}/remove", json={"reason": "다시 사유 입력"}).status_code == 409
+    assert admin_client.post(f"{API}/admin/reviews/{rid}/approve").status_code == 409
+
+
+def test_admin_cannot_remove_pending_review(db, admin_client, world):
+    """레거시 대기열 건은 approve/reject 로만 처리한다 — remove 의 대상이 아니다."""
+    rid = pending_review(db, world["station"].id).id
+    assert admin_client.post(f"{API}/admin/reviews/{rid}/remove", json={"reason": "사유 충분히 길게"}).status_code == 409
+
+
+def test_admin_can_toggle_evidence_badge(client, admin_client, world):
+    rid = world["reviews"][0].id
+    assert client.get(f"{API}/stations/{world['station'].id}").json()["reviews"]["items"][0]["evidence_verified"] is False
+    r = admin_client.patch(f"{API}/admin/reviews/{rid}/evidence", json={"verified": True})
+    assert r.status_code == 200 and r.json()["evidence_verified"] is True
+    pub = client.get(f"{API}/stations/{world['station'].id}").json()
+    hit = next(x for x in pub["reviews"]["items"] if x["id"] == rid)
+    assert hit["evidence_verified"] is True
+    # 되돌리기도 가능
+    assert admin_client.patch(f"{API}/admin/reviews/{rid}/evidence", json={"verified": False}).json()["evidence_verified"] is False
 
 
 def test_takedown_is_audited_with_system_actor(client, admin_client, world):

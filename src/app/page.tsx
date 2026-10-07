@@ -11,7 +11,7 @@ import { formatDate } from '@/lib/format';
 export const dynamic = 'force-dynamic';
 
 const FEATURES = [
-  { to: '/policy', icon: ShieldCheck, title: '사실 기반 평가', body: '직무수행에 대한 구조화된 평가만 선검수 후 게시합니다. 인신공격과 사생활 정보는 게재하지 않습니다.', more: '운영원칙 보기' },
+  { to: '/policy', icon: ShieldCheck, title: '사실 기반 평가', body: '직무수행에 대한 구조화된 평가만 받습니다. 금칙어는 자동 필터링되고, 인신공격·사생활 게시물은 사후 삭제됩니다.', more: '운영원칙 보기' },
   { to: '/remedy', icon: Scale, title: '권리구제 내비게이터', body: '후기에서 멈추지 않도록, 겪은 문제에 맞는 공식 절차와 접수처를 안내합니다.', more: '내 상황에 맞는 절차 찾기' },
   { to: '/stats', icon: BarChart3, title: '공개 통계', body: '이용자 평가와 정보공개청구로 확보한 기피신청·수용률 통계를 함께 제공합니다.', more: '전국 통계 보기' },
 ];
@@ -74,13 +74,14 @@ export default async function Home() {
           <div className="sec-head">
             <div>
               <h2 style={{ marginBottom: 4 }}>최근 등록된 평가</h2>
-              <p className="sub">모든 평가는 작성 후 검수(24~48시간)를 거쳐 게시됩니다.</p>
+              <p className="sub">모든 평가는 작성 즉시 게시됩니다. 금칙어는 자동으로 걸러집니다.</p>
             </div>
           </div>
           {recent.length ? recent.map((rv) => (
             <div className="review" key={rv.id}>
               <div className="meta">
                 <span className="badge">{rv.role_label}</span>{rv.station_name} · {formatDate(rv.published_at)}
+                {rv.evidence_verified && <span className="badge good"><ShieldCheck size={11} />증빙확인</span>}
               </div>
               <div className="head"><Score value={rv.overall} /></div>
               <p>

@@ -60,10 +60,10 @@ function ChapterHead({ n, eyebrow, title, sub }: { n: string; eyebrow: string; t
 }
 
 const FEATURES = [
-  { icon: Star, title: '경험자만, 사실만', body: '사건관계인·변호인이 사건서류로 검증받고 작성하는 5개 항목 구조화 평가. 비방·인신공격은 검수에서 걸러집니다.' },
+  { icon: Star, title: '경험자만, 사실만', body: '사건관계인·변호인이 직접 경험한 사실만 적는 5개 항목 구조화 평가. 비방·인신공격은 금칙어 필터로 걸러지고, 남은 문제는 사후 조치합니다.' },
   { icon: Map, title: '전국 경찰서', body: '관서·부서 단위의 평가와 통계를 지도로 봅니다. 특정 개인 낙인이 아닌, 패턴의 기록이 목적입니다.' },
   { icon: Scale, title: '평가에서 권리구제로', body: '불만으로 끝내지 않습니다. 국민신문고·수사관 기피신청·불송치 이의신청 등 공식 절차를 사안별로 안내합니다.' },
-  { icon: ShieldCheck, title: '투명한 운영', body: '모든 게시물 선검수, 당사자 삭제·정정 요청 즉시 임시조치, 분기별 투명성 보고서 공개.' },
+  { icon: ShieldCheck, title: '투명한 운영', body: '모든 게시물 즉시 공개(금칙어 자동 필터), 당사자 삭제·정정 요청 즉시 임시조치, 분기별 투명성 보고서 공개.' },
 ];
 
 export default async function WhyPage() {

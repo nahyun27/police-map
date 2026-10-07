@@ -9,6 +9,10 @@ class RejectIn(BaseModel):
     reason: str = Field(min_length=5, max_length=500)
 
 
+class EvidenceVerifyIn(BaseModel):
+    verified: bool
+
+
 class ResolveIn(BaseModel):
     decision: Literal["keep", "remove"]
     note: str = Field(min_length=5, max_length=2000)
