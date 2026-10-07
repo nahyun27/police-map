@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Search } from 'lucide-react';
-import { Card, Crumb, PageHead, TableWrap } from '@/components/ui';
+import { Card, Crumb, PageHead } from '@/components/ui';
 import { getRegions, listPosts, type PopularPeriod, type PostCategory } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
@@ -93,27 +93,28 @@ export default async function BoardPage({ searchParams }: Props) {
       </Card>
 
       <Card>
-        <TableWrap>
-          <table className="list">
-            <thead><tr><th>글머리</th><th>지역</th><th>제목</th><th>작성자</th><th>조회</th><th>추천</th><th>댓글</th><th>작성일</th></tr></thead>
-            <tbody>
-              {posts.items.length ? posts.items.map((p) => (
-                <tr key={p.id}>
-                  <td className="sub">{p.category_label}</td>
-                  <td className="sub">{p.region_name}{p.station_name ? ` · ${p.station_name}` : ''}</td>
-                  <td><Link href={`/board/${p.id}`}>{p.title}</Link></td>
-                  <td className="sub">{p.author_nickname}</td>
-                  <td className="sub">{p.view_count}</td>
-                  <td className="sub">{p.score}</td>
-                  <td className="sub">{p.comment_count}</td>
-                  <td className="sub">{formatDate(p.created_at)}</td>
-                </tr>
-              )) : (
-                <tr><td colSpan={8} className="sub">{q ? '검색 결과가 없습니다.' : '등록된 글이 없습니다. 첫 글을 남겨 보세요.'}</td></tr>
-              )}
-            </tbody>
-          </table>
-        </TableWrap>
+        {posts.items.length ? (
+          <div className="post-list">
+            {posts.items.map((p) => (
+              <Link href={`/board/${p.id}`} key={p.id} className="post-row">
+                <div className="post-row-top">
+                  <span className="badge brand">{p.category_label}</span>
+                  <span className="sub">{p.region_name}{p.station_name ? ` · ${p.station_name}` : ''}</span>
+                </div>
+                <div className="post-row-title">{p.title}</div>
+                <div className="post-row-meta sub">
+                  <span>{p.author_nickname}</span>
+                  <span>{formatDate(p.created_at)}</span>
+                  <span>조회 {p.view_count}</span>
+                  <span>추천 {p.score}</span>
+                  <span>댓글 {p.comment_count}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="sub">{q ? '검색 결과가 없습니다.' : '등록된 글이 없습니다. 첫 글을 남겨 보세요.'}</p>
+        )}
         {totalPages > 1 && (
           <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>
             {page > 1 && <Link href={buildHref({ ...f, page: page - 1 })} className="btn line sm">이전</Link>}

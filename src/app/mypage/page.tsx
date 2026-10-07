@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Bookmark, LogOut, ShieldCheck, X } from 'lucide-react';
-import { Card, PageHead, Score, TableWrap } from '@/components/ui';
+import { Card, PageHead, Score } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import {
   ApiError, followRegion, getMe, getMyRegions, getMyReviews, getMyReviewScraps, getMyPostScraps, getRegions,
@@ -207,46 +207,35 @@ export default function MyPage() {
       <Card>
         <h2>내가 쓴 평가</h2>
         {error && <div className="warn">{error}</div>}
-        <TableWrap>
-          <table className="list">
-            <thead>
-              <tr><th>경찰서</th><th>구분</th><th>평점</th><th>추천</th><th>댓글</th><th>상태</th><th>작성일</th></tr>
-            </thead>
-            <tbody>
-              {data && data.items.length ? (
-                data.items.map((r) => {
-                  const st = STATUS_LABEL[r.status];
-                  return (
-                    <tr key={r.id}>
-                      <td><Link href={`/station/${r.station_id}`}>{r.station_name}</Link></td>
-                      <td className="sub">{r.role_label} · {r.case_type_label}</td>
-                      <td><Score value={r.overall} /></td>
-                      <td className="sub">{r.score > 0 ? `+${r.score}` : r.score}</td>
-                      <td className="sub">{r.comment_count}</td>
-                      <td>
-                        <span className={`badge ${st.tone}`}>{st.label}</span>
-                        {r.evidence_verified && <span className="badge good"><ShieldCheck size={11} />증빙확인</span>}
-                      </td>
-                      <td className="sub">{formatDate(r.created_at)}</td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr><td colSpan={7} className="sub">아직 작성한 평가가 없습니다.</td></tr>
-              )}
-              {data && data.items.some((r) => r.status === 'rejected' && r.reject_reason) && (
-                <tr><td colSpan={7}>
-                  <div className="guidebox" style={{ marginBottom: 0 }}>
+        {data && data.items.length ? (
+          data.items.map((r) => {
+            const st = STATUS_LABEL[r.status];
+            return (
+              <div className="review" key={r.id}>
+                <div className="meta">
+                  <span className="badge brand">{r.role_label}</span><span className="badge">{r.case_type_label}</span>
+                  {formatDate(r.created_at)}
+                  {r.evidence_verified && <span className="badge good"><ShieldCheck size={11} />증빙확인</span>}
+                </div>
+                <div className="head"><Score value={r.overall} /></div>
+                <p><Link href={`/station/${r.station_id}`}>{r.station_name}</Link></p>
+                <div className="post-row-meta sub" style={{ marginTop: 8 }}>
+                  <span className={`badge ${st.tone}`}>{st.label}</span>
+                  <span>추천 {r.score > 0 ? `+${r.score}` : r.score}</span>
+                  <span>댓글 {r.comment_count}</span>
+                </div>
+                {r.status === 'rejected' && r.reject_reason && (
+                  <div className="guidebox" style={{ marginTop: 10, marginBottom: 0 }}>
                     <b>반려 사유</b>
-                    {data.items.filter((r) => r.status === 'rejected' && r.reject_reason).map((r) => (
-                      <p key={r.id} className="sub" style={{ marginTop: 6 }}>{r.station_name}: {r.reject_reason}</p>
-                    ))}
+                    <p className="sub" style={{ marginTop: 4 }}>{r.reject_reason}</p>
                   </div>
-                </td></tr>
-              )}
-            </tbody>
-          </table>
-        </TableWrap>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <p className="sub">아직 작성한 평가가 없습니다.</p>
+        )}
         {totalPages > 1 && (
           <div className="btn-row" style={{ marginTop: 16, justifyContent: 'center' }}>
             <button className="btn line sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>이전</button>

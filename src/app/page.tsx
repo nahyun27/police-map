@@ -3,7 +3,7 @@ import { ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Flame, Scale, Shield
 import HeroSearch from '@/components/HeroSearch';
 import KoreaMap from '@/components/KoreaMap';
 import { MyRegionFeed } from '@/components/MyRegionFeed';
-import { Bars, Card, Score, Stars, TableWrap } from '@/components/ui';
+import { Bars, Card, Score, Stars } from '@/components/ui';
 import { getPopularPosts, getRecentReviews, getRegions, getStats } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
@@ -102,22 +102,21 @@ export default async function Home() {
           <Link href="/board" className="btn line sm">게시판 전체보기</Link>
         </div>
         {popularPosts.length ? (
-          <TableWrap>
-            <table className="list">
-              <thead><tr><th>글머리</th><th>지역</th><th>제목</th><th>추천</th><th>댓글</th></tr></thead>
-              <tbody>
-                {popularPosts.map((p) => (
-                  <tr key={p.id}>
-                    <td className="sub">{p.category_label}</td>
-                    <td className="sub">{p.region_name}</td>
-                    <td><Link href={`/board/${p.id}`}>{p.title}</Link></td>
-                    <td className="sub">{p.score}</td>
-                    <td className="sub">{p.comment_count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableWrap>
+          <div className="post-list">
+            {popularPosts.map((p) => (
+              <Link href={`/board/${p.id}`} key={p.id} className="post-row">
+                <div className="post-row-top">
+                  <span className="badge brand">{p.category_label}</span>
+                  <span className="sub">{p.region_name}</span>
+                </div>
+                <div className="post-row-title">{p.title}</div>
+                <div className="post-row-meta sub">
+                  <span>추천 {p.score}</span>
+                  <span>댓글 {p.comment_count}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
         ) : (
           <p className="sub">아직 추천받은 글이 없습니다. <Link href="/board/write">첫 글을 남겨 보세요</Link>.</p>
         )}
