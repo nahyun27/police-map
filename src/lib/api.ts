@@ -2,7 +2,14 @@
  * 백엔드(FastAPI) 클라이언트. 서버 컴포넌트·클라이언트 컴포넌트 양쪽에서 쓴다.
  * 타입은 backend/app/schemas/public.py, review.py 의 Pydantic 스키마와 1:1로 맞춘다.
  */
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8001';
+// 서버 컴포넌트(SSR)는 같은 EC2 박스 안에서 돌아가므로 공인 도메인으로 다시 나갔다 들어오는
+// 홀펀(hairpin) 경로를 타면 안 된다 — 이 경로는 AWS VPC에서 간헐적으로 끊긴다(자기 자신의
+// 공인 IP로는 안정적으로 되돌아오지 못하는 경우가 흔함). 그래서 서버 쪽만 내부 전용
+// INTERNAL_API_BASE_URL(루프백)을 우선 쓰고, 브라우저(클라이언트 컴포넌트)는 항상 공개
+// NEXT_PUBLIC_API_BASE_URL 을 쓴다.
+const API_BASE = typeof window === 'undefined'
+  ? (process.env.INTERNAL_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8001')
+  : (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8001');
 
 export class ApiError extends Error {
   status: number;
