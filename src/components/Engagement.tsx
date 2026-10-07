@@ -5,13 +5,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Bookmark, MessageSquare, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
 import {
-  ApiError, type CommentOut,
+  ApiError, type CommentOut, type ReportTargetType,
   createPostComment, createReviewComment, deletePostComment, deleteReviewComment,
   getPostComments, getReviewComments, scrapPost, scrapReview, unscrapPost, unscrapReview, votePost, voteReview,
 } from '@/lib/api';
 import { formatDate } from '@/lib/format';
+import { ReportButton } from '@/components/ReportButton';
 
 type Kind = 'review' | 'post';
+
+const COMMENT_REPORT_TYPE: Record<Kind, ReportTargetType> = { review: 'review_comment', post: 'post_comment' };
 
 const ACTIONS: Record<Kind, {
   vote: (id: number, value: 1 | -1 | 0) => Promise<{ score: number; my_vote: number }>;
@@ -131,8 +134,10 @@ export function Engagement({
           {depth === 0 && (
             <button type="button" className="link-btn" onClick={() => setReplyTo(replyTo === c.id ? null : c.id)}>답글</button>
           )}
-          {c.is_mine && (
+          {c.is_mine ? (
             <button type="button" className="link-btn" onClick={() => remove(c.id)}><Trash2 size={12} />삭제</button>
+          ) : (
+            <ReportButton targetType={COMMENT_REPORT_TYPE[kind]} targetId={c.id} />
           )}
         </div>
       )}
@@ -157,12 +162,15 @@ export function Engagement({
           <ThumbsDown size={14} />
         </button>
         <button type="button" className="link-btn" onClick={toggleOpen}><MessageSquare size={14} />댓글 {commentCount}</button>
-        <button
-          type="button" className={`vote-btn scrap-btn ${scrapped ? 'active scrap' : ''}`} onClick={toggleScrap}
-          disabled={scrapBusy} aria-label={scrapped ? '스크랩 해제' : '스크랩'} style={{ marginLeft: 'auto' }}
-        >
-          <Bookmark size={14} fill={scrapped ? 'currentColor' : 'none'} />
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <ReportButton targetType={kind} targetId={targetId} />
+          <button
+            type="button" className={`vote-btn scrap-btn ${scrapped ? 'active scrap' : ''}`} onClick={toggleScrap}
+            disabled={scrapBusy} aria-label={scrapped ? '스크랩 해제' : '스크랩'}
+          >
+            <Bookmark size={14} fill={scrapped ? 'currentColor' : 'none'} />
+          </button>
+        </div>
       </div>
       {authNeeded && <p className="warn">로그인 후 이용할 수 있습니다. <Link href={loginLink}>로그인</Link></p>}
       {error && <p className="warn">{error}</p>}

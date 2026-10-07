@@ -359,7 +359,7 @@ table.list td a { font-weight: 650; color: var(--ink); }
 .link-btn:hover { color: var(--ink); }
 
 .engage { margin-top: 10px; }
-.engage-bar { display: flex; align-items: center; gap: 8px; }
+.engage-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .vote-btn {
   display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px;
   border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer; transition: .15s;
@@ -379,7 +379,7 @@ table.list td a { font-weight: 650; color: var(--ink); }
 .cmt-meta b { font-size: 13px; }
 .cmt p { color: var(--ink2); white-space: pre-wrap; word-break: break-word; }
 .cmt-actions { display: flex; gap: 10px; margin-top: 2px; }
-.cmt-form { display: flex; gap: 8px; margin-top: 6px; }
+.cmt-form { display: flex; gap: 8px; margin-top: 6px; flex-basis: 100%; }
 .cmt-form input {
   flex: 1; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 8px 12px; font-size: 13.5px; color: var(--ink);
 }

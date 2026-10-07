@@ -12,16 +12,18 @@ from app.api.v1._present import iso, ratings_dict
 from app.core.database import get_db
 from app.core.deps import require_admin
 from app.models import (
-    AuditLog, Department, Officer, OfficerAssignment, OfficerVerification, Region, Review, ReviewStatus, Station,
-    TakedownRequest, TakedownStatus, User, VerificationStatus,
+    AuditLog, Department, Officer, OfficerAssignment, OfficerVerification, Region, Report, ReportStatus, Review,
+    ReviewStatus, Station, TakedownRequest, TakedownStatus, User, VerificationStatus,
 )
 from app.models.officer import SOURCE_LABELS
 from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
 from app.schemas.admin import EvidenceVerifyIn, OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate
 from app.schemas.public import Page
+from app.schemas.report import AdminReportOut, ResolveReportIn
 from app.schemas.verification import AdminVerifyOut
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
+from app.services.reports import remove_target, target_preview
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -192,6 +194,51 @@ def revoke_verification(verification_id: int, body: RejectIn, admin: User = Depe
     log_action(db, admin.id, "officer_verification_revoked", "officer_verification", v.id, {"reason": body.reason, "user_id": v.user_id})
     db.commit()
     return _admin_verify(v)
+
+
+# ---------- 신고 처리 ----------
+def _admin_report(db: Session, r: Report) -> AdminReportOut:
+    return AdminReportOut(
+        id=r.id, reporter_nickname=r.reporter.nickname, target_type=r.target_type.value, target_id=r.target_id,
+        target_preview=target_preview(db, r.target_type, r.target_id), reason=r.reason, status=r.status.value,
+        resolved_by=r.resolved_by, resolution_action=r.resolution_action, resolution_note=r.resolution_note,
+        created_at=iso(r.created_at),
+    )
+
+
+@router.get("/reports", response_model=Page[AdminReportOut])
+def list_reports(
+    status_: ReportStatus = Query(ReportStatus.pending, alias="status"),
+    page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100), db: Session = Depends(get_db),
+):
+    total = db.scalar(select(func.count(Report.id)).where(Report.status == status_)) or 0
+    order = Report.created_at.asc() if status_ == ReportStatus.pending else Report.created_at.desc()
+    rows = db.scalars(
+        select(Report).where(Report.status == status_).order_by(order, Report.id).offset((page - 1) * size).limit(size)
+    ).all()
+    return Page(items=[_admin_report(db, r) for r in rows], total=total, page=page, size=size)
+
+
+@router.post("/reports/{report_id}/resolve", response_model=AdminReportOut)
+def resolve_report(report_id: int, body: ResolveReportIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """action=remove 면 신고 대상을 실제로 지우고(콘텐츠 타입별 기존 삭제 방식 그대로),
+    action=dismiss 면 내용은 그대로 두고 신고만 처리 완료로 닫는다."""
+    r = db.get(Report, report_id)
+    if not r:
+        raise HTTPException(404, "신고를 찾을 수 없습니다.")
+    if r.status != ReportStatus.pending:
+        raise HTTPException(409, f"이미 처리된 신고입니다(현재: {r.status.value}).")
+    removed = remove_target(db, r.target_type, r.target_id, admin.id) if body.action == "remove" else False
+    r.status = ReportStatus.resolved
+    r.resolved_by, r.resolved_at = admin.id, takedown_svc.utcnow()
+    r.resolution_action = "removed" if removed else "dismissed"
+    r.resolution_note = body.note
+    log_action(
+        db, admin.id, "report_resolved", "report", r.id,
+        {"action": r.resolution_action, "target_type": r.target_type.value, "target_id": r.target_id},
+    )
+    db.commit()
+    return _admin_report(db, r)
 
 
 # ---------- 삭제·정정 요청 ----------

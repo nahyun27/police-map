@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Pencil, ShieldCheck, Trash2 } from 'lucide-react';
 import { ApiError, createReply, deleteReply, updateReply, type ReplyOut } from '@/lib/api';
+import { ReportButton } from '@/components/ReportButton';
 
 /** 평가에 달리는 "경찰관 공식 해명" 블록. 표시는 모두에게 하되(reply 가 있으면), 새로 쓰는 건
  * canWrite(= 뷰어가 이 경찰서 소속으로 인증된 계정)일 때만, 해명이 아직 없을 때만 보여준다. */
@@ -61,12 +62,16 @@ export function ReplyBox({ reviewId, initialReply, canWrite }: { reviewId: numbe
             {reply.updated_at && <span className="sub">(수정됨)</span>}
           </div>
           <p>{reply.body}</p>
-          {reply.is_mine && (
-            <div className="btn-row">
-              <button type="button" className="link-btn" onClick={startEdit}><Pencil size={12} />수정</button>
-              <button type="button" className="link-btn" onClick={remove} disabled={busy}><Trash2 size={12} />삭제</button>
-            </div>
-          )}
+          <div className="btn-row">
+            {reply.is_mine ? (
+              <>
+                <button type="button" className="link-btn" onClick={startEdit}><Pencil size={12} />수정</button>
+                <button type="button" className="link-btn" onClick={remove} disabled={busy}><Trash2 size={12} />삭제</button>
+              </>
+            ) : (
+              <ReportButton targetType="review_reply" targetId={reply.id} />
+            )}
+          </div>
         </>
       )}
       {(editing || (!reply && canWrite)) && (

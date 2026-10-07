@@ -381,6 +381,20 @@ export interface ScrapStatus {
   scrapped: boolean;
 }
 
+/* ===================== 신고 ===================== */
+
+export type ReportTargetType = 'review' | 'post' | 'review_comment' | 'post_comment' | 'review_reply';
+
+export interface ReportReceipt {
+  id: number;
+  message: string;
+}
+
+export const createReport = (targetType: ReportTargetType, targetId: number, reason: string) =>
+  apiFetch<ReportReceipt>('/reports', {
+    method: 'POST', body: JSON.stringify({ target_type: targetType, target_id: targetId, reason }),
+  });
+
 export const voteReview = (reviewId: number, value: 1 | -1 | 0) => vote(`/reviews/${reviewId}/vote`, value);
 export const getReviewComments = (reviewId: number) => apiFetch<CommentOut[]>(`/reviews/${reviewId}/comments`);
 export const createReviewComment = (reviewId: number, body: string, parentId?: number) =>
@@ -519,6 +533,29 @@ export const rejectVerification = (id: number, reason: string) =>
   apiFetch<AdminVerifyOut>(`/admin/officer-verifications/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
 export const revokeVerification = (id: number, reason: string) =>
   apiFetch<AdminVerifyOut>(`/admin/officer-verifications/${id}/revoke`, { method: 'POST', body: JSON.stringify({ reason }) });
+
+export interface AdminReportOut {
+  id: number;
+  reporter_nickname: string;
+  target_type: ReportTargetType;
+  target_id: number;
+  target_preview: string;
+  reason: string;
+  status: 'pending' | 'resolved';
+  resolved_by: number | null;
+  resolution_action: 'removed' | 'dismissed' | null;
+  resolution_note: string | null;
+  created_at: string | null;
+}
+
+export const listAdminReports = (opts: { status: string; page?: number; size?: number }) => {
+  const qs = new URLSearchParams({ status: opts.status });
+  if (opts.page) qs.set('page', String(opts.page));
+  if (opts.size) qs.set('size', String(opts.size));
+  return apiFetch<Page<AdminReportOut>>(`/admin/reports?${qs}`);
+};
+export const resolveReport = (id: number, action: 'remove' | 'dismiss', note: string) =>
+  apiFetch<AdminReportOut>(`/admin/reports/${id}/resolve`, { method: 'POST', body: JSON.stringify({ action, note }) });
 
 export interface AdminTakedown {
   id: number;

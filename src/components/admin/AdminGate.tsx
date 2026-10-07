@@ -9,6 +9,7 @@ import { getMe, logout, type UserOut } from '@/lib/api';
 
 const TABS = [
   { href: '/admin', label: '평가 검수' },
+  { href: '/admin/reports', label: '신고' },
   { href: '/admin/takedowns', label: '삭제·정정 요청' },
   { href: '/admin/officer-verifications', label: '경찰관 인증' },
 ];
