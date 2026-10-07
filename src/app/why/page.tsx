@@ -12,7 +12,7 @@ import { getStats } from '@/lib/api';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: '왜 폴리스맵인가',
+  title: '폴리스맵 소개',
   description: '수사의 실패는 언제나 있었습니다. 기록되지 않았을 뿐입니다. 법원 판결과 국정조사로 이미 확인된 사건들의 기록.',
 };
 

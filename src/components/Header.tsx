@@ -9,7 +9,7 @@ import { getMe, type UserOut } from '@/lib/api';
 const NAV = [
   { to: '/', label: '지도 탐색', end: true },
   { to: '/board', label: '커뮤니티' },
-  { to: '/why', label: '왜 폴리스맵인가' },
+  { to: '/why', label: '폴리스맵 소개' },
   { to: '/stats', label: '통계' },
   { to: '/guide', label: '권리구제 안내' },
   { to: '/remedy', label: '민원 연계' },

@@ -41,7 +41,7 @@ export default async function Home() {
         <HeroSearch />
 
         <div className="quick">
-          <Link href="/why" className="btn gold sm">왜 폴리스맵인가</Link>
+          <Link href="/why" className="btn gold sm">폴리스맵 소개</Link>
           <Link href="/remedy" className="btn ghost sm">권리구제 내비게이터 <ArrowRight size={14} /></Link>
           <Link href="/guide" className="btn ghost sm">기피신청 안내</Link>
           <Link href="/stats" className="btn ghost sm">전국 통계</Link>
@@ -150,7 +150,7 @@ export default async function Home() {
           ))}
         </div>
         <Link href="/why" className="btn ghost sm" style={{ marginTop: 18, borderColor: 'var(--low)', color: 'var(--low)' }}>
-          전체 기록 보기: 왜 폴리스맵인가 <ArrowUpRight size={14} />
+          전체 기록 보기: 폴리스맵 소개 <ArrowUpRight size={14} />
         </Link>
       </Card>
 
