@@ -31,3 +31,7 @@ class UserOut(BaseModel):
     nickname: str
     role: str
     identity_verified: bool
+    # 경찰관 인증(OfficerVerification 승인) 결과. station_id 가 있어야 그 경찰서 리뷰에 해명 가능.
+    officer_station_id: int | None = None
+    officer_station_name: str | None = None
+    officer_rank: str | None = None

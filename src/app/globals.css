@@ -384,6 +384,17 @@ table.list td a { font-weight: 650; color: var(--ink); }
 }
 .cmt-form input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
 
+.reply-box { margin-top: 12px; padding: 14px 16px; background: var(--brand-soft); border: 1px solid #cfe0fb; border-radius: 12px; }
+.reply-head { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13.5px; color: var(--brand-ink); margin-bottom: 6px; }
+.reply-head .sub { font-weight: 500; margin-left: 2px; }
+.reply-box p { color: var(--ink2); white-space: pre-wrap; word-break: break-word; }
+.reply-form textarea {
+  width: 100%; min-height: 90px; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 10px 12px;
+  font-size: 13.5px; color: var(--ink); line-height: 1.6; resize: vertical;
+}
+.reply-form textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.reply-showname { display: flex; align-items: center; gap: 6px; margin: 8px 0; }
+
 .sel { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 8px 12px; font-size: 13.5px; color: var(--ink); }
 .sel:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
 .chip { display: inline-flex; align-items: center; gap: 6px; }

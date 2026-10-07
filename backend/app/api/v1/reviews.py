@@ -3,19 +3,21 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.api.v1._present import reply_out
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
-from app.core.rate_limit import comment_limiter, review_limiter, vote_limiter
+from app.core.rate_limit import comment_limiter, reply_limiter, review_limiter, vote_limiter
 from app.core.security import hash_case_number
-from app.models import Review, ReviewComment, ReviewStatus, ReviewVote, Station, User, UserRole
+from app.models import Review, ReviewComment, ReviewReply, ReviewStatus, ReviewVote, Station, User, UserRole
 from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
 from app.schemas.community import CommentCreate, CommentOut, VoteIn, VoteSummary
 from app.schemas.public import Page
 from app.schemas.review import MyReviewOut, ReviewCreate, ReviewReceipt
+from app.schemas.verification import ReplyCreate, ReplyOut
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
-from app.services.engagement import comment_counts, comment_tree, vote_summaries
+from app.services.engagement import comment_counts, comment_tree, reply_rows, vote_summaries
 from app.services.ratings import DIMS
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
@@ -49,6 +51,7 @@ def list_my_reviews(
     ids = [r.id for r in rows]
     votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, user.id)
     counts = comment_counts(db, ReviewComment, ReviewComment.review_id, ids)
+    replies = reply_rows(db, ids)
     items = [
         MyReviewOut(
             id=r.id, station_id=r.station_id, station_name=r.station.name,
@@ -57,6 +60,7 @@ def list_my_reviews(
             created_at=_iso(r.created_at), published_at=_iso(r.published_at),
             comment_count=counts[r.id], score=votes[r.id].score,
             evidence_note=r.evidence_note, evidence_verified=r.evidence_verified,
+            reply=reply_out(*replies[r.id], user.id) if r.id in replies else None,
         )
         for r in rows
     ]
@@ -169,3 +173,59 @@ def vote_review(review_id: int, body: VoteIn, db: Session = Depends(get_db), use
         db.add(ReviewVote(review_id=review_id, user_id=user.id, value=body.value))
     db.commit()
     return vote_summaries(db, ReviewVote, ReviewVote.review_id, [review_id], user.id)[review_id]
+
+
+def _require_officer(user: User, station_id: int) -> None:
+    if user.officer_station_id != station_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "해당 경찰서 소속으로 인증된 계정만 해명을 작성할 수 있습니다.")
+
+
+@router.post(
+    "/{review_id}/reply", response_model=ReplyOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(reply_limiter)],
+)
+def create_reply(review_id: int, body: ReplyCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """인증된 경찰관(본인 소속 경찰서 리뷰 한정)이 다는 공식 해명. 리뷰 1건당 1개만 허용된다."""
+    review = _published_or_404(db, review_id)
+    _require_officer(user, review.station_id)
+    banned = find_banned(body.body)
+    if banned:
+        raise HTTPException(422, {"message": "게시할 수 없는 표현이 포함되어 있습니다.", "banned": banned})
+    if db.scalar(select(ReviewReply.id).where(ReviewReply.review_id == review_id)):
+        raise HTTPException(status.HTTP_409_CONFLICT, "이미 해명이 등록된 평가입니다.")
+    reply = ReviewReply(review_id=review_id, author_id=user.id, body=body.body, show_name=body.show_name)
+    db.add(reply)
+    try:
+        db.commit()
+    except IntegrityError:  # 동시 요청으로 중복 등록된 경우
+        db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "이미 해명이 등록된 평가입니다.")
+    return reply_out(reply, user, user.id)
+
+
+@router.patch("/{review_id}/reply", response_model=ReplyOut)
+def update_reply(review_id: int, body: ReplyCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    reply = db.scalar(select(ReviewReply).where(ReviewReply.review_id == review_id))
+    if not reply:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "해명을 찾을 수 없습니다.")
+    if reply.author_id != user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "본인이 작성한 해명만 수정할 수 있습니다.")
+    banned = find_banned(body.body)
+    if banned:
+        raise HTTPException(422, {"message": "게시할 수 없는 표현이 포함되어 있습니다.", "banned": banned})
+    reply.body, reply.show_name, reply.updated_at = body.body, body.show_name, takedown_svc.utcnow()
+    db.commit()
+    return reply_out(reply, user, user.id)
+
+
+@router.delete("/{review_id}/reply", status_code=status.HTTP_204_NO_CONTENT)
+def delete_reply(review_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """작성자 본인 또는 관리자만 삭제 가능. 하드 삭제라(모델 docstring 참고) 삭제 후 다른
+    인증된 경찰관이 새로 해명을 달 수 있다."""
+    reply = db.scalar(select(ReviewReply).where(ReviewReply.review_id == review_id))
+    if not reply:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "해명을 찾을 수 없습니다.")
+    if reply.author_id != user.id and user.role != UserRole.admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "본인 해명만 삭제할 수 있습니다.")
+    log_action(db, user.id, "reply.remove", "review_reply", reply.id, {"self": reply.author_id == user.id})
+    db.delete(reply)
+    db.commit()

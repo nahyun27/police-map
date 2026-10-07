@@ -18,7 +18,11 @@ _DUMMY_HASH = hash_password("dummy-password-for-timing")
 
 
 def user_out(u: User) -> UserOut:
-    return UserOut(id=u.id, email=u.email, nickname=u.nickname, role=u.role.value, identity_verified=u.identity_verified_at is not None)
+    return UserOut(
+        id=u.id, email=u.email, nickname=u.nickname, role=u.role.value, identity_verified=u.identity_verified_at is not None,
+        officer_station_id=u.officer_station_id, officer_station_name=u.officer_station.name if u.officer_station else None,
+        officer_rank=u.officer_rank,
+    )
 
 
 def _issue(response: Response, user: User) -> None:

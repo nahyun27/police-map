@@ -5,6 +5,7 @@ ReviewVote/PostVote, ReviewComment/PostComment 는 대상 FK 이름만 다를 �
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import InstrumentedAttribute, Session
 
+from app.models import ReviewReply, User
 from app.schemas.community import CommentOut, VoteSummary
 
 REMOVED_BODY = "삭제된 댓글입니다."
@@ -34,6 +35,19 @@ def comment_counts(db: Session, comment_model, fk_col: InstrumentedAttribute, ta
         return {}
     counts = dict(db.execute(select(fk_col, func.count(comment_model.id)).where(fk_col.in_(target_ids)).group_by(fk_col)).all())
     return {tid: int(counts.get(tid, 0)) for tid in target_ids}
+
+
+def reply_rows(db: Session, review_ids: list[int]) -> dict[int, tuple[ReviewReply, User | None]]:
+    """review_id → (해명, 작성자). 삭제는 하드 삭제라 여기 조회되면 곧 "현재 유효한" 해명이다.
+    작성자를 outer join 하는 이유는 인증이 사후 해제돼도(User.officer_* 가 비어도) 해명 행
+    자체는 남기 때문(User 는 계정 삭제 기능이 없어 사실상 항상 존재하지만 방어적으로 outer join)."""
+    if not review_ids:
+        return {}
+    rows = db.execute(
+        select(ReviewReply, User).outerjoin(User, User.id == ReviewReply.author_id)
+        .where(ReviewReply.review_id.in_(review_ids))
+    ).all()
+    return {r.review_id: (r, u) for r, u in rows}
 
 
 def comment_tree(rows: list[tuple], user_id: int | None) -> list[CommentOut]:

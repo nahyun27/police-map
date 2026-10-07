@@ -6,9 +6,11 @@ from app.models.review import CaseType, Review, ReviewRole, ReviewStatus
 from app.models.statistic import PublicStatistic
 from app.models.takedown import TakedownRequest, TakedownStatus, TakedownTarget, TakedownType
 from app.models.user import User, UserRole
+from app.models.verification import OfficerVerification, ReviewReply, VerificationStatus
 
 __all__ = [
-    "AuditLog", "CaseType", "Department", "Officer", "OfficerAssignment", "OfficerSource", "Post", "PostComment",
-    "PostVote", "PublicStatistic", "Region", "RegionFollow", "Review", "ReviewComment", "ReviewRole", "ReviewStatus",
-    "ReviewVote", "Station", "TakedownRequest", "TakedownStatus", "TakedownTarget", "TakedownType", "User", "UserRole",
+    "AuditLog", "CaseType", "Department", "Officer", "OfficerAssignment", "OfficerSource", "OfficerVerification",
+    "Post", "PostComment", "PostVote", "PublicStatistic", "Region", "RegionFollow", "Review", "ReviewComment",
+    "ReviewReply", "ReviewRole", "ReviewStatus", "ReviewVote", "Station", "TakedownRequest", "TakedownStatus",
+    "TakedownTarget", "TakedownType", "User", "UserRole", "VerificationStatus",
 ]

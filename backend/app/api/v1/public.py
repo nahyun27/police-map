@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.v1._present import review_public
+from app.api.v1._present import reply_out, review_public
 from app.core.database import get_db
 from app.core.deps import get_current_user_optional
 from app.models import Department, PublicStatistic, Region, Review, ReviewComment, ReviewStatus, ReviewVote, Station, User
@@ -10,7 +10,7 @@ from app.schemas.public import (
     Page, RankedStation, RecentReview, RegionDetail, RegionOut, RegionRef, SearchResult, StationDetail, StationItem,
     StatsOverview, Totals, YearValue,
 )
-from app.services.engagement import comment_counts, vote_summaries
+from app.services.engagement import comment_counts, reply_rows, vote_summaries
 from app.services.ratings import EMPTY, national_summary, station_summaries, visible_reviews
 
 router = APIRouter(tags=["public"])
@@ -76,13 +76,17 @@ def get_station(
     ids = [r.id for r in reviews]
     votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, user.id if user else None)
     counts = comment_counts(db, ReviewComment, ReviewComment.review_id, ids)
+    replies = reply_rows(db, ids)
+    uid = user.id if user else None
+    items = [
+        review_public(r, votes[r.id], counts[r.id], reply_out(*replies[r.id], uid) if r.id in replies else None)
+        for r in reviews
+    ]
     return StationDetail(
         id=s.id, name=s.name, address=s.address, website=s.website, source=s.source,
         region=_region_ref(s.region), departments=[d.name for d in s.departments],
         rating=station_summaries(db, [s.id]).get(s.id, EMPTY),
-        reviews=Page(
-            items=[review_public(r, votes[r.id], counts[r.id]) for r in reviews], total=total, page=page, size=size,
-        ),
+        reviews=Page(items=items, total=total, page=page, size=size),
         lat=s.lat, lng=s.lng,
     )
 
@@ -100,8 +104,15 @@ def recent_reviews(
     ids = [r.id for r, _ in rows]
     votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, user.id if user else None)
     counts = comment_counts(db, ReviewComment, ReviewComment.review_id, ids)
+    replies = reply_rows(db, ids)
+    uid = user.id if user else None
     return [
-        RecentReview(**review_public(r, votes[r.id], counts[r.id]).model_dump(), station_id=s.id, station_name=s.name)
+        RecentReview(
+            **review_public(
+                r, votes[r.id], counts[r.id], reply_out(*replies[r.id], uid) if r.id in replies else None,
+            ).model_dump(),
+            station_id=s.id, station_name=s.name,
+        )
         for r, s in rows
     ]
 

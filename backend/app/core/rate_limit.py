@@ -38,4 +38,9 @@ review_limiter = RateLimiter(10, 3600, "review")
 post_limiter = RateLimiter(10, 3600, "post")
 comment_limiter = RateLimiter(30, 3600, "comment")
 vote_limiter = RateLimiter(60, 3600, "vote")
-ALL_LIMITERS = [login_limiter, register_limiter, takedown_limiter, review_limiter, post_limiter, comment_limiter, vote_limiter]
+verify_limiter = RateLimiter(3, 86400, "officer_verify")
+reply_limiter = RateLimiter(20, 3600, "reply")
+ALL_LIMITERS = [
+    login_limiter, register_limiter, takedown_limiter, review_limiter, post_limiter, comment_limiter, vote_limiter,
+    verify_limiter, reply_limiter,
+]

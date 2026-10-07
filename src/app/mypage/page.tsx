@@ -137,6 +137,17 @@ export default function MyPage() {
         <button className="btn line sm" onClick={doLogout}><LogOut size={14} />로그아웃</button>
       </Card>
 
+      <Card className="flat" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {user.officer_station_id ? (
+          <p className="sub"><ShieldCheck size={14} style={{ verticalAlign: -2, marginRight: 4 }} />{user.officer_station_name} 소속({user.officer_rank})으로 인증된 계정입니다.</p>
+        ) : (
+          <p className="sub">경찰관이신가요? 신원 인증을 받으면 소속 경찰서 평가에 해명을 남길 수 있어요.</p>
+        )}
+        <Link href="/officer-verify" className="btn line sm">
+          {user.officer_station_id ? '인증 정보 보기' : '경찰관 인증 신청'}
+        </Link>
+      </Card>
+
       <RegionFollows />
 
       <Card>

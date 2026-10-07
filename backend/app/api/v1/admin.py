@@ -12,13 +12,14 @@ from app.api.v1._present import iso, ratings_dict
 from app.core.database import get_db
 from app.core.deps import require_admin
 from app.models import (
-    AuditLog, Department, Officer, OfficerAssignment, Region, Review, ReviewStatus, Station, TakedownRequest,
-    TakedownStatus, User,
+    AuditLog, Department, Officer, OfficerAssignment, OfficerVerification, Region, Review, ReviewStatus, Station,
+    TakedownRequest, TakedownStatus, User, VerificationStatus,
 )
 from app.models.officer import SOURCE_LABELS
 from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
 from app.schemas.admin import EvidenceVerifyIn, OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate
 from app.schemas.public import Page
+from app.schemas.verification import AdminVerifyOut
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
 
@@ -121,6 +122,76 @@ def set_review_evidence(review_id: int, body: EvidenceVerifyIn, admin: User = De
     log_action(db, admin.id, "review_evidence_verified" if body.verified else "review_evidence_unverified", "review", r.id)
     db.commit()
     return _admin_review(r)
+
+
+# ---------- 경찰관 신원 인증 ----------
+def _admin_verify(v: OfficerVerification) -> AdminVerifyOut:
+    return AdminVerifyOut(
+        id=v.id, station_id=v.station_id, station_name=v.station.name, name=v.name, rank=v.rank,
+        department=v.department, contact=v.contact, proof_note=v.proof_note, status=v.status.value,
+        reject_reason=v.reject_reason, created_at=iso(v.created_at),
+        user_id=v.user_id, user_email=v.user.email, user_nickname=v.user.nickname,
+    )
+
+
+@router.get("/officer-verifications", response_model=Page[AdminVerifyOut])
+def list_officer_verifications(
+    status_: VerificationStatus = Query(VerificationStatus.pending, alias="status"),
+    page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100), db: Session = Depends(get_db),
+):
+    total = db.scalar(select(func.count(OfficerVerification.id)).where(OfficerVerification.status == status_)) or 0
+    order = OfficerVerification.created_at.asc() if status_ == VerificationStatus.pending else OfficerVerification.created_at.desc()
+    rows = db.scalars(
+        select(OfficerVerification).where(OfficerVerification.status == status_)
+        .order_by(order, OfficerVerification.id).offset((page - 1) * size).limit(size)
+    ).all()
+    return Page(items=[_admin_verify(v) for v in rows], total=total, page=page, size=size)
+
+
+def _pending_verification(db: Session, verification_id: int) -> OfficerVerification:
+    v = db.get(OfficerVerification, verification_id)
+    if not v:
+        raise HTTPException(404, "신청을 찾을 수 없습니다.")
+    if v.status != VerificationStatus.pending:
+        raise HTTPException(409, f"심사 대기 상태가 아닙니다(현재: {v.status.value}).")
+    return v
+
+
+@router.post("/officer-verifications/{verification_id}/approve", response_model=AdminVerifyOut)
+def approve_verification(verification_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    v = _pending_verification(db, verification_id)
+    now = takedown_svc.utcnow()
+    v.status, v.reviewed_by, v.reviewed_at = VerificationStatus.approved, admin.id, now
+    user = db.get(User, v.user_id)
+    user.officer_station_id, user.officer_name = v.station_id, v.name
+    user.officer_rank, user.officer_department, user.officer_verified_at = v.rank, v.department, now
+    log_action(db, admin.id, "officer_verification_approved", "officer_verification", v.id, {"user_id": v.user_id})
+    db.commit()
+    return _admin_verify(v)
+
+
+@router.post("/officer-verifications/{verification_id}/reject", response_model=AdminVerifyOut)
+def reject_verification(verification_id: int, body: RejectIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    v = _pending_verification(db, verification_id)
+    v.status, v.reviewed_by, v.reviewed_at, v.reject_reason = VerificationStatus.rejected, admin.id, takedown_svc.utcnow(), body.reason
+    log_action(db, admin.id, "officer_verification_rejected", "officer_verification", v.id, {"reason": body.reason})
+    db.commit()
+    return _admin_verify(v)
+
+
+@router.post("/officer-verifications/{verification_id}/revoke", response_model=AdminVerifyOut)
+def revoke_verification(verification_id: int, body: RejectIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """이미 승인된 인증을 취소한다(전출·허위 신청 발각 등). 해당 계정의 해명 작성 권한이 즉시 사라진다
+    (기존에 작성해 둔 해명 자체는 남아 있다 — 필요하면 별도로 삭제)."""
+    v = db.get(OfficerVerification, verification_id)
+    if not v or v.status != VerificationStatus.approved:
+        raise HTTPException(404, "승인된 인증을 찾을 수 없습니다.")
+    v.status, v.reviewed_by, v.reviewed_at, v.reject_reason = VerificationStatus.rejected, admin.id, takedown_svc.utcnow(), body.reason
+    user = db.get(User, v.user_id)
+    user.officer_station_id = user.officer_name = user.officer_rank = user.officer_department = user.officer_verified_at = None
+    log_action(db, admin.id, "officer_verification_revoked", "officer_verification", v.id, {"reason": body.reason, "user_id": v.user_id})
+    db.commit()
+    return _admin_verify(v)
 
 
 # ---------- 삭제·정정 요청 ----------

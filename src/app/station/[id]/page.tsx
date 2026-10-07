@@ -1,11 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ShieldCheck } from 'lucide-react';
-import { Engagement } from '@/components/Engagement';
-import { Bars, Card, Crumb, Score, Stars } from '@/components/ui';
+import { Bars, Card, Crumb, Stars } from '@/components/ui';
+import { ReviewList } from '@/components/ReviewList';
 import { ApiError, getStation } from '@/lib/api';
-import { formatDate } from '@/lib/format';
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ page?: string }> };
 
@@ -90,23 +88,7 @@ export default async function StationPage({ params, searchParams }: Props) {
       <Card>
         <h2>평가 후기 <span className="sub" style={{ fontWeight: 500 }}>{s.reviews.total}건</span></h2>
         {s.reviews.items.length ? (
-          s.reviews.items.map((rv) => (
-            <div className="review" key={rv.id}>
-              <div className="meta">
-                <span className="badge brand">{rv.role_label}</span><span className="badge">{rv.case_type_label}</span>{formatDate(rv.published_at)}
-                {rv.evidence_verified && <span className="badge good"><ShieldCheck size={11} />증빙확인</span>}
-              </div>
-              <div className="head"><Score value={rv.overall} /></div>
-              <p>{rv.body || '(서술 없음, 별점만 등록)'}</p>
-              <Engagement
-                kind="review" targetId={rv.id}
-                initialScore={rv.score} initialMyVote={rv.my_vote} initialCommentCount={rv.comment_count}
-              />
-              <Link href={`/takedown/review/${rv.id}?station=${encodeURIComponent(s.name)}`} className="sub" style={{ display: 'inline-block', marginTop: 8 }}>
-                이 게시물 삭제·정정 요청
-              </Link>
-            </div>
-          ))
+          <ReviewList stationId={s.id} stationName={s.name} items={s.reviews.items} />
         ) : (
           <p className="sub">등록된 평가가 없습니다.</p>
         )}

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, model_validator
 
 from app.models import CaseType, ReviewRole
+from app.schemas.verification import ReplyOut
 
 
 class RatingsIn(BaseModel):
@@ -63,3 +64,4 @@ class MyReviewOut(BaseModel):
     score: int = 0
     evidence_note: str | None = None
     evidence_verified: bool = False
+    reply: ReplyOut | None = None

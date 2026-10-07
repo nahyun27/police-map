@@ -87,6 +87,17 @@ export interface RegionRef {
   full_name: string;
 }
 
+export interface ReplyOut {
+  id: number;
+  review_id: number;
+  author_label: string;
+  show_name: boolean;
+  is_mine: boolean;
+  body: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 export interface ReviewPublic {
   id: number;
   role: string;
@@ -101,6 +112,7 @@ export interface ReviewPublic {
   score: number;
   my_vote: number;
   evidence_verified: boolean;
+  reply: ReplyOut | null;
 }
 
 export interface Page<T> {
@@ -249,6 +261,9 @@ export interface UserOut {
   nickname: string;
   role: 'user' | 'admin';
   identity_verified: boolean;
+  officer_station_id: number | null;
+  officer_station_name: string | null;
+  officer_rank: string | null;
 }
 
 export const register = (email: string, password: string, nickname: string) =>
@@ -277,6 +292,7 @@ export interface MyReviewOut {
   score: number;
   evidence_note: string | null;
   evidence_verified: boolean;
+  reply: ReplyOut | null;
 }
 
 export function getMyReviews(opts?: { page?: number; size?: number }) {
@@ -286,6 +302,41 @@ export function getMyReviews(opts?: { page?: number; size?: number }) {
   const suffix = qs.toString() ? `?${qs}` : '';
   return apiFetch<Page<MyReviewOut>>(`/reviews/mine${suffix}`);
 }
+
+/* ===================== 경찰관 신원 인증 + 해명 ===================== */
+
+export interface VerifyOut {
+  id: number;
+  station_id: number;
+  station_name: string;
+  name: string;
+  rank: string;
+  department: string | null;
+  contact: string;
+  proof_note: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  reject_reason: string | null;
+  created_at: string | null;
+}
+
+export interface VerifyCreatePayload {
+  station_id: number;
+  name: string;
+  rank: string;
+  department?: string | null;
+  contact: string;
+  proof_note?: string | null;
+}
+
+export const getMyVerifications = () => apiFetch<VerifyOut[]>('/officer-verifications/mine');
+export const createVerification = (payload: VerifyCreatePayload) =>
+  apiFetch<VerifyOut>('/officer-verifications', { method: 'POST', body: JSON.stringify(payload) });
+
+export const createReply = (reviewId: number, body: string, showName: boolean) =>
+  apiFetch<ReplyOut>(`/reviews/${reviewId}/reply`, { method: 'POST', body: JSON.stringify({ body, show_name: showName }) });
+export const updateReply = (reviewId: number, body: string, showName: boolean) =>
+  apiFetch<ReplyOut>(`/reviews/${reviewId}/reply`, { method: 'PATCH', body: JSON.stringify({ body, show_name: showName }) });
+export const deleteReply = (reviewId: number) => apiFetch<void>(`/reviews/${reviewId}/reply`, { method: 'DELETE' });
 
 /* ===================== 관심 지역 ===================== */
 
@@ -424,6 +475,25 @@ export const removeReview = (id: number, reason: string) =>
   apiFetch<AdminReview>(`/admin/reviews/${id}/remove`, { method: 'POST', body: JSON.stringify({ reason }) });
 export const setReviewEvidence = (id: number, verified: boolean) =>
   apiFetch<AdminReview>(`/admin/reviews/${id}/evidence`, { method: 'PATCH', body: JSON.stringify({ verified }) });
+
+export interface AdminVerifyOut extends VerifyOut {
+  user_id: number;
+  user_email: string;
+  user_nickname: string;
+}
+
+export const listAdminVerifications = (opts: { status: string; page?: number; size?: number }) => {
+  const qs = new URLSearchParams({ status: opts.status });
+  if (opts.page) qs.set('page', String(opts.page));
+  if (opts.size) qs.set('size', String(opts.size));
+  return apiFetch<Page<AdminVerifyOut>>(`/admin/officer-verifications?${qs}`);
+};
+export const approveVerification = (id: number) =>
+  apiFetch<AdminVerifyOut>(`/admin/officer-verifications/${id}/approve`, { method: 'POST' });
+export const rejectVerification = (id: number, reason: string) =>
+  apiFetch<AdminVerifyOut>(`/admin/officer-verifications/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
+export const revokeVerification = (id: number, reason: string) =>
+  apiFetch<AdminVerifyOut>(`/admin/officer-verifications/${id}/revoke`, { method: 'POST', body: JSON.stringify({ reason }) });
 
 export interface AdminTakedown {
   id: number;

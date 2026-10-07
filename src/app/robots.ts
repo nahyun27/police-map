@@ -6,7 +6,10 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: '*', allow: '/',
-      disallow: ['/search', '/station/*/write', '/board/write', '/remedy/', '/report/', '/takedown', '/admin', '/mypage'],
+      disallow: [
+        '/search', '/station/*/write', '/board/write', '/officer-verify', '/remedy/', '/report/', '/takedown',
+        '/admin', '/mypage',
+      ],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
