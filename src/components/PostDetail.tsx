@@ -37,7 +37,7 @@ export function PostDetail({ initial }: { initial: PostOut }) {
 
   return (
     <>
-      <div className="eyebrow">{post.region_name}{post.station_name ? ` · ${post.station_name}` : ''}</div>
+      <div className="eyebrow">{post.region_name ?? '전체'}{post.station_name ? ` · ${post.station_name}` : ''}</div>
       <span className={`badge cat-${post.category}`}>{post.category_label}</span>
       <h1>{post.title}</h1>
       <p className="sub" style={{ marginTop: 6 }}>

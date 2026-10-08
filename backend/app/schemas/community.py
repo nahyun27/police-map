@@ -57,7 +57,7 @@ CommentOut.model_rebuild()
 
 
 class PostCreate(BaseModel):
-    region_id: str
+    region_id: str | None = None
     station_id: int | None = None
     category: PostCategory = PostCategory.chat
     title: str = Field(min_length=2, max_length=200)
@@ -78,8 +78,8 @@ class PostOut(BaseModel):
     id: int
     author_nickname: str
     is_mine: bool
-    region_id: str
-    region_name: str
+    region_id: str | None
+    region_name: str | None
     station_id: int | None
     station_name: str | None
     category: str

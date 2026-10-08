@@ -62,7 +62,7 @@ export default function BoardWritePage() {
     setSubmitting(true);
     try {
       const r = await createPost({
-        region_id: regionId, station_id: stationId ? Number(stationId) : null, category,
+        region_id: regionId || null, station_id: stationId ? Number(stationId) : null, category,
         title: title.trim(), body: body.trim(),
       });
       router.replace(`/board/${r.id}`);
@@ -84,7 +84,7 @@ export default function BoardWritePage() {
       <Card>
         <form onSubmit={submit}>
           <div className="field">
-            <label>지역</label>
+            <label>지역 <span className="tag">선택</span></label>
             {regionsState === 'error' ? (
               <div className="warn" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 지역 목록을 불러오지 못했습니다.
@@ -93,9 +93,9 @@ export default function BoardWritePage() {
             ) : (
               <select
                 className="sel" style={{ width: '100%' }} value={regionId} onChange={(e) => setRegionId(e.target.value)}
-                disabled={regionsState === 'loading'} required
+                disabled={regionsState === 'loading'}
               >
-                <option value="">{regionsState === 'loading' ? '불러오는 중…' : '지역 선택'}</option>
+                <option value="">{regionsState === 'loading' ? '불러오는 중…' : '지역 지정 안 함(자유 주제)'}</option>
                 {regions.map((r) => <option key={r.id} value={r.id}>{r.full_name}</option>)}
               </select>
             )}
@@ -124,7 +124,7 @@ export default function BoardWritePage() {
             <textarea value={body} onChange={(e) => setBody(e.target.value)} maxLength={5000} required />
           </div>
           {error && <div className="warn">{error}</div>}
-          <button className="btn lg" type="submit" disabled={submitting || !regionId}>
+          <button className="btn lg" type="submit" disabled={submitting}>
             <Send size={16} />{submitting ? '등록 중…' : '게시하기'}
           </button>
         </form>

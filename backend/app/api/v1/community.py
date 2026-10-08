@@ -74,7 +74,7 @@ def _post_out(
 ) -> PostOut:
     return PostOut(
         id=p.id, author_nickname=author_nickname, is_mine=(user_id is not None and p.author_id == user_id),
-        region_id=p.region_id, region_name=p.region.name, station_id=p.station_id,
+        region_id=p.region_id, region_name=p.region.name if p.region else None, station_id=p.station_id,
         station_name=p.station.name if p.station else None,
         category=p.category.value, category_label=POST_CATEGORY_LABELS[p.category],
         title=p.title, body=p.body, view_count=p.view_count, comment_count=comment_count, score=vote.score,
@@ -152,19 +152,27 @@ def popular_posts(
 def create_post(body: PostCreate, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
     """게시글 작성. 평가(Review)와 마찬가지로 로그인 없이도 익명으로 작성할 수 있다
     (2026-10 결정). 로그인한 상태로 쓰면 author_id 가 채워져 본인이 나중에 삭제할 수 있지만,
-    익명 글은 작성자 본인이 지울 방법이 없고 관리자만 지울 수 있다."""
-    region = db.get(Region, body.region_id)
-    if not region:
+    익명 글은 작성자 본인이 지울 방법이 없고 관리자만 지울 수 있다.
+
+    지역도 선택 입력이다(2026-10 결정 — 자유게시판 글까지 지역을 강제로 고르게 할 필요는
+    없다는 피드백). 지역 없이 경찰서만 지정할 수는 없다 — 경찰서는 특정 지역 소속이라
+    그러면 글의 지역이 모호해지므로, 그 경우엔 경찰서가 속한 지역으로 채워 넣는다."""
+    region_id = body.region_id
+    if region_id is not None and not db.get(Region, region_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "지역을 찾을 수 없습니다.")
     if body.station_id is not None:
         station = db.get(Station, body.station_id)
-        if not station or station.region_id != body.region_id:
+        if not station:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "경찰서를 찾을 수 없습니다.")
+        if region_id is None:
+            region_id = station.region_id
+        elif station.region_id != region_id:
             raise HTTPException(422, "선택한 경찰서가 해당 지역 소속이 아닙니다.")
     banned = find_banned(f"{body.title}\n{body.body}")
     if banned:
         raise HTTPException(422, {"message": "게시할 수 없는 표현이 포함되어 있습니다.", "banned": banned})
     post = Post(
-        author_id=user.id if user else None, region_id=body.region_id, station_id=body.station_id,
+        author_id=user.id if user else None, region_id=region_id, station_id=body.station_id,
         category=body.category, title=body.title, body=body.body,
     )
     db.add(post)

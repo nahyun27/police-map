@@ -120,7 +120,7 @@ export default async function Home() {
               <Link href={`/board/${p.id}`} key={p.id} className="post-row">
                 <div className="post-row-top">
                   <span className="badge brand">{p.category_label}</span>
-                  <span className="sub">{p.region_name}</span>
+                  <span className="sub">{p.region_name ?? '전체'}</span>
                 </div>
                 <div className="post-row-title">{p.title}</div>
                 <div className="post-row-meta sub">

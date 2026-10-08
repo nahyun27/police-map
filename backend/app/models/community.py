@@ -96,13 +96,17 @@ class Post(Base):
     Review 와 동일하게 로그인 없이도 익명으로 작성할 수 있다(2026-10 결정) — 로그인한 상태로
     쓰면 author_id 가 채워져 본인 확인(수정 전에는 없음 — 삭제만 가능)이 되지만, 익명 글은
     작성자 본인이 나중에 지울 방법이 없고 관리자만 지울 수 있다(Review 의 익명 제출과 동일한
-    트레이드오프). 남용 방지는 post_limiter(IP 기준 속도 제한)와 금칙어 필터로 한다."""
+    트레이드오프). 남용 방지는 post_limiter(IP 기준 속도 제한)와 금칙어 필터로 한다.
+
+    region_id 는 선택 입력이다(2026-10 결정 — 자유게시판 글까지 지역을 강제로 고르게 할
+    필요는 없다는 피드백). 지역을 밝히고 싶은 글(동네 소식 등)은 여전히 지정할 수 있고,
+    지정하면 그 지역 게시판 필터에도 걸린다."""
 
     __tablename__ = "posts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
-    region_id: Mapped[str] = mapped_column(ForeignKey("regions.id"), index=True)
+    region_id: Mapped[str | None] = mapped_column(ForeignKey("regions.id"), index=True)
     station_id: Mapped[int | None] = mapped_column(ForeignKey("stations.id"), index=True)
     category: Mapped[PostCategory] = mapped_column(Enum(PostCategory, native_enum=False, length=20), default=PostCategory.chat, index=True)
     title: Mapped[str] = mapped_column(String(200))
@@ -117,7 +121,7 @@ class Post(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    region: Mapped[Region] = relationship()
+    region: Mapped[Region | None] = relationship()
     station: Mapped[Station | None] = relationship()
 
 

@@ -191,12 +191,42 @@ def test_post_create_is_immediately_public(user_client, client, world):
     assert pub.json()["title"] == "동네 순찰 관련 문의"
 
 
-def test_post_station_must_belong_to_region(user_client, world):
+def test_post_region_is_optional(client, world):
+    """자유게시판 글까지 지역을 강제로 고르게 할 필요는 없다는 피드백 반영(2026-10) —
+    지역 없이도 글을 쓸 수 있고, 목록·상세 조회에서 region_name 이 null 로 내려온다."""
+    r = client.post(f"{API}/posts", json={"title": "전국 공통 질문", "body": "아무 지역이나 상관없는 질문입니다."})
+    assert r.status_code == 201
+    pid = r.json()["id"]
+    detail = client.get(f"{API}/posts/{pid}").json()
+    assert detail["region_id"] is None and detail["region_name"] is None
+
+    # 전체 지역 조회(region_id 필터 없음)에는 여전히 보이지만, 특정 지역으로 필터링하면 안 보여야 한다.
+    assert pid in {p["id"] for p in client.get(f"{API}/posts").json()["items"]}
+    assert pid not in {p["id"] for p in client.get(f"{API}/posts", params={"region_id": "seoul"}).json()["items"]}
+
+
+def test_post_station_without_region_infers_region(client, world):
+    r = client.post(f"{API}/posts", json={"title": "경찰서만 지정", "body": "지역은 안 골랐지만 경찰서는 지정", "station_id": world["station"].id})
+    assert r.status_code == 201
+    detail = client.get(f"{API}/posts/{r.json()['id']}").json()
+    assert detail["region_id"] == "seoul"  # 경찰서가 속한 지역으로 자동 채워짐
+
+
+def test_post_station_must_belong_to_region(db, user_client, world):
+    from app.models import Region, Station
+
     r = user_client.post(f"{API}/posts", json=post_payload(station_id=world["station"].id))
     assert r.status_code == 201
 
-    bad = user_client.post(f"{API}/posts", json=post_payload(region_id="seoul", station_id=999999))
-    assert bad.status_code == 422
+    missing = user_client.post(f"{API}/posts", json=post_payload(region_id="seoul", station_id=999999))
+    assert missing.status_code == 404  # 경찰서 자체가 없음
+
+    db.add(Region(id="busan", name="부산", full_name="부산경찰청", station_total=1))
+    other_station = Station(region_id="busan", name="부산경찰서")
+    db.add(other_station)
+    db.commit()
+    mismatched = user_client.post(f"{API}/posts", json=post_payload(region_id="seoul", station_id=other_station.id))
+    assert mismatched.status_code == 422  # 경찰서는 있지만 다른 지역 소속
 
 
 def test_post_banned_word_rejected(user_client, world):

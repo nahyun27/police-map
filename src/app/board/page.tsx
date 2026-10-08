@@ -98,7 +98,7 @@ export default async function BoardPage({ searchParams }: Props) {
               <Link href={`/board/${p.id}`} key={p.id} className="post-row">
                 <div className="post-row-top">
                   <span className={`badge cat-${p.category}`}>{p.category_label}</span>
-                  <span className="sub">{p.region_name}{p.station_name ? ` · ${p.station_name}` : ''}</span>
+                  <span className="sub">{p.region_name ?? '전체'}{p.station_name ? ` · ${p.station_name}` : ''}</span>
                 </div>
                 <div className="post-row-title">{p.title}</div>
                 <div className="post-row-meta sub">

@@ -463,8 +463,8 @@ export interface PostOut {
   id: number;
   author_nickname: string;
   is_mine: boolean;
-  region_id: string;
-  region_name: string;
+  region_id: string | null;
+  region_name: string | null;
   station_id: number | null;
   station_name: string | null;
   category: PostCategory;
@@ -481,7 +481,7 @@ export interface PostOut {
 }
 
 export interface PostCreatePayload {
-  region_id: string;
+  region_id?: string | null;
   station_id?: number | null;
   category: PostCategory;
   title: string;
