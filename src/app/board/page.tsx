@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PenLine, Search } from 'lucide-react';
 import { Card, Crumb, PageHead } from '@/components/ui';
+import { RegionFilterSelect } from '@/components/RegionFilterSelect';
 import { getRegions, listPosts, type PopularPeriod, type PostCategory } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
@@ -71,12 +72,7 @@ export default async function BoardPage({ searchParams }: Props) {
 
       <Card className="flat">
         <div className="btn-row" style={{ marginBottom: 10 }}>
-          <Link href={buildHref({ ...f, region: undefined, page: 1 })} className={`btn sm ${!region ? '' : 'line'}`}>전체 지역</Link>
-          {regions.map((r) => (
-            <Link key={r.id} href={buildHref({ ...f, region: r.id, page: 1 })} className={`btn sm ${region === r.id ? '' : 'line'}`}>
-              {r.name}
-            </Link>
-          ))}
+          <RegionFilterSelect regions={regions} value={region ?? ''} category={category} sort={sort} period={period} q={q} />
         </div>
         <div className="btn-row" style={{ marginBottom: 10 }}>
           <Link href={buildHref({ ...f, sort: 'new', page: 1 })} className={`btn sm ${sort === 'new' ? '' : 'line'}`}>최신순</Link>

@@ -294,6 +294,7 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 .board-ui .cmt-list { border-top: none; margin-top: 16px; gap: 10px; }
 .board-ui .cmt { background: #f8f9fb; border-radius: 16px; padding: 12px 14px; }
 .board-ui .cmt-form input, .board-ui .field input, .board-ui .field select, .board-ui .field textarea { border-radius: 16px; }
+.board-ui .sel { border-radius: 14px; padding: 10px 14px; min-width: 150px; border-color: var(--line2); }
 
 /* 모바일 플로팅 글쓰기 버튼 그림자를 브랜드 컬러로. */
 .board-ui .fab-write { box-shadow: 0 14px 28px -10px rgba(36, 86, 245, .5), 0 4px 10px rgba(36, 86, 245, .3); }
