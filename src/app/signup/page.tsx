@@ -45,7 +45,7 @@ function SignupForm() {
         </div>
         <div className="field">
           <label>닉네임</label>
-          <input value={nickname} onChange={(e) => setNickname(e.target.value)} autoComplete="nickname" minLength={2} maxLength={30} required />
+          <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} autoComplete="nickname" minLength={2} maxLength={30} required />
         </div>
         <div className="field">
           <label>비밀번호 <span className="tag">8자 이상</span></label>

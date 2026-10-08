@@ -375,7 +375,7 @@ table.list td a { font-weight: 650; color: var(--ink); }
 /* ---------- Forms ---------- */
 .field { margin-bottom: 20px; }
 .field label { display: block; font-weight: 650; font-size: 14px; margin-bottom: 8px; }
-.field input[type=text], .field select, .field textarea {
+.field input, .field select, .field textarea {
   width: 100%; border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 12px 14px; font-size: 15px; color: var(--ink); transition: .15s;
 }
 .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft); }
