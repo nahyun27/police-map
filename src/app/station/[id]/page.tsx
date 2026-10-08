@@ -14,6 +14,8 @@ type JurisdictionEntry = {
   viewBox?: string;
   labelX?: number;
   labelY?: number;
+  stationX?: number;
+  stationY?: number;
 };
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ page?: string; evidence?: string }> };
@@ -141,7 +143,19 @@ export default async function StationPage({ params, searchParams }: Props) {
                   role="img" aria-label={`${s.name} 관할구역 지도`}
                 >
                   <path d={jurisdiction.path} fill="var(--brand-soft)" stroke="var(--brand)" strokeWidth={1.5} />
-                  {jurisdiction.labelX !== undefined && jurisdiction.labelY !== undefined && (
+                  {jurisdiction.stationX !== undefined && jurisdiction.stationY !== undefined ? (
+                    // 실제 경찰서 주소 위치 — 관할구역 도형의 기하학적 중심(labelX/Y)과는
+                    // 다른 지점이라, 라벨도 도형 중심이 아니라 이 실제 위치 옆에 붙인다.
+                    <g transform={`translate(${jurisdiction.stationX} ${jurisdiction.stationY})`}>
+                      <path
+                        d="M0,-9.3L7,-9.3L10,-4L10,1.1L0,11.5L-10,1.1L-10,-4L-7,-9.3Z"
+                        fill="var(--brand)" stroke="#fff" strokeWidth={1}
+                      />
+                      <text y={24} textAnchor="middle" fontSize={14} fontWeight={700} fill="var(--brand-ink)">
+                        {s.name.replace(/경찰서$/, '')}
+                      </text>
+                    </g>
+                  ) : jurisdiction.labelX !== undefined && jurisdiction.labelY !== undefined && (
                     <text
                       x={jurisdiction.labelX} y={jurisdiction.labelY} textAnchor="middle"
                       fontSize={15} fontWeight={700} fill="var(--brand-ink)"

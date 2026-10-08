@@ -191,10 +191,12 @@ def classify(text: str):
     return "complex", None
 
 
-def project_and_path(geom, pad_ratio: float = 0.08, target: float = 400):
+def project_and_path(geom, station_point=None, pad_ratio: float = 0.08, target: float = 400):
     """위경도 폴리곤을 그 폴리곤 자체의 bbox 에 맞춘 로컬 SVG viewBox(0 0 W H)로 투영한다
     (station/[id] 페이지마다 독립된 작은 지도라 koreaMap.json 전역 투영과 맞출 필요가 없다).
-    위도에 따른 가로세로 비율 왜곡은 중심위도 cos 보정으로 간단히 바로잡는다."""
+    위도에 따른 가로세로 비율 왜곡은 중심위도 cos 보정으로 간단히 바로잡는다.
+    station_point((lng, lat))을 주면 같은 투영으로 경찰서 실제 위치도 함께 좌표를 낸다 —
+    관할구역 도형의 기하학적 중심(representative_point)과는 다른, 실제 주소 지점이다."""
     minx, miny, maxx, maxy = geom.bounds
     cos_lat0 = math.cos(math.radians((miny + maxy) / 2))
     w, h = (maxx - minx) * cos_lat0, maxy - miny
@@ -216,7 +218,8 @@ def project_and_path(geom, pad_ratio: float = 0.08, target: float = 400):
             d_parts.append(ring_path(list(poly.exterior.coords)))
             d_parts.extend(ring_path(list(ring.coords)) for ring in poly.interiors)
     cx, cy = proj(*geom.representative_point().coords[0])
-    return " ".join(d_parts), f"0 0 {round(w * scale, 1)} {round(h * scale, 1)}", (cx, cy)
+    station_xy = proj(*station_point) if station_point else None
+    return " ".join(d_parts), f"0 0 {round(w * scale, 1)} {round(h * scale, 1)}", (cx, cy), station_xy
 
 
 def main():
@@ -267,12 +270,14 @@ def main():
     print(f"  {len(pdf_stations)}개 관서", file=sys.stderr)
 
     db = SessionLocal()
-    db_stations = db.execute(select(Station.id, Station.name, Station.region_id, Station.is_sample)).all()
+    db_stations = db.execute(
+        select(Station.id, Station.name, Station.region_id, Station.is_sample, Station.lat, Station.lng)
+    ).all()
 
     stats = {"matched": 0, "unmatched": 0, "whole": 0, "dong_list": 0, "complex": 0}
     out: dict[str, dict] = {}
 
-    for sid, name, region_id, is_sample in db_stations:
+    for sid, name, region_id, is_sample, lat, lng in db_stations:
         if is_sample:
             continue
         pdf_entry = pdf_by_name.get(name)
@@ -308,8 +313,11 @@ def main():
         entry = {"text": text, "kind": kind}
         if kind in ("whole", "dong_list") and geoms:
             try:
-                d, viewbox, (cx, cy) = project_and_path(unary_union(geoms))
+                station_point = (lng, lat) if lat is not None and lng is not None else None
+                d, viewbox, (cx, cy), station_xy = project_and_path(unary_union(geoms), station_point)
                 entry.update({"path": d, "viewBox": viewbox, "labelX": cx, "labelY": cy})
+                if station_xy:
+                    entry["stationX"], entry["stationY"] = station_xy
             except Exception as e:  # 극히 일부 섬 지역 등에서 위상 오류가 날 수 있다
                 print(f"  경계 생성 실패: {name} ({e})", file=sys.stderr)
                 entry["kind"] = "complex"
