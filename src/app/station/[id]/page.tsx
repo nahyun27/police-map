@@ -3,9 +3,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Bars, Card, Crumb, Stars } from '@/components/ui';
 import { ReviewList } from '@/components/ReviewList';
+import { ShieldCheck } from 'lucide-react';
 import { ApiError, getStation } from '@/lib/api';
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ page?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ page?: string; evidence?: string }> };
 
 const PAGE_SIZE = 10;
 
@@ -21,15 +22,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function StationPage({ params, searchParams }: Props) {
   const { id } = await params;
-  const page = Math.max(1, Number((await searchParams).page ?? '1') || 1);
+  const sp = await searchParams;
+  const page = Math.max(1, Number(sp.page ?? '1') || 1);
+  const evidenceOnly = sp.evidence === '1';
   let s;
   try {
-    s = await getStation(id, { page, size: PAGE_SIZE });
+    s = await getStation(id, { page, size: PAGE_SIZE, evidenceOnly });
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) notFound();
     throw e;
   }
   const totalPages = Math.max(1, Math.ceil(s.reviews.total / s.reviews.size));
+  const pageHref = (p: number) => `/station/${s.id}?page=${p}${evidenceOnly ? '&evidence=1' : ''}`;
 
   return (
     <>
@@ -86,17 +90,22 @@ export default async function StationPage({ params, searchParams }: Props) {
       </Card>
 
       <Card>
-        <h2>평가 후기 <span className="sub" style={{ fontWeight: 500 }}>{s.reviews.total}건</span></h2>
+        <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+          <h2 style={{ marginBottom: 0 }}>평가 후기 <span className="sub" style={{ fontWeight: 500 }}>{s.reviews.total}건</span></h2>
+          <Link href={`/station/${s.id}${evidenceOnly ? '' : '?evidence=1'}`} className={`link-btn ${evidenceOnly ? 'on' : ''}`}>
+            <ShieldCheck size={13} />증빙확인된 평가만 보기
+          </Link>
+        </div>
         {s.reviews.items.length ? (
           <ReviewList stationId={s.id} stationName={s.name} items={s.reviews.items} />
         ) : (
-          <p className="sub">등록된 평가가 없습니다.</p>
+          <p className="sub">{evidenceOnly ? '증빙확인된 평가가 아직 없습니다.' : '등록된 평가가 없습니다.'}</p>
         )}
         {totalPages > 1 && (
           <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>
-            {page > 1 && <Link href={`/station/${s.id}?page=${page - 1}`} className="btn line sm">이전</Link>}
+            {page > 1 && <Link href={pageHref(page - 1)} className="btn line sm">이전</Link>}
             <span className="sub">{page} / {totalPages}</span>
-            {page < totalPages && <Link href={`/station/${s.id}?page=${page + 1}`} className="btn line sm">다음</Link>}
+            {page < totalPages && <Link href={pageHref(page + 1)} className="btn line sm">다음</Link>}
           </div>
         )}
       </Card>

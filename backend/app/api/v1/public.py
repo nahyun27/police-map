@@ -65,12 +65,15 @@ def get_region(region_id: str, db: Session = Depends(get_db)):
 @router.get("/stations/{station_id}", response_model=StationDetail)
 def get_station(
     station_id: int, page: int = Query(1, ge=1), size: int = Query(10, ge=1, le=50),
+    evidence_only: bool = Query(False, description="증빙확인된 평가만 보기"),
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
 ):
     s = db.get(Station, station_id)
     if not s:
         raise HTTPException(404, "경찰서를 찾을 수 없습니다.")
     base = (Review.station_id == s.id, Review.status == ReviewStatus.published)
+    if evidence_only:
+        base = (*base, Review.evidence_verified.is_(True))
     total = db.scalar(select(func.count(Review.id)).where(*base)) or 0
     reviews = db.scalars(
         select(Review).where(*base).order_by(Review.published_at.desc(), Review.id.desc()).offset((page - 1) * size).limit(size)

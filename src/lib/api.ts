@@ -185,10 +185,11 @@ export interface StatsOverview {
 export const getRegions = () => apiFetch<RegionOut[]>('/regions', { revalidateSeconds: 30 });
 export const getRegion = (id: string) => apiFetch<RegionDetail>(`/regions/${encodeURIComponent(id)}`, { revalidateSeconds: 30 });
 
-export function getStation(id: number | string, opts?: { page?: number; size?: number }) {
+export function getStation(id: number | string, opts?: { page?: number; size?: number; evidenceOnly?: boolean }) {
   const qs = new URLSearchParams();
   if (opts?.page) qs.set('page', String(opts.page));
   if (opts?.size) qs.set('size', String(opts.size));
+  if (opts?.evidenceOnly) qs.set('evidence_only', 'true');
   const suffix = qs.toString() ? `?${qs}` : '';
   return apiFetch<StationDetail>(`/stations/${encodeURIComponent(String(id))}${suffix}`, { revalidateSeconds: 30 });
 }

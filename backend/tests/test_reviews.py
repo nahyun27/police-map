@@ -126,3 +126,17 @@ def test_evidence_note_is_optional_and_unverified_until_admin_acts(user_client, 
     pub = next(x for x in user_client.get(f"{API}/stations/{world['station'].id}").json()["reviews"]["items"] if x["id"] == rid)
     assert pub["evidence_verified"] is False
     assert "evidence_note" not in pub  # 공개 응답에는 메모 원문을 노출하지 않는다(배지 여부만)
+
+
+def test_station_evidence_only_filter(user_client, admin_client, world):
+    sid = world["station"].id
+    rid1 = user_client.post(f"{API}/reviews", json=review_payload(sid, evidence_note="증빙 보유")).json()["id"]
+    rid2 = user_client.post(f"{API}/reviews", json=review_payload(sid, case_number="2027-형제-00001")).json()["id"]
+    admin_client.patch(f"{API}/admin/reviews/{rid1}/evidence", json={"verified": True})
+
+    all_ids = {x["id"] for x in user_client.get(f"{API}/stations/{sid}").json()["reviews"]["items"]}
+    assert {rid1, rid2} <= all_ids
+
+    filtered = user_client.get(f"{API}/stations/{sid}", params={"evidence_only": "true"}).json()["reviews"]
+    ids = {x["id"] for x in filtered["items"]}
+    assert rid1 in ids and rid2 not in ids
