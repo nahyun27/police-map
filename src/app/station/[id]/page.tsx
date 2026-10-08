@@ -5,6 +5,16 @@ import { Bars, Card, Crumb, Stars } from '@/components/ui';
 import { ReviewList } from '@/components/ReviewList';
 import { ShieldCheck } from 'lucide-react';
 import { ApiError, getStation } from '@/lib/api';
+import stationJurisdiction from '@/data/stationJurisdiction.json';
+
+type JurisdictionEntry = {
+  text: string;
+  kind: 'whole' | 'dong_list' | 'complex';
+  path?: string;
+  viewBox?: string;
+  labelX?: number;
+  labelY?: number;
+};
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ page?: string; evidence?: string }> };
 
@@ -34,6 +44,7 @@ export default async function StationPage({ params, searchParams }: Props) {
   }
   const totalPages = Math.max(1, Math.ceil(s.reviews.total / s.reviews.size));
   const pageHref = (p: number) => `/station/${s.id}?page=${p}${evidenceOnly ? '&evidence=1' : ''}`;
+  const jurisdiction = (stationJurisdiction as Record<string, JurisdictionEntry>)[String(s.id)];
 
   return (
     <>
@@ -116,6 +127,35 @@ export default async function StationPage({ params, searchParams }: Props) {
           <p className="sub">공개된 부서 정보가 없습니다.</p>
         )}
       </Card>
+
+      {jurisdiction && (
+        <Card>
+          <h2>관할구역 <span className="tag">경찰청과 그 소속기관 직제 시행규칙 별표2</span></h2>
+          {jurisdiction.kind !== 'complex' && jurisdiction.path ? (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <svg
+                  viewBox={jurisdiction.viewBox} style={{ width: '100%', maxWidth: 280, height: 'auto' }}
+                  role="img" aria-label={`${s.name} 관할구역 지도`}
+                >
+                  <path d={jurisdiction.path} fill="var(--brand-soft)" stroke="var(--brand)" strokeWidth={1.5} />
+                  {jurisdiction.labelX !== undefined && jurisdiction.labelY !== undefined && (
+                    <text
+                      x={jurisdiction.labelX} y={jurisdiction.labelY} textAnchor="middle"
+                      fontSize={15} fontWeight={700} fill="var(--brand-ink)"
+                    >
+                      {s.name.replace(/경찰서$/, '')}
+                    </text>
+                  )}
+                </svg>
+              </div>
+              <p className="sub" style={{ textAlign: 'center', marginTop: 8 }}>{jurisdiction.text}</p>
+            </>
+          ) : (
+            <p className="sub">{jurisdiction.text}</p>
+          )}
+        </Card>
+      )}
 
       <Card>
         <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>

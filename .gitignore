@@ -32,3 +32,4 @@ police_stations_db*.xlsx
 police_stations_db*.csv
 backend/app/*.pdf
 *.pdf
+backend/data/.geo-cache/
