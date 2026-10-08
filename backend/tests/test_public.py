@@ -147,3 +147,11 @@ def test_transparency_report_aggregates_current_quarter(db, client, user_client,
     assert cur["reviews_removed"] >= 1
     assert cur["reports_resolved_dismiss"] >= 1
     assert cur["takedowns_kept"] >= 1
+
+
+def test_transparency_report_is_rate_limited(client):
+    """비로그인으로도 호출되는 공개 엔드포인트라 다른 공개 조회처럼 IP당 요청 제한이 걸려야 한다
+    (보안 감사에서 지적된 무제한 반복 호출로 인한 과부하 방지)."""
+    for _ in range(120):
+        assert client.get(f"{API}/stats/transparency").status_code == 200
+    assert client.get(f"{API}/stats/transparency").status_code == 429

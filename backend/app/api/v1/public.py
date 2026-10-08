@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from math import asin, cos, radians, sin, sqrt
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -7,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.v1._present import reply_out, review_public
 from app.core.database import get_db
 from app.core.deps import get_current_user_optional
+from app.core.rate_limit import view_limiter
 from app.models import (
     Department, PublicStatistic, Region, Report, ReportStatus, Review, ReviewComment, ReviewScrap, ReviewStatus,
     ReviewVote, Station, TakedownRequest, TakedownStatus, User,
@@ -191,20 +193,27 @@ def stats_overview(db: Session = Depends(get_db)):
     )
 
 
+_TRANSPARENCY_QUARTERS_BACK = 8  # 최근 2년(8분기)치만 — 사이트 운영 기간이 길어져도 매 요청
+# 비용이 늘지 않게 전체 이력 대신 최근 구간으로만 훑는다.
+
+
 def _quarter_counts(db: Session, time_col, where) -> dict[tuple[int, int], int]:
     """(연도, 분기) 별 건수. SQLite(테스트)·Postgres(운영) 양쪽에서 똑같이 동작하도록 DB 함수
-    대신 파이썬에서 묶는다 — 관리자/투명성 보고서 전용이라 자주 호출되지 않아 부담 없다."""
+    대신 파이썬에서 묶는다. 호출 빈도가 낮다는 가정만으로 기간을 무한정 열어두면 요청마다
+    비용이 이력 전체에 비례해 늘어나므로, 최근 분기 구간으로 미리 잘라서 쿼리한다."""
+    since = datetime.now(timezone.utc) - timedelta(days=_TRANSPARENCY_QUARTERS_BACK * 91)
     counts: dict[tuple[int, int], int] = {}
-    for (ts,) in db.execute(select(time_col).where(*where, time_col.is_not(None))).all():
+    for (ts,) in db.execute(select(time_col).where(*where, time_col.is_not(None), time_col >= since)).all():
         key = (ts.year, (ts.month - 1) // 3 + 1)
         counts[key] = counts.get(key, 0) + 1
     return counts
 
 
-@router.get("/stats/transparency", response_model=TransparencyReport)
+@router.get("/stats/transparency", response_model=TransparencyReport, dependencies=[Depends(view_limiter)])
 def transparency_report(db: Session = Depends(get_db)):
     """운영원칙의 "분기별 투명성 보고서(게시·반려·삭제 건수) 공개" 약속을 채우는 집계.
-    평가 반려/삭제는 reviewed_at, 신고·삭제요청 처리는 resolved_at 기준으로 분기를 나눈다."""
+    평가 반려/삭제는 reviewed_at, 신고·삭제요청 처리는 resolved_at 기준으로 분기를 나눈다.
+    비로그인으로도 호출되는 공개 엔드포인트라 다른 공개 조회와 마찬가지로 요청 제한을 둔다."""
     rejected = _quarter_counts(db, Review.reviewed_at, (Review.status == ReviewStatus.rejected,))
     removed = _quarter_counts(db, Review.reviewed_at, (Review.status == ReviewStatus.removed,))
     reports_remove = _quarter_counts(

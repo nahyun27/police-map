@@ -267,7 +267,9 @@ def vote_post_comment(comment_id: int, body: VoteIn, db: Session = Depends(get_d
 
 @router.post("/posts/{post_id}/vote", response_model=VoteSummary, dependencies=[Depends(vote_limiter)])
 def vote_post(post_id: int, body: VoteIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    p = db.get(Post, post_id)
+    # 글 행을 잠그고 시작한다 — 같은 글에 동시에 들어오는 투표 요청들이 서로 Post.score 증분을
+    # 덮어써서(lost update) 캐시 컬럼이 실제 투표 합계와 어긋나는 걸 막는다(정렬 조작 방지).
+    p = db.scalar(select(Post).where(Post.id == post_id).with_for_update())
     if not p or p.is_removed:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
     existing = db.scalar(select(PostVote).where(PostVote.post_id == post_id, PostVote.user_id == user.id))
@@ -279,7 +281,9 @@ def vote_post(post_id: int, body: VoteIn, db: Session = Depends(get_db), user: U
         existing.value = body.value
     else:
         db.add(PostVote(post_id=post_id, user_id=user.id, value=body.value))
-    p.score += body.value - before  # 정렬용 캐시 컬럼 — 위 Post.score 주석 참고
+    # SQL 쪽 상대 증분(score = score + delta)으로 적용한다 — 파이썬에서 읽은 값에 더해 그대로
+    # 덮어쓰면 위 잠금이 있어도 계산 경로 자체가 read-modify-write 라 방어가 약해진다.
+    db.execute(update(Post).where(Post.id == post_id).values(score=Post.score + (body.value - before)))
     db.commit()
     return vote_summaries(db, PostVote, PostVote.post_id, [post_id], user.id)[post_id]
 
