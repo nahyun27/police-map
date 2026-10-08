@@ -404,11 +404,11 @@ table.list td a { font-weight: 650; color: var(--ink); }
 .region-mini-shape { fill: var(--brand-soft); stroke: #fff; stroke-width: 2; }
 .region-pin { cursor: pointer; outline: none; transform-box: fill-box; transform-origin: center; transition: transform .12s; }
 .region-pin:hover, .region-pin:focus-visible { transform: scale(1.35); }
-.pin-dot { stroke: #fff; }
-.region-pin.tone-good .pin-dot { fill: var(--good); }
-.region-pin.tone-mid .pin-dot { fill: var(--mid); }
-.region-pin.tone-low .pin-dot { fill: var(--low); }
-.region-pin.tone-none .pin-dot { fill: var(--muted); }
+.pin-shield { stroke: #fff; }
+.region-pin.tone-good .pin-shield { fill: var(--good); }
+.region-pin.tone-mid .pin-shield { fill: var(--mid); }
+.region-pin.tone-low .pin-shield { fill: var(--low); }
+.region-pin.tone-none .pin-shield { fill: var(--muted); }
 
 /* ---------- Feature cards ---------- */
 .feature .ico { width: 44px; height: 44px; border-radius: 13px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; margin-bottom: 18px; }

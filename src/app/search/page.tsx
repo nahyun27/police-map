@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Building2 } from 'lucide-react';
+import { PoliceStationIcon } from '@/components/icons/PoliceStationIcon';
 import { Card, PageHead, Score } from '@/components/ui';
 import { search as apiSearch } from '@/lib/api';
 import { NOINDEX } from '@/lib/seo';
@@ -28,7 +28,7 @@ export default async function SearchPage({ searchParams }: Props) {
         sub={q ? `경찰서 ${stations.length}건` : undefined}
       />
       <Card>
-        <h2><Building2 size={17} style={{ verticalAlign: -2, marginRight: 8, color: 'var(--brand)' }} />경찰서 ({stations.length})</h2>
+        <h2><PoliceStationIcon size={17} style={{ verticalAlign: -2, marginRight: 8, color: 'var(--brand)' }} />경찰서 ({stations.length})</h2>
         {failed ? <p className="sub">검색 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.</p> : stations.length ? stations.map((s) => (
           <div className="review" key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
             <div>

@@ -51,6 +51,19 @@ export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps
   );
 }
 
+/** 동그라미 핀 대신 쓰는 경찰서 모양(방패) 실루엣. 지도 핀은 반지름이 1~5 단위로 아주 작아서
+ * (region-mini-map-wrap, 위 주석 참고) 별 같은 속 디테일은 그 크기에서 뭉개지므로 넣지 않고
+ * 윤곽만 그린다(별이 들어간 전체 버전은 components/icons/PoliceStationIcon.tsx 참고, 검색
+ * 결과처럼 충분히 큰 자리에서 쓴다). */
+function shieldPath(r: number): string {
+  const w = r, h = r * 1.15;
+  const pts: [number, number][] = [
+    [-w * 0.78, -h * 0.87], [w * 0.78, -h * 0.87], [w, -h * 0.43],
+    [w, h * 0.09], [0, h], [-w, h * 0.09], [-w, -h * 0.43],
+  ];
+  return `M${pts.map(([px, py]) => `${px},${py}`).join(' L')} Z`;
+}
+
 function RegionPin({
   x, y, r, name, tone, stationId,
 }: { x: number; y: number; r: number; name: string; tone: string; stationId: number }) {
@@ -71,7 +84,7 @@ function RegionPin({
       }}
     >
       <title>{name}</title>
-      <circle r={r} strokeWidth={r * 0.3} className="pin-dot" />
+      <path d={shieldPath(r)} strokeWidth={r * 0.3} strokeLinejoin="round" className="pin-shield" />
     </g>
   );
 }
