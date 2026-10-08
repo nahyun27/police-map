@@ -42,8 +42,11 @@ class RegionFollow(Base):
 
 
 class ReviewComment(Base):
-    """평가(리뷰)에 다는 댓글. 로그인한 회원만 작성 가능하고, 대댓글은 1단계까지만 허용한다
-    (parent_id 가 있는 댓글에는 또 대댓글을 달 수 없음 — API 레벨에서 검사).
+    """평가(리뷰)에 다는 댓글. 평가·게시글과 마찬가지로 로그인 없이도 익명으로 쓸 수 있다
+    (2026-10 결정 — 추천/투표와 달리 댓글은 신뢰도 핵심 지표가 아니라서 글/평가와 같은
+    기준으로 맞췄다). 대댓글은 1단계까지만 허용한다(parent_id 가 있는 댓글에는 또 대댓글을
+    달 수 없음 — API 레벨에서 검사). 익명 댓글은 작성자 본인이 지울 방법이 없고(로그인
+    자체가 안 돼 있으니) 관리자만 지울 수 있다.
 
     삭제는 항상 소프트 삭제(is_removed)다. 하드 삭제하면 그 댓글에 달린 대댓글들이
     고아가 되므로, 본인 삭제든 관리자 삭제든 본문만 "삭제된 댓글입니다"로 가리고 행은 남긴다.
@@ -55,7 +58,7 @@ class ReviewComment(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     review_id: Mapped[int] = mapped_column(ForeignKey("reviews.id"), index=True)
-    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
     parent_id: Mapped[int | None] = mapped_column(ForeignKey("review_comments.id"), index=True)
     body: Mapped[str] = mapped_column(Text)
     is_removed: Mapped[bool] = mapped_column(default=False)
@@ -126,14 +129,14 @@ class Post(Base):
 
 
 class PostComment(Base):
-    """게시판 글의 댓글. ReviewComment 와 동일한 규칙(로그인 필수, 대댓글 1단계, 소프트 삭제,
+    """게시판 글의 댓글. ReviewComment 와 동일한 규칙(익명 작성 가능, 대댓글 1단계, 소프트 삭제,
     removed_at 으로 삭제 시각만 공개 — ReviewComment docstring 참고)."""
 
     __tablename__ = "post_comments"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     post_id: Mapped[int] = mapped_column(ForeignKey("posts.id"), index=True)
-    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
     parent_id: Mapped[int | None] = mapped_column(ForeignKey("post_comments.id"), index=True)
     body: Mapped[str] = mapped_column(Text)
     is_removed: Mapped[bool] = mapped_column(default=False)

@@ -9,6 +9,7 @@ from app.models import ReviewReply, User
 from app.schemas.community import CommentOut, VoteSummary
 
 REMOVED_BODY = "삭제된 댓글입니다."
+ANON_LABEL = "익명"  # 로그인 없이 작성된 글/댓글의 작성자 표시(Review 의 익명 제출과 동일한 정책)
 
 
 def vote_summaries(

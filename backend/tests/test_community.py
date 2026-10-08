@@ -48,9 +48,20 @@ def test_recent_reviews_filtered_by_region(client, db, world):
 
 
 # ---------- 평가 댓글/추천 ----------
-def test_review_comment_requires_login(client, world):
+def test_review_comment_anonymous_allowed(client, world):
+    """댓글은 평가·게시글과 마찬가지로 로그인 없이도 달 수 있다(2026-10 결정)."""
     rid = world["reviews"][0].id
-    assert client.post(f"{API}/reviews/{rid}/comments", json={"body": "익명 댓글"}).status_code == 401
+    r = client.post(f"{API}/reviews/{rid}/comments", json={"body": "익명 댓글"})
+    assert r.status_code == 201
+    assert r.json()["author_nickname"] == "익명"
+    assert r.json()["is_mine"] is False
+
+    lst = client.get(f"{API}/reviews/{rid}/comments").json()
+    assert lst[0]["author_nickname"] == "익명"
+
+    # 익명 댓글은 작성자 본인이 지울 방법이 없다(로그인 자체가 안 돼 있으므로) — 관리자만 가능
+    cid = r.json()["id"]
+    assert client.delete(f"{API}/reviews/comments/{cid}").status_code == 401
 
 
 def test_review_comment_create_and_list(user_client, world):
@@ -128,10 +139,18 @@ def test_review_comment_vote_and_sort_top(user_client, world):
 
 
 def test_review_comment_vote_requires_login(client, world):
+    """댓글 작성은 익명으로 되지만, 추천/투표는 신뢰도 핵심 지표라 로그인이 필요하다."""
     rid = world["reviews"][0].id
-    cid_resp = client.post(f"{API}/reviews/{rid}/comments", json={"body": "익명시도"})
-    assert cid_resp.status_code == 401  # 애초에 댓글도 로그인 필요
-    assert client.post(f"{API}/reviews/comments/1/vote", json={"value": 1}).status_code == 401
+    cid = client.post(f"{API}/reviews/{rid}/comments", json={"body": "익명 댓글"}).json()["id"]
+    assert client.post(f"{API}/reviews/comments/{cid}/vote", json={"value": 1}).status_code == 401
+
+
+def test_review_comment_anonymous_removable_by_admin_only(client, admin_client, world):
+    rid = world["reviews"][0].id
+    cid = client.post(f"{API}/reviews/{rid}/comments", json={"body": "지울 익명 댓글"}).json()["id"]
+    assert admin_client.delete(f"{API}/reviews/comments/{cid}").status_code == 204
+    tree = client.get(f"{API}/reviews/{rid}/comments").json()
+    assert tree[0]["is_removed"] is True
 
 
 def test_review_vote_requires_login(client, world):
@@ -357,6 +376,24 @@ def test_post_comment_delete_shows_removed_at(user_client, world):
     assert user_client.delete(f"{API}/post-comments/{cid}").status_code == 204
     tree = user_client.get(f"{API}/posts/{pid}/comments").json()
     assert tree[0]["is_removed"] is True and tree[0]["removed_at"] is not None
+
+
+def test_post_comment_anonymous_allowed(client, admin_client, world):
+    """게시글 댓글도 로그인 없이 달 수 있다(2026-10 결정) — 투표는 여전히 로그인 필요."""
+    pid = client.post(f"{API}/posts", json=post_payload()).json()["id"]
+    r = client.post(f"{API}/posts/{pid}/comments", json={"body": "익명 댓글"})
+    assert r.status_code == 201
+    assert r.json()["author_nickname"] == "익명"
+    assert r.json()["is_mine"] is False
+
+    cid = r.json()["id"]
+    assert client.post(f"{API}/post-comments/{cid}/vote", json={"value": 1}).status_code == 401
+
+    # 익명 댓글은 본인이 지울 수 없고(로그인 자체가 안 됨) 관리자만 지울 수 있다
+    assert client.delete(f"{API}/post-comments/{cid}").status_code == 401
+    assert admin_client.delete(f"{API}/post-comments/{cid}").status_code == 204
+    tree = client.get(f"{API}/posts/{pid}/comments").json()
+    assert tree[0]["is_removed"] is True
 
 
 def test_popular_posts_excludes_old_and_removed(user_client, world):

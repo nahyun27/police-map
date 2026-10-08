@@ -20,7 +20,7 @@ from app.schemas.community import (
 from app.schemas.public import Page
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
-from app.services.engagement import comment_counts, comment_tree, scrapped_set, vote_summaries
+from app.services.engagement import ANON_LABEL, comment_counts, comment_tree, scrapped_set, vote_summaries
 
 router = APIRouter(tags=["community"])
 
@@ -58,9 +58,6 @@ def unfollow_region(region_id: str, db: Session = Depends(get_db), user: User = 
 
 
 # ---------- 게시판 ----------
-ANON_LABEL = "익명"  # 로그인 없이 작성된 글의 작성자 표시(Review 의 익명 제출과 동일한 정책)
-
-
 def _nicknames(db: Session, posts: list[Post]) -> dict[int, str]:
     """글 작성자 닉네임을 한 번에 묶어 조회한다(author_id 가 None 인 익명 글은 애초에 조회
     대상에서 빠지므로, 쓰는 쪽에서 .get(author_id, ANON_LABEL) 로 집어야 한다)."""
@@ -224,10 +221,13 @@ def list_post_comments(
     p = db.get(Post, post_id)
     if not p or p.is_removed:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
-    rows = db.execute(
-        select(PostComment, User.nickname).join(User, User.id == PostComment.author_id)
-        .where(PostComment.post_id == post_id).order_by(PostComment.created_at.asc())
-    ).all()
+    rows = [
+        (c, nickname or ANON_LABEL)
+        for c, nickname in db.execute(
+            select(PostComment, User.nickname).outerjoin(User, User.id == PostComment.author_id)
+            .where(PostComment.post_id == post_id).order_by(PostComment.created_at.asc())
+        ).all()
+    ]
     ids = [c.id for c, _ in rows]
     votes = vote_summaries(db, PostCommentVote, PostCommentVote.comment_id, ids, user.id if user else None)
     return comment_tree(rows, user.id if user else None, votes, sort)
@@ -237,7 +237,12 @@ def list_post_comments(
     "/posts/{post_id}/comments", response_model=CommentOut, status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(comment_limiter)],
 )
-def create_post_comment(post_id: int, body: CommentCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def create_post_comment(
+    post_id: int, body: CommentCreate, db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
+    """게시글과 마찬가지로 로그인 없이도 익명으로 댓글을 달 수 있다(2026-10 결정) —
+    추천/투표와 달리 댓글은 신뢰도 핵심 지표가 아니라서 글 작성과 같은 기준으로 맞췄다."""
     p = db.get(Post, post_id)
     if not p or p.is_removed:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
@@ -250,10 +255,11 @@ def create_post_comment(post_id: int, body: CommentCreate, db: Session = Depends
             raise HTTPException(status.HTTP_404_NOT_FOUND, "댓글을 찾을 수 없습니다.")
         if parent.parent_id is not None:
             raise HTTPException(422, "대댓글에는 답글을 달 수 없습니다.")
-    comment = PostComment(post_id=post_id, author_id=user.id, parent_id=body.parent_id, body=body.body)
+    comment = PostComment(post_id=post_id, author_id=user.id if user else None, parent_id=body.parent_id, body=body.body)
     db.add(comment)
     db.commit()
-    return comment_tree([(comment, user.nickname)], user.id)[0]
+    uid = user.id if user else None
+    return comment_tree([(comment, user.nickname if user else ANON_LABEL)], uid)[0]
 
 
 @router.delete("/post-comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)

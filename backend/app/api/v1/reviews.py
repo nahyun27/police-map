@@ -20,7 +20,7 @@ from app.schemas.review import MyReviewOut, ReviewCreate, ReviewReceipt
 from app.schemas.verification import ReplyCreate, ReplyOut
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
-from app.services.engagement import comment_counts, comment_tree, reply_rows, scrapped_set, vote_summaries
+from app.services.engagement import ANON_LABEL, comment_counts, comment_tree, reply_rows, scrapped_set, vote_summaries
 from app.services.ratings import DIMS, visible_reviews
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
@@ -188,10 +188,13 @@ def list_review_comments(
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
 ):
     _published_or_404(db, review_id)
-    rows = db.execute(
-        select(ReviewComment, User.nickname).join(User, User.id == ReviewComment.author_id)
-        .where(ReviewComment.review_id == review_id).order_by(ReviewComment.created_at.asc())
-    ).all()
+    rows = [
+        (c, nickname or ANON_LABEL)
+        for c, nickname in db.execute(
+            select(ReviewComment, User.nickname).outerjoin(User, User.id == ReviewComment.author_id)
+            .where(ReviewComment.review_id == review_id).order_by(ReviewComment.created_at.asc())
+        ).all()
+    ]
     ids = [c.id for c, _ in rows]
     votes = vote_summaries(db, ReviewCommentVote, ReviewCommentVote.comment_id, ids, user.id if user else None)
     return comment_tree(rows, user.id if user else None, votes, sort)
@@ -201,7 +204,12 @@ def list_review_comments(
     "/{review_id}/comments", response_model=CommentOut, status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(comment_limiter)],
 )
-def create_review_comment(review_id: int, body: CommentCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def create_review_comment(
+    review_id: int, body: CommentCreate, db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
+    """평가(리뷰)·게시글과 마찬가지로 로그인 없이도 익명으로 댓글을 달 수 있다(2026-10 결정) —
+    추천/투표와 달리 댓글은 신뢰도 핵심 지표가 아니라서 글 작성과 같은 기준으로 맞췄다."""
     _published_or_404(db, review_id)
     banned = find_banned(body.body)
     if banned:
@@ -213,10 +221,11 @@ def create_review_comment(review_id: int, body: CommentCreate, db: Session = Dep
             raise HTTPException(status.HTTP_404_NOT_FOUND, "댓글을 찾을 수 없습니다.")
         if parent.parent_id is not None:
             raise HTTPException(422, "대댓글에는 답글을 달 수 없습니다.")
-    comment = ReviewComment(review_id=review_id, author_id=user.id, parent_id=body.parent_id, body=body.body)
+    comment = ReviewComment(review_id=review_id, author_id=user.id if user else None, parent_id=body.parent_id, body=body.body)
     db.add(comment)
     db.commit()
-    return comment_tree([(comment, user.nickname)], user.id)[0]
+    uid = user.id if user else None
+    return comment_tree([(comment, user.nickname if user else ANON_LABEL)], uid)[0]
 
 
 @router.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
