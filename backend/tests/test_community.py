@@ -165,8 +165,20 @@ def post_payload(**over):
     return body
 
 
-def test_post_requires_login_to_create(client):
-    assert client.post(f"{API}/posts", json=post_payload()).status_code == 401
+def test_post_can_be_created_anonymously(client, user_client, admin_client, world):
+    """Review 와 동일하게 비로그인으로도 글을 쓸 수 있다(2026-10 결정) — 익명 글은 작성자
+    닉네임이 "익명"으로 뜨고, 작성자 본인이 지울 방법이 없어(로그인 자체가 안 돼 있으니)
+    관리자만 삭제할 수 있다."""
+    r = client.post(f"{API}/posts", json=post_payload())
+    assert r.status_code == 201
+    pid = r.json()["id"]
+
+    pub = client.get(f"{API}/posts/{pid}").json()
+    assert pub["author_nickname"] == "익명" and pub["is_mine"] is False
+
+    assert client.delete(f"{API}/posts/{pid}").status_code == 401  # 비로그인은 삭제 자체가 불가
+    assert user_client.delete(f"{API}/posts/{pid}").status_code == 403  # 로그인했어도 작성자가 아니면 불가
+    assert admin_client.delete(f"{API}/posts/{pid}").status_code == 204  # 관리자만 가능
 
 
 def test_post_create_is_immediately_public(user_client, client, world):

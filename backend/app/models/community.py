@@ -91,12 +91,17 @@ class ReviewCommentVote(Base):
 
 class Post(Base):
     """평가(리뷰)와는 별개의 자유게시판 글. 작성 즉시 공개되고(사전 검수 없음), 금칙어만
-    서버에서 걸러낸다. 문제가 생기면 작성자 본인 또는 관리자가 지운다(소프트 삭제)."""
+    서버에서 걸러낸다. 문제가 생기면 작성자 본인 또는 관리자가 지운다(소프트 삭제).
+
+    Review 와 동일하게 로그인 없이도 익명으로 작성할 수 있다(2026-10 결정) — 로그인한 상태로
+    쓰면 author_id 가 채워져 본인 확인(수정 전에는 없음 — 삭제만 가능)이 되지만, 익명 글은
+    작성자 본인이 나중에 지울 방법이 없고 관리자만 지울 수 있다(Review 의 익명 제출과 동일한
+    트레이드오프). 남용 방지는 post_limiter(IP 기준 속도 제한)와 금칙어 필터로 한다."""
 
     __tablename__ = "posts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    author_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
     region_id: Mapped[str] = mapped_column(ForeignKey("regions.id"), index=True)
     station_id: Mapped[int | None] = mapped_column(ForeignKey("stations.id"), index=True)
     category: Mapped[PostCategory] = mapped_column(Enum(PostCategory, native_enum=False, length=20), default=PostCategory.chat, index=True)

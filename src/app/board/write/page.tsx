@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Send } from 'lucide-react';
 import { Card, Crumb, PageHead } from '@/components/ui';
 import {
-  ApiError, createPost, getMe, getRegion, getRegions,
+  ApiError, createPost, getRegion, getRegions,
   type PostCategory, type RegionDetail, type RegionOut, type StationItem,
 } from '@/lib/api';
 
@@ -36,16 +36,14 @@ export default function BoardWritePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 평가(리뷰)와 동일하게 로그인 없이도 글을 쓸 수 있어서, 여기서는 로그인 여부를 확인하지
+  // 않고 지역 목록만 불러온다. 그래도 네트워크 오류는 그대로 날 수 있으니 재시도 버튼은 둔다.
   const load = useCallback(() => {
     setLoadState('loading');
-    getMe()
-      .then(() => getRegions())
+    getRegions()
       .then((rs) => { setRegions(rs); setLoadState('ready'); })
-      .catch((e) => {
-        if (e instanceof ApiError && e.status === 401) { router.replace('/login?next=/board/write'); return; }
-        setLoadState('error');
-      });
-  }, [router]);
+      .catch(() => setLoadState('error'));
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -86,7 +84,11 @@ export default function BoardWritePage() {
   return (
     <>
       <Crumb items={[{ label: '홈', to: '/' }, { label: '커뮤니티 게시판', to: '/board' }, { label: '글쓰기' }]} />
-      <PageHead eyebrow="커뮤니티" title="자유 게시판 글쓰기" sub="작성 즉시 공개됩니다. 사실 적시 비방·욕설은 삭제될 수 있어요." />
+      <PageHead
+        eyebrow="커뮤니티"
+        title="자유 게시판 글쓰기"
+        sub="작성 즉시 공개됩니다. 로그인 없이 익명으로도 쓸 수 있고, 사실 적시 비방·욕설은 삭제될 수 있어요."
+      />
 
       <Card>
         <form onSubmit={submit}>

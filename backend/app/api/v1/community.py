@@ -58,6 +58,16 @@ def unfollow_region(region_id: str, db: Session = Depends(get_db), user: User = 
 
 
 # ---------- 게시판 ----------
+ANON_LABEL = "익명"  # 로그인 없이 작성된 글의 작성자 표시(Review 의 익명 제출과 동일한 정책)
+
+
+def _nicknames(db: Session, posts: list[Post]) -> dict[int, str]:
+    """글 작성자 닉네임을 한 번에 묶어 조회한다(author_id 가 None 인 익명 글은 애초에 조회
+    대상에서 빠지므로, 쓰는 쪽에서 .get(author_id, ANON_LABEL) 로 집어야 한다)."""
+    ids = {p.author_id for p in posts if p.author_id is not None}
+    return dict(db.execute(select(User.id, User.nickname).where(User.id.in_(ids))).all()) if ids else {}
+
+
 def _post_out(
     db: Session, p: Post, vote: VoteSummary, comment_count: int, author_nickname: str, user_id: int | None,
     is_scrapped: bool = False,
@@ -109,8 +119,8 @@ def list_posts(
     votes = vote_summaries(db, PostVote, PostVote.post_id, ids, uid)
     counts = comment_counts(db, PostComment, PostComment.post_id, ids)
     scrapped = scrapped_set(db, PostScrap, PostScrap.post_id, ids, uid)
-    nicknames = dict(db.execute(select(User.id, User.nickname).where(User.id.in_({p.author_id for p in posts}))).all())
-    items = [_post_out(db, p, votes[p.id], counts[p.id], nicknames[p.author_id], uid, p.id in scrapped) for p in posts]
+    nicknames = _nicknames(db, posts)
+    items = [_post_out(db, p, votes[p.id], counts[p.id], nicknames.get(p.author_id, ANON_LABEL), uid, p.id in scrapped) for p in posts]
     return Page(items=items, total=total, page=page, size=size)
 
 
@@ -134,12 +144,15 @@ def popular_posts(
     votes = vote_summaries(db, PostVote, PostVote.post_id, ids, uid)
     counts = comment_counts(db, PostComment, PostComment.post_id, ids)
     scrapped = scrapped_set(db, PostScrap, PostScrap.post_id, ids, uid)
-    nicknames = dict(db.execute(select(User.id, User.nickname).where(User.id.in_({p.author_id for p in posts}))).all())
-    return [_post_out(db, p, votes[p.id], counts[p.id], nicknames[p.author_id], uid, p.id in scrapped) for p in posts]
+    nicknames = _nicknames(db, posts)
+    return [_post_out(db, p, votes[p.id], counts[p.id], nicknames.get(p.author_id, ANON_LABEL), uid, p.id in scrapped) for p in posts]
 
 
 @router.post("/posts", response_model=PostReceipt, status_code=status.HTTP_201_CREATED, dependencies=[Depends(post_limiter)])
-def create_post(body: PostCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def create_post(body: PostCreate, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
+    """게시글 작성. 평가(Review)와 마찬가지로 로그인 없이도 익명으로 작성할 수 있다
+    (2026-10 결정). 로그인한 상태로 쓰면 author_id 가 채워져 본인이 나중에 삭제할 수 있지만,
+    익명 글은 작성자 본인이 지울 방법이 없고 관리자만 지울 수 있다."""
     region = db.get(Region, body.region_id)
     if not region:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "지역을 찾을 수 없습니다.")
@@ -151,8 +164,8 @@ def create_post(body: PostCreate, db: Session = Depends(get_db), user: User = De
     if banned:
         raise HTTPException(422, {"message": "게시할 수 없는 표현이 포함되어 있습니다.", "banned": banned})
     post = Post(
-        author_id=user.id, region_id=body.region_id, station_id=body.station_id, category=body.category,
-        title=body.title, body=body.body,
+        author_id=user.id if user else None, region_id=body.region_id, station_id=body.station_id,
+        category=body.category, title=body.title, body=body.body,
     )
     db.add(post)
     db.commit()
@@ -168,8 +181,8 @@ def get_post(post_id: int, db: Session = Depends(get_db), user: User | None = De
     votes = vote_summaries(db, PostVote, PostVote.post_id, [post_id], uid)
     counts = comment_counts(db, PostComment, PostComment.post_id, [post_id])
     scrapped = scrapped_set(db, PostScrap, PostScrap.post_id, [post_id], uid)
-    nickname = db.scalar(select(User.nickname).where(User.id == p.author_id))
-    return _post_out(db, p, votes[post_id], counts[post_id], nickname, uid, post_id in scrapped)
+    nickname = db.scalar(select(User.nickname).where(User.id == p.author_id)) if p.author_id else None
+    return _post_out(db, p, votes[post_id], counts[post_id], nickname or ANON_LABEL, uid, post_id in scrapped)
 
 
 @router.post("/posts/{post_id}/view", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(view_limiter)])
@@ -310,9 +323,9 @@ def list_my_post_scraps(
     }
     votes = vote_summaries(db, PostVote, PostVote.post_id, page_ids, user.id)
     counts = comment_counts(db, PostComment, PostComment.post_id, page_ids)
-    nicknames = dict(db.execute(select(User.id, User.nickname).where(User.id.in_({p.author_id for p in posts.values()}))).all())
+    nicknames = _nicknames(db, list(posts.values()))
     items = [
-        _post_out(db, posts[pid], votes[pid], counts[pid], nicknames[posts[pid].author_id], user.id, True)
+        _post_out(db, posts[pid], votes[pid], counts[pid], nicknames.get(posts[pid].author_id, ANON_LABEL), user.id, True)
         for pid in page_ids if pid in posts  # 삭제된 글은 조용히 건너뜀(스크랩한 순서 유지)
     ]
     return Page(items=items, total=total, page=page, size=size)
