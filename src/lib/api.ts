@@ -130,6 +130,19 @@ export interface Page<T> {
   size: number;
 }
 
+export interface CaseTypeSummary {
+  case_type: string;
+  case_type_label: string;
+  rating: RatingSummary;
+}
+
+export interface NearbyStation {
+  id: number;
+  name: string;
+  distance_km: number;
+  rating: RatingSummary;
+}
+
 export interface StationDetail {
   id: number;
   name: string;
@@ -139,6 +152,8 @@ export interface StationDetail {
   region: RegionRef;
   departments: string[];
   rating: RatingSummary;
+  by_case_type: CaseTypeSummary[];
+  nearby: NearbyStation[];
   reviews: Page<ReviewPublic>;
   lat: number | null;
   lng: number | null;
@@ -201,6 +216,22 @@ export function getRecentReviews(limit = 3, regionIds?: string[]) {
 }
 export const search = (q: string) => apiFetch<SearchResult>(`/search?q=${encodeURIComponent(q)}`, { revalidateSeconds: 15 });
 export const getStats = () => apiFetch<StatsOverview>('/stats/overview', { revalidateSeconds: 60 });
+
+export interface TransparencyQuarter {
+  year: number;
+  quarter: number;
+  reviews_rejected: number;
+  reviews_removed: number;
+  reports_resolved_remove: number;
+  reports_resolved_dismiss: number;
+  takedowns_removed: number;
+  takedowns_kept: number;
+}
+export interface TransparencyReport {
+  quarters: TransparencyQuarter[];
+}
+export const getTransparencyReport = () =>
+  apiFetch<TransparencyReport>('/stats/transparency', { revalidateSeconds: 60 });
 
 export interface ReviewRatingsIn {
   fair?: number | null;

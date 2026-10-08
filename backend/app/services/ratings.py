@@ -2,7 +2,7 @@
 from sqlalchemy import Float, Select, case, cast, func, select
 from sqlalchemy.orm import Session
 
-from app.models import Review, ReviewStatus
+from app.models import CaseType, Review, ReviewStatus
 from app.schemas.public import RatingSummary
 
 DIMS = ("fair", "proc", "att", "comm", "speed")
@@ -50,3 +50,13 @@ def station_summaries(db: Session, station_ids: list[int] | None = None) -> dict
 def national_summary(db: Session) -> RatingSummary:
     row = db.execute(visible_reviews(*_summary_columns())).one()
     return _to_summary(row)
+
+
+def station_case_type_summaries(db: Session, station_id: int) -> dict[CaseType, RatingSummary]:
+    """한 경찰서의 평가를 사건유형별로 쪼갠 집계. 전체 평균 하나로만 뭉뚱그려 보여주던 걸
+    보완 — "이 경찰서가 특정 사건유형에서 특히 약한가"를 볼 수 있게 한다."""
+    q = (
+        visible_reviews(Review.case_type, *_summary_columns())
+        .where(Review.station_id == station_id).group_by(Review.case_type)
+    )
+    return {row[0]: _to_summary(row[1:]) for row in db.execute(q)}

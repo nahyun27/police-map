@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import ClickableRow from '@/components/ClickableRow';
 import { Bars, Card, PageHead, Score } from '@/components/ui';
-import { getStats, type StatsOverview } from '@/lib/api';
+import { getStats, getTransparencyReport, type StatsOverview, type TransparencyQuarter } from '@/lib/api';
 
 // getStats() 가 이미 60초 캐시돼 있어(src/lib/api.ts), force-dynamic 없이도 신선도는
 // 동일하게 유지된다 — ISR 로 바꿔 매 요청 재렌더링 비용만 없앤다.
@@ -28,6 +28,7 @@ export default async function StatsPage() {
   const appeals = stats.appeals_filed;
   const max = appeals.length ? Math.max(...appeals.map((a) => a.value)) : 1;
   const latestAppeal = appeals.at(-1);
+  const transparency: TransparencyQuarter[] = await getTransparencyReport().then((r) => r.quarters).catch(() => []);
 
   return (
     <>
@@ -95,6 +96,40 @@ export default async function StatsPage() {
             </tbody>
           </table>
         </div>
+      </Card>
+
+      <Card>
+        <h2>분기별 투명성 보고서</h2>
+        <p className="sub" style={{ marginBottom: 14 }}>
+          운영원칙에 따라 평가 반려·사후삭제, 신고 처리, 삭제·정정 요청 처리 건수를 분기별로 공개합니다.
+        </p>
+        {transparency.length ? (
+          <div className="table-wrap">
+            <table className="list">
+              <thead>
+                <tr>
+                  <th>분기</th><th>평가 반려</th><th>평가 삭제</th><th>신고 처리(삭제)</th><th>신고 처리(기각)</th>
+                  <th>삭제요청(삭제)</th><th>삭제요청(유지)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...transparency].reverse().map((q) => (
+                  <tr key={`${q.year}-${q.quarter}`}>
+                    <td style={{ fontWeight: 700 }}>{q.year}년 {q.quarter}분기</td>
+                    <td>{q.reviews_rejected}건</td>
+                    <td>{q.reviews_removed}건</td>
+                    <td>{q.reports_resolved_remove}건</td>
+                    <td>{q.reports_resolved_dismiss}건</td>
+                    <td>{q.takedowns_removed}건</td>
+                    <td>{q.takedowns_kept}건</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="sub">아직 집계할 처리 건이 없습니다.</p>
+        )}
       </Card>
     </>
   );

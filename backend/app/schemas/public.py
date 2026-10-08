@@ -73,6 +73,19 @@ class ReviewPublic(BaseModel):
     is_scrapped: bool = False  # 로그인 + 스크랩한 경우만 true
 
 
+class CaseTypeSummary(BaseModel):
+    case_type: str
+    case_type_label: str
+    rating: RatingSummary
+
+
+class NearbyStation(BaseModel):
+    id: int
+    name: str
+    distance_km: float
+    rating: RatingSummary
+
+
 class StationDetail(BaseModel):
     id: int
     name: str
@@ -82,6 +95,8 @@ class StationDetail(BaseModel):
     region: RegionRef
     departments: list[str]
     rating: RatingSummary
+    by_case_type: list[CaseTypeSummary] = []
+    nearby: list[NearbyStation] = []
     reviews: Page[ReviewPublic]
     lat: float | None = None
     lng: float | None = None
@@ -121,3 +136,20 @@ class StatsOverview(BaseModel):
     appeals_filed: list[YearValue]
     appeal_acceptance_rate: YearValue | None
     station_ranking: list[RankedStation]
+
+
+class TransparencyQuarter(BaseModel):
+    year: int
+    quarter: int
+    reviews_rejected: int  # 검수 반려(레거시 대기열 처리분)
+    reviews_removed: int  # 관리자 사후삭제 + 신고 처리에 따른 삭제
+    reports_resolved_remove: int
+    reports_resolved_dismiss: int
+    takedowns_removed: int
+    takedowns_kept: int
+
+
+class TransparencyReport(BaseModel):
+    """운영원칙에 적힌 "분기별 투명성 보고서(게시·반려·삭제 건수) 공개" 를 실제로 채우는 응답.
+    데이터가 쌓인 분기부터 전부(오래된 순) 내려준다."""
+    quarters: list[TransparencyQuarter]

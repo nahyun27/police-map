@@ -1,3 +1,5 @@
+from math import asin, cos, radians, sin, sqrt
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
@@ -6,20 +8,31 @@ from app.api.v1._present import reply_out, review_public
 from app.core.database import get_db
 from app.core.deps import get_current_user_optional
 from app.models import (
-    Department, PublicStatistic, Region, Review, ReviewComment, ReviewScrap, ReviewStatus, ReviewVote, Station, User,
+    Department, PublicStatistic, Region, Report, ReportStatus, Review, ReviewComment, ReviewScrap, ReviewStatus,
+    ReviewVote, Station, TakedownRequest, TakedownStatus, User,
 )
 from app.schemas.public import (
-    Page, RankedStation, RecentReview, RegionDetail, RegionOut, RegionRef, SearchResult, StationDetail, StationItem,
-    StatsOverview, Totals, YearValue,
+    CaseTypeSummary, NearbyStation, Page, RankedStation, RecentReview, RegionDetail, RegionOut, RegionRef,
+    SearchResult, StationDetail, StationItem, StatsOverview, Totals, TransparencyQuarter, TransparencyReport,
+    YearValue,
 )
 from app.services.engagement import comment_counts, reply_rows, scrapped_set, vote_summaries
-from app.services.ratings import EMPTY, national_summary, station_summaries, visible_reviews
+from app.models.review import CASE_TYPE_LABELS
+from app.services.ratings import EMPTY, national_summary, station_case_type_summaries, station_summaries, visible_reviews
 
 router = APIRouter(tags=["public"])
 
 
 def _region_ref(r: Region) -> RegionRef:
     return RegionRef(id=r.id, name=r.name, full_name=r.full_name)
+
+
+def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    r = 6371.0  # 지구 평균 반지름(km)
+    p1, p2 = radians(lat1), radians(lat2)
+    dp, dl = radians(lat2 - lat1), radians(lng2 - lng1)
+    a = sin(dp / 2) ** 2 + cos(p1) * cos(p2) * sin(dl / 2) ** 2
+    return 2 * r * asin(sqrt(a))
 
 
 def _station_items(db: Session, stations: list[Station]) -> list[StationItem]:
@@ -91,10 +104,25 @@ def get_station(
         )
         for r in reviews
     ]
+    by_case_type = [
+        CaseTypeSummary(case_type=ct.value, case_type_label=CASE_TYPE_LABELS[ct], rating=summary)
+        for ct, summary in sorted(station_case_type_summaries(db, s.id).items(), key=lambda kv: -kv[1].count)
+    ]
+    nearby: list[NearbyStation] = []
+    if s.lat is not None and s.lng is not None:
+        others = db.scalars(
+            select(Station).where(Station.id != s.id, Station.lat.is_not(None), Station.lng.is_not(None), Station.is_sample.is_(False))
+        ).all()
+        sums = station_summaries(db, [o.id for o in others])
+        nearby = sorted(
+            (NearbyStation(id=o.id, name=o.name, distance_km=round(_haversine_km(s.lat, s.lng, o.lat, o.lng), 1), rating=sums.get(o.id, EMPTY))
+             for o in others),
+            key=lambda n: n.distance_km,
+        )[:5]
     return StationDetail(
         id=s.id, name=s.name, address=s.address, website=s.website, source=s.source,
         region=_region_ref(s.region), departments=[d.name for d in s.departments],
-        rating=station_summaries(db, [s.id]).get(s.id, EMPTY),
+        rating=station_summaries(db, [s.id]).get(s.id, EMPTY), by_case_type=by_case_type, nearby=nearby,
         reviews=Page(items=items, total=total, page=page, size=size),
         lat=s.lat, lng=s.lng,
     )
@@ -161,3 +189,40 @@ def stats_overview(db: Session = Depends(get_db)):
         appeal_acceptance_rate=YearValue(year=rate[-1].year, value=rate[-1].value) if rate else None,
         station_ranking=ranked,
     )
+
+
+def _quarter_counts(db: Session, time_col, where) -> dict[tuple[int, int], int]:
+    """(연도, 분기) 별 건수. SQLite(테스트)·Postgres(운영) 양쪽에서 똑같이 동작하도록 DB 함수
+    대신 파이썬에서 묶는다 — 관리자/투명성 보고서 전용이라 자주 호출되지 않아 부담 없다."""
+    counts: dict[tuple[int, int], int] = {}
+    for (ts,) in db.execute(select(time_col).where(*where, time_col.is_not(None))).all():
+        key = (ts.year, (ts.month - 1) // 3 + 1)
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+@router.get("/stats/transparency", response_model=TransparencyReport)
+def transparency_report(db: Session = Depends(get_db)):
+    """운영원칙의 "분기별 투명성 보고서(게시·반려·삭제 건수) 공개" 약속을 채우는 집계.
+    평가 반려/삭제는 reviewed_at, 신고·삭제요청 처리는 resolved_at 기준으로 분기를 나눈다."""
+    rejected = _quarter_counts(db, Review.reviewed_at, (Review.status == ReviewStatus.rejected,))
+    removed = _quarter_counts(db, Review.reviewed_at, (Review.status == ReviewStatus.removed,))
+    reports_remove = _quarter_counts(
+        db, Report.resolved_at, (Report.status == ReportStatus.resolved, Report.resolution_action == "removed"),
+    )
+    reports_dismiss = _quarter_counts(
+        db, Report.resolved_at, (Report.status == ReportStatus.resolved, Report.resolution_action == "dismissed"),
+    )
+    takedowns_removed = _quarter_counts(db, TakedownRequest.resolved_at, (TakedownRequest.status == TakedownStatus.removed,))
+    takedowns_kept = _quarter_counts(db, TakedownRequest.resolved_at, (TakedownRequest.status == TakedownStatus.kept,))
+
+    keys = sorted(set(rejected) | set(removed) | set(reports_remove) | set(reports_dismiss) | set(takedowns_removed) | set(takedowns_kept))
+    return TransparencyReport(quarters=[
+        TransparencyQuarter(
+            year=y, quarter=q,
+            reviews_rejected=rejected.get((y, q), 0), reviews_removed=removed.get((y, q), 0),
+            reports_resolved_remove=reports_remove.get((y, q), 0), reports_resolved_dismiss=reports_dismiss.get((y, q), 0),
+            takedowns_removed=takedowns_removed.get((y, q), 0), takedowns_kept=takedowns_kept.get((y, q), 0),
+        )
+        for y, q in keys
+    ])

@@ -67,6 +67,18 @@ export default async function StationPage({ params, searchParams }: Props) {
             <>
               <Bars rating={s.rating} />
               <p className="sub" style={{ marginTop: 14 }}>항목: 공정성 / 절차 준수 / 조사 태도 / 소통·응대 / 신속성 (각 5점)</p>
+              {s.by_case_type.length > 1 && (
+                <div style={{ marginTop: 18, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+                  <p className="sub" style={{ fontWeight: 700, marginBottom: 8 }}>사건유형별 평균</p>
+                  {s.by_case_type.map((c) => (
+                    <div key={c.case_type} className="barrow">
+                      <div className="lb" style={{ width: 76 }}>{c.case_type_label}</div>
+                      <div className="bar"><i style={{ width: `${((c.rating.overall ?? 0) / 5) * 100}%` }} /></div>
+                      <div className="vl" style={{ width: 70 }}>{c.rating.overall?.toFixed(1)} ({c.rating.count}건)</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           ) : (
             <p className="sub">아직 등록된 평가가 없습니다. 이 경찰서의 첫 평가를 남겨 주세요.</p>
@@ -77,6 +89,22 @@ export default async function StationPage({ params, searchParams }: Props) {
           <p style={{ color: 'var(--ink2)' }}>{s.source ?? '경찰청 전국경찰관서안내 공개자료'}</p>
         </Card>
       </div>
+
+      {s.nearby.length > 0 && (
+        <Card>
+          <h2>인근 경찰서</h2>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {s.nearby.map((n) => (
+              <Link key={n.id} href={`/station/${n.id}`} className="card clickable-card flat" style={{ flex: '1 1 180px', margin: 0, padding: 14 }}>
+                <p style={{ fontWeight: 700 }}>{n.name}</p>
+                <p className="sub" style={{ marginTop: 4 }}>
+                  {n.distance_km}km · {n.rating.overall !== null ? `평균 ${n.rating.overall.toFixed(1)}점` : '평가 없음'}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card>
         <h2>수사부서 <span className="tag">홈페이지 공개 기준</span></h2>
