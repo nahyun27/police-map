@@ -584,6 +584,25 @@ export const listAdminReports = (opts: { status: string; page?: number; size?: n
 export const resolveReport = (id: number, action: 'remove' | 'dismiss', note: string) =>
   apiFetch<AdminReportOut>(`/admin/reports/${id}/resolve`, { method: 'POST', body: JSON.stringify({ action, note }) });
 
+export interface AuditLogOut {
+  id: number;
+  actor_id: number | null;
+  actor_email: string | null;
+  action: string;
+  target_type: string;
+  target_id: number | null;
+  detail: Record<string, unknown> | null;
+  created_at: string | null;
+}
+
+export const listAuditLogs = (opts?: { action?: string; page?: number; size?: number }) => {
+  const qs = new URLSearchParams();
+  if (opts?.action) qs.set('action', opts.action);
+  if (opts?.page) qs.set('page', String(opts.page));
+  if (opts?.size) qs.set('size', String(opts.size));
+  return apiFetch<Page<AuditLogOut>>(`/admin/audit-logs?${qs}`);
+};
+
 export interface AdminTakedown {
   id: number;
   public_code: string;

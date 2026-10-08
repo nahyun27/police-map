@@ -12,6 +12,7 @@ const TABS = [
   { href: '/admin/reports', label: '신고' },
   { href: '/admin/takedowns', label: '삭제·정정 요청' },
   { href: '/admin/officer-verifications', label: '경찰관 인증' },
+  { href: '/admin/audit-log', label: '처리 기록' },
 ];
 
 type State = { status: 'loading' } | { status: 'unauthorized' } | { status: 'forbidden'; user: UserOut } | { status: 'ok'; user: UserOut };
