@@ -57,7 +57,6 @@ export default async function Home() {
         <div className="quick">
           <Link href="/why" className="btn gold sm">폴리스맵 소개</Link>
           <Link href="/remedy" className="btn ghost sm">권리구제 내비게이터 <ArrowRight size={14} /></Link>
-          <Link href="/guide" className="btn ghost sm">기피신청 안내</Link>
           <Link href="/stats" className="btn ghost sm">전국 통계</Link>
         </div>
 

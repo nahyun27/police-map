@@ -13,6 +13,13 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: SECURITY_HEADERS }];
   },
+  async redirects() {
+    return [
+      // "권리구제 안내"(백과사전)와 "민원 연계"(마법사)가 이름만 봐서 구분이 안 된다는
+      // 피드백으로 /remedy 안의 탭 두 개로 합쳤다(components/RemedyNavigator.tsx 참고).
+      { source: '/guide', destination: '/remedy?tab=all', permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

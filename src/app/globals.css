@@ -227,12 +227,12 @@ footer.site p { line-height: 1.8; max-width: 720px; }
   border-bottom: 1px solid var(--line); margin-bottom: 14px;
 }
 .cat-tabs::-webkit-scrollbar { display: none; }
-.cat-tabs a {
+.cat-tabs a, .cat-tabs button {
   flex: 0 0 auto; padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--muted);
-  border-bottom: 2px solid transparent; white-space: nowrap;
+  border-bottom: 2px solid transparent; white-space: nowrap; background: none; border-left: none; border-right: none; border-top: none; cursor: pointer;
 }
-.cat-tabs a.on { color: var(--brand); border-bottom-color: var(--brand); }
-.cat-tabs a:hover { color: var(--ink); }
+.cat-tabs a.on, .cat-tabs button.on { color: var(--brand); border-bottom-color: var(--brand); }
+.cat-tabs a:hover, .cat-tabs button:hover { color: var(--ink); }
 
 /* 모바일 전용 글쓰기 플로팅 버튼. 데스크톱에선 PageHead 안의 인라인 버튼을 쓰므로 숨긴다. */
 .fab-write { display: none; }

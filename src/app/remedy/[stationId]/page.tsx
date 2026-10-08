@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import RemedyNavigator from '@/components/RemedyNavigator';
 import { ApiError, getStation } from '@/lib/api';
 import { NOINDEX } from '@/lib/seo';
@@ -20,5 +21,9 @@ export default async function RemedyForStationPage({ params }: Props) {
     // 존재하지 않는 경찰서면 맥락 없이 일반 내비게이터로 대체한다(에러로 막지 않는다).
     if (!(e instanceof ApiError && e.status === 404)) throw e;
   }
-  return <RemedyNavigator contextLabel={contextLabel} stationId={numericId} />;
+  return (
+    <Suspense>
+      <RemedyNavigator contextLabel={contextLabel} stationId={numericId} />
+    </Suspense>
+  );
 }

@@ -11,8 +11,7 @@ const NAV = [
   { to: '/board', label: '커뮤니티' },
   { to: '/why', label: '폴리스맵 소개' },
   { to: '/stats', label: '통계' },
-  { to: '/guide', label: '권리구제 안내' },
-  { to: '/remedy', label: '민원 연계' },
+  { to: '/remedy', label: '권리구제' },
   { to: '/report', label: '제보' },
   { to: '/policy', label: '운영원칙' },
 ];
