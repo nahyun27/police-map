@@ -314,7 +314,11 @@ def main():
                 print(f"  경계 생성 실패: {name} ({e})", file=sys.stderr)
                 entry["kind"] = "complex"
         stats[entry["kind"]] += 1
-        out[str(sid)] = entry
+        # DB 기본키(id)로 키를 잡으면 안 된다 — 로컬 개발 DB와 운영 DB는 같은 관서도 시딩
+        # 순서가 달라 id 가 서로 다르게 배정돼 있다(실제로 이 값으로 운영에 배포했다가 다른
+        # 관서 지도가 뜨는 걸 확인함). 이름은 "고성경찰서"처럼 동명이인이 있어 region_id 를
+        # 더해 키를 만든다 — 어느 환경에서 돌려도 항상 같은 키가 나온다.
+        out[f"{name}:{region_id}"] = entry
 
     print(json.dumps(stats, ensure_ascii=False, indent=2), file=sys.stderr)
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)

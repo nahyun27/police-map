@@ -44,7 +44,9 @@ export default async function StationPage({ params, searchParams }: Props) {
   }
   const totalPages = Math.max(1, Math.ceil(s.reviews.total / s.reviews.size));
   const pageHref = (p: number) => `/station/${s.id}?page=${p}${evidenceOnly ? '&evidence=1' : ''}`;
-  const jurisdiction = (stationJurisdiction as Record<string, JurisdictionEntry>)[String(s.id)];
+  // 이름+지역을 키로 쓴다(숫자 id 는 로컬 개발 DB와 운영 DB에서 같은 관서라도 다르게
+  // 배정돼 있어서 환경마다 어긋난다 — scripts/build_station_jurisdiction.py 주석 참고).
+  const jurisdiction = (stationJurisdiction as Record<string, JurisdictionEntry>)[`${s.name}:${s.region.id}`];
 
   return (
     <>
