@@ -246,6 +246,58 @@ footer.site p { line-height: 1.8; max-width: 720px; }
   .fab-write span { display: none; }
   .pagehead-write-inline { display: none; }
 }
+
+/* ============================================================
+   커뮤니티(게시판) 전용 스타일. "토스 디자인처럼" 요청(2026-10)에 맞춰 커뮤니티 영역부터
+   먼저 다듬는다. src/app/board/layout.tsx 의 .board-ui 스코프 안에서만 적용되고, 사이트
+   다른 영역의 공용 카드·버튼 스타일(.card, .btn 등)은 그대로 둔다.
+   ============================================================ */
+.board-ui .card { border: none; border-radius: 22px; box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 26px -14px rgba(16, 24, 40, .14); }
+.board-ui .card.flat { box-shadow: none; background: transparent; padding: 0; }
+.board-ui .btn, .board-ui .btn.sm, .board-ui .btn.lg { border-radius: 999px; font-weight: 700; }
+
+/* 글머리별 색 구분(badge 에 brand 대신 cat-{카테고리} 클래스를 붙여 쓴다). */
+.board-ui .badge.cat-info { background: #e8f1ff; color: #1b64da; }
+.board-ui .badge.cat-question { background: #f3ecff; color: #7c3aed; }
+.board-ui .badge.cat-chat { background: #e6f8ef; color: #0f9d58; }
+.board-ui .badge.cat-other { background: #f1f2f5; color: #5f6b83; }
+
+/* 게시글 목록: 줄로 구분하는 대신 카드 하나하나를 띄워서 호버 시 살짝 떠오르게. */
+.board-ui .post-list { gap: 10px; }
+.board-ui .post-row {
+  border-top: none; border-radius: 18px; background: #fff; padding: 16px 18px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .05); transition: transform .15s, box-shadow .15s;
+}
+.board-ui .post-row:first-child { padding-top: 16px; }
+.board-ui .post-row:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -14px rgba(16, 24, 40, .22); background: #fff; }
+.board-ui .post-row-title { font-size: 15.5px; }
+
+/* 글머리 탭을 밑줄 탭 대신, 토스에서 자주 쓰는 알약형 세그먼트 컨트롤로. */
+.board-ui .cat-tabs {
+  display: inline-flex; width: auto; max-width: 100%; background: #eef0f5; border-radius: 999px;
+  border-bottom: none; padding: 4px; gap: 2px; margin-bottom: 16px;
+}
+.board-ui .cat-tabs a, .board-ui .cat-tabs button { border-bottom: none; border-radius: 999px; padding: 9px 16px; }
+.board-ui .cat-tabs a.on, .board-ui .cat-tabs button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(16, 24, 40, .14); }
+
+/* 추천·댓글·스크랩 버튼을 항상 옅은 배경이 있는 알약 버튼으로(윤곽선 대신 면 색으로 구분). */
+.board-ui .engage-bar { gap: 6px; }
+.board-ui .vote-btn { border-radius: 999px; background: #f5f6f9; border-color: transparent; }
+.board-ui .vote-btn:hover { background: var(--brand-soft); border-color: transparent; color: var(--brand); }
+.board-ui .vote-btn.active.up { background: var(--good-soft); border-color: transparent; }
+.board-ui .vote-btn.active.down { background: var(--low-soft); border-color: transparent; }
+.board-ui .vote-btn.active.scrap { background: var(--brand-soft); border-color: transparent; }
+.board-ui .engage-bar .link-btn { background: #f5f6f9; border-radius: 999px; padding: 8px 14px; margin-left: 0; }
+.board-ui .engage-bar .link-btn:hover { background: #eef0f5; }
+
+/* 댓글: 점선 구분 대신 옅은 배경 말풍선 카드로. */
+.board-ui .cmt-list { border-top: none; margin-top: 16px; gap: 10px; }
+.board-ui .cmt { background: #f8f9fb; border-radius: 16px; padding: 12px 14px; }
+.board-ui .cmt-form input, .board-ui .field input, .board-ui .field select, .board-ui .field textarea { border-radius: 16px; }
+
+/* 모바일 플로팅 글쓰기 버튼 그림자를 브랜드 컬러로. */
+.board-ui .fab-write { box-shadow: 0 14px 28px -10px rgba(36, 86, 245, .5), 0 4px 10px rgba(36, 86, 245, .3); }
+
 table.list { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 520px; }
 table.list th { text-align: left; padding: 10px 14px; font-size: 12.5px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); white-space: nowrap; }
 table.list td { padding: 15px 14px; border-bottom: 1px solid var(--line2); vertical-align: middle; }

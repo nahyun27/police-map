@@ -101,7 +101,7 @@ export default async function BoardPage({ searchParams }: Props) {
             {posts.items.map((p) => (
               <Link href={`/board/${p.id}`} key={p.id} className="post-row">
                 <div className="post-row-top">
-                  <span className="badge brand">{p.category_label}</span>
+                  <span className={`badge cat-${p.category}`}>{p.category_label}</span>
                   <span className="sub">{p.region_name}{p.station_name ? ` · ${p.station_name}` : ''}</span>
                 </div>
                 <div className="post-row-title">{p.title}</div>
