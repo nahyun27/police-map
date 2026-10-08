@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Search } from 'lucide-react';
+import { PenLine, Search } from 'lucide-react';
 import { Card, Crumb, PageHead } from '@/components/ui';
 import { getRegions, listPosts, type PopularPeriod, type PostCategory } from '@/lib/api';
 import { formatDate } from '@/lib/format';
@@ -59,8 +59,15 @@ export default async function BoardPage({ searchParams }: Props) {
         title="자유 게시판"
         sub="지역·경찰서 관련 자유로운 이야기를 나누는 공간입니다. 사실 적시 평가는 경찰서 평가 작성을 이용해 주세요."
       >
-        <Link href="/board/write" className="btn sm" style={{ marginTop: 10 }}>글쓰기</Link>
+        <Link href="/board/write" className="btn sm pagehead-write-inline" style={{ marginTop: 10 }}>글쓰기</Link>
       </PageHead>
+
+      <nav className="cat-tabs" aria-label="글머리 선택">
+        <Link href={buildHref({ ...f, category: undefined, page: 1 })} className={!category ? 'on' : ''}>전체</Link>
+        {CATEGORY_OPTIONS.map(([v, l]) => (
+          <Link key={v} href={buildHref({ ...f, category: v, page: 1 })} className={category === v ? 'on' : ''}>{l}</Link>
+        ))}
+      </nav>
 
       <Card className="flat">
         <div className="btn-row" style={{ marginBottom: 10 }}>
@@ -69,12 +76,6 @@ export default async function BoardPage({ searchParams }: Props) {
             <Link key={r.id} href={buildHref({ ...f, region: r.id, page: 1 })} className={`btn sm ${region === r.id ? '' : 'line'}`}>
               {r.name}
             </Link>
-          ))}
-        </div>
-        <div className="btn-row" style={{ marginBottom: 10 }}>
-          <Link href={buildHref({ ...f, category: undefined, page: 1 })} className={`btn sm ${!category ? '' : 'line'}`}>전체 글머리</Link>
-          {CATEGORY_OPTIONS.map(([v, l]) => (
-            <Link key={v} href={buildHref({ ...f, category: v, page: 1 })} className={`btn sm ${category === v ? '' : 'line'}`}>{l}</Link>
           ))}
         </div>
         <div className="btn-row" style={{ marginBottom: 10 }}>
@@ -127,6 +128,10 @@ export default async function BoardPage({ searchParams }: Props) {
           </div>
         )}
       </Card>
+
+      <Link href="/board/write" className="fab-write" aria-label="글쓰기">
+        <PenLine size={22} /><span>글쓰기</span>
+      </Link>
     </>
   );
 }

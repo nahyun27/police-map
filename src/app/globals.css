@@ -220,6 +220,32 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 .post-row-top { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin-bottom: 6px; }
 .post-row-title { font-weight: 700; font-size: 15.5px; color: var(--ink); line-height: 1.4; margin-bottom: 6px; }
 .post-row-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; }
+
+/* 글머리 등 하위 카테고리를 탭으로 보여줄 때 쓰는 가로 스크롤 탭바. */
+.cat-tabs {
+  display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  border-bottom: 1px solid var(--line); margin-bottom: 14px;
+}
+.cat-tabs::-webkit-scrollbar { display: none; }
+.cat-tabs a {
+  flex: 0 0 auto; padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--muted);
+  border-bottom: 2px solid transparent; white-space: nowrap;
+}
+.cat-tabs a.on { color: var(--brand); border-bottom-color: var(--brand); }
+.cat-tabs a:hover { color: var(--ink); }
+
+/* 모바일 전용 글쓰기 플로팅 버튼. 데스크톱에선 PageHead 안의 인라인 버튼을 쓰므로 숨긴다. */
+.fab-write { display: none; }
+@media (max-width: 860px) {
+  .fab-write {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 40;
+    width: 56px; height: 56px; border-radius: 50%; background: var(--brand); color: #fff;
+    box-shadow: 0 10px 24px -8px rgba(36, 86, 245, .55); font-weight: 700;
+  }
+  .fab-write span { display: none; }
+  .pagehead-write-inline { display: none; }
+}
 table.list { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 520px; }
 table.list th { text-align: left; padding: 10px 14px; font-size: 12.5px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); white-space: nowrap; }
 table.list td { padding: 15px 14px; border-bottom: 1px solid var(--line2); vertical-align: middle; }
