@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Send } from 'lucide-react';
 import { Card, Crumb, PageHead } from '@/components/ui';
@@ -25,7 +25,7 @@ function errorMessage(e: unknown): string {
 
 export default function BoardWritePage() {
   const router = useRouter();
-  const [ready, setReady] = useState(false);
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [regions, setRegions] = useState<RegionOut[]>([]);
   const [regionId, setRegionId] = useState('');
   const [stations, setStations] = useState<StationItem[]>([]);
@@ -36,14 +36,18 @@ export default function BoardWritePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoadState('loading');
     getMe()
-      .then(() => getRegions().then((rs) => { setRegions(rs); setReady(true); }))
+      .then(() => getRegions())
+      .then((rs) => { setRegions(rs); setLoadState('ready'); })
       .catch((e) => {
-        if (e instanceof ApiError && e.status === 401) router.replace('/login?next=/board/write');
-        else setError('정보를 불러오지 못했습니다.');
+        if (e instanceof ApiError && e.status === 401) { router.replace('/login?next=/board/write'); return; }
+        setLoadState('error');
       });
   }, [router]);
+
+  useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
     setStationId('');
@@ -69,7 +73,15 @@ export default function BoardWritePage() {
     }
   };
 
-  if (!ready) return <Card><p className="sub">불러오는 중…</p></Card>;
+  if (loadState === 'loading') return <Card><p className="sub">불러오는 중…</p></Card>;
+  if (loadState === 'error') {
+    return (
+      <Card>
+        <p className="warn">정보를 불러오지 못했습니다. 네트워크 상태를 확인하고 다시 시도해 주세요.</p>
+        <button className="btn line sm" style={{ marginTop: 10 }} onClick={load}>다시 시도</button>
+      </Card>
+    );
+  }
 
   return (
     <>

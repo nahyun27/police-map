@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck } from 'lucide-react';
 import { Card, Crumb, PageHead } from '@/components/ui';
@@ -17,7 +17,7 @@ const STATUS_LABEL: Record<VerifyOut['status'], { label: string; tone: string }>
 
 export default function OfficerVerifyPage() {
   const router = useRouter();
-  const [ready, setReady] = useState(false);
+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [alreadyOfficer, setAlreadyOfficer] = useState<{ stationName: string; rank: string } | null>(null);
   const [mine, setMine] = useState<VerifyOut[]>([]);
   const [regions, setRegions] = useState<RegionOut[]>([]);
@@ -33,7 +33,8 @@ export default function OfficerVerifyPage() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoadState('loading');
     getMe()
       .then(async (me) => {
         if (me.officer_station_id && me.officer_station_name) {
@@ -42,13 +43,15 @@ export default function OfficerVerifyPage() {
         const [regs, requests] = await Promise.all([getRegions(), getMyVerifications()]);
         setRegions(regs);
         setMine(requests);
-        setReady(true);
+        setLoadState('ready');
       })
       .catch((e) => {
-        if (e instanceof ApiError && e.status === 401) router.replace('/login?next=/officer-verify');
-        else setError('정보를 불러오지 못했습니다.');
+        if (e instanceof ApiError && e.status === 401) { router.replace('/login?next=/officer-verify'); return; }
+        setLoadState('error');
       });
   }, [router]);
+
+  useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
     setStationId('');
@@ -77,7 +80,15 @@ export default function OfficerVerifyPage() {
     }
   };
 
-  if (!ready) return <Card><p className="sub">불러오는 중…</p></Card>;
+  if (loadState === 'loading') return <Card><p className="sub">불러오는 중…</p></Card>;
+  if (loadState === 'error') {
+    return (
+      <Card>
+        <p className="warn">정보를 불러오지 못했습니다. 네트워크 상태를 확인하고 다시 시도해 주세요.</p>
+        <button className="btn line sm" style={{ marginTop: 10 }} onClick={load}>다시 시도</button>
+      </Card>
+    );
+  }
 
   return (
     <>
