@@ -205,6 +205,25 @@ def test_post_list_filters_and_sort(user_client, world):
     assert by_top["items"][0]["id"] == p2  # 추천 많은 글이 먼저
 
 
+def test_post_score_cache_stays_correct_through_vote_switch(db, user_client, world):
+    """sort=top 은 매 투표마다 증분 갱신되는 Post.score 캐시 컬럼으로 정렬한다(성능 최적화,
+    community.py 참고) — 추천→비추천 전환, 투표 취소를 거치며 캐시가 실제 집계와 계속
+    일치하는지 확인한다."""
+    from app.models import Post
+
+    pid = user_client.post(f"{API}/posts", json=post_payload()).json()["id"]
+    user_client.post(f"{API}/posts/{pid}/vote", json={"value": 1})
+    assert db.get(Post, pid).score == 1
+
+    user_client.post(f"{API}/posts/{pid}/vote", json={"value": -1})  # 추천 → 비추천 전환
+    db.expire_all()
+    assert db.get(Post, pid).score == -1
+
+    user_client.post(f"{API}/posts/{pid}/vote", json={"value": 0})  # 투표 취소
+    db.expire_all()
+    assert db.get(Post, pid).score == 0
+
+
 def test_post_default_category_is_chat(user_client, world):
     pid = user_client.post(f"{API}/posts", json=post_payload()).json()["id"]
     detail = user_client.get(f"{API}/posts/{pid}").json()

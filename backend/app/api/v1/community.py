@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import case, func, select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_current_user_optional
@@ -74,13 +74,6 @@ def _post_out(
     )
 
 
-def _score_subq():
-    return (
-        select(func.coalesce(func.sum(case((PostVote.value == 1, 1), (PostVote.value == -1, -1), else_=0)), 0))
-        .where(PostVote.post_id == Post.id).correlate(Post).scalar_subquery()
-    )
-
-
 _PERIOD_DAYS = {"today": 1, "week": 7, "month": 30}
 
 
@@ -106,8 +99,10 @@ def list_posts(
         since = datetime.now(timezone.utc) - timedelta(days=_PERIOD_DAYS[period])
         base = base.where(Post.created_at >= since)
     total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
-    order = (_score_subq().desc(), Post.created_at.desc(), Post.id.desc()) if sort == "top" else (Post.created_at.desc(), Post.id.desc())
-    posts = db.scalars(base.order_by(*order).offset((page - 1) * size).limit(size)).all()
+    order = (Post.score.desc(), Post.created_at.desc(), Post.id.desc()) if sort == "top" else (Post.created_at.desc(), Post.id.desc())
+    # region/station 이름을 글마다 따로 조회하면 N+1 이 나므로 한 번에 묶어 가져온다.
+    rows = base.options(joinedload(Post.region), joinedload(Post.station))
+    posts = db.scalars(rows.order_by(*order).offset((page - 1) * size).limit(size)).all()
 
     ids = [p.id for p in posts]
     uid = user.id if user else None
@@ -132,7 +127,8 @@ def popular_posts(
         base = base.where(Post.created_at >= since)
     if region_id:
         base = base.where(Post.region_id == region_id)
-    posts = db.scalars(base.order_by(_score_subq().desc(), Post.created_at.desc(), Post.id.desc()).limit(limit)).all()
+    rows = base.options(joinedload(Post.region), joinedload(Post.station))
+    posts = db.scalars(rows.order_by(Post.score.desc(), Post.created_at.desc(), Post.id.desc()).limit(limit)).all()
     ids = [p.id for p in posts]
     uid = user.id if user else None
     votes = vote_summaries(db, PostVote, PostVote.post_id, ids, uid)
@@ -275,6 +271,7 @@ def vote_post(post_id: int, body: VoteIn, db: Session = Depends(get_db), user: U
     if not p or p.is_removed:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
     existing = db.scalar(select(PostVote).where(PostVote.post_id == post_id, PostVote.user_id == user.id))
+    before = existing.value if existing else 0
     if body.value == 0:
         if existing:
             db.delete(existing)
@@ -282,6 +279,7 @@ def vote_post(post_id: int, body: VoteIn, db: Session = Depends(get_db), user: U
         existing.value = body.value
     else:
         db.add(PostVote(post_id=post_id, user_id=user.id, value=body.value))
+    p.score += body.value - before  # 정렬용 캐시 컬럼 — 위 Post.score 주석 참고
     db.commit()
     return vote_summaries(db, PostVote, PostVote.post_id, [post_id], user.id)[post_id]
 
@@ -300,7 +298,12 @@ def list_my_post_scraps(
     if not page_ids:
         return Page(items=[], total=total, page=page, size=size)
 
-    posts = {p.id: p for p in db.scalars(select(Post).where(Post.id.in_(page_ids), Post.is_removed.is_(False))).all()}
+    posts = {
+        p.id: p for p in db.scalars(
+            select(Post).options(joinedload(Post.region), joinedload(Post.station))
+            .where(Post.id.in_(page_ids), Post.is_removed.is_(False))
+        ).all()
+    }
     votes = vote_summaries(db, PostVote, PostVote.post_id, page_ids, user.id)
     counts = comment_counts(db, PostComment, PostComment.post_id, page_ids)
     nicknames = dict(db.execute(select(User.id, User.nickname).where(User.id.in_({p.author_id for p in posts.values()}))).all())

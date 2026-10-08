@@ -1,7 +1,9 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, SmallInteger, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    CheckConstraint, DateTime, Enum, ForeignKey, Index, SmallInteger, String, Text, UniqueConstraint, func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -83,6 +85,10 @@ class Review(Base):
         CheckConstraint("att IS NULL OR att BETWEEN 1 AND 5", name="att_range"),
         CheckConstraint("comm IS NULL OR comm BETWEEN 1 AND 5", name="comm_range"),
         CheckConstraint("speed IS NULL OR speed BETWEEN 1 AND 5", name="speed_range"),
+        # 경찰서 상세 페이지가 매번 날리는 "이 경찰서의 공개된 평가를 최신순으로" 쿼리
+        # (station_id = ? AND status = 'published' ORDER BY published_at DESC) 전용 복합 인덱스.
+        # 단일 컬럼 인덱스 3개로는 비트맵 AND 가 필요해 덜 효율적이다.
+        Index("ix_reviews_station_status_published", "station_id", "status", "published_at"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

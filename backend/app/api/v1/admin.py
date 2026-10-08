@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1._present import iso, ratings_dict
 from app.core.database import get_db
@@ -23,7 +23,7 @@ from app.schemas.report import AdminReportOut, ResolveReportIn
 from app.schemas.verification import AdminVerifyOut
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
-from app.services.reports import remove_target, target_preview
+from app.services.reports import batch_target_previews, remove_target, target_preview
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -64,7 +64,10 @@ def list_reviews(
     total = db.scalar(select(func.count(Review.id)).where(Review.status == status_)) or 0
     # 검수 대기열은 오래된 순(먼저 제출한 사람부터), 그 외는 최신순
     order = Review.created_at.asc() if status_ == ReviewStatus.pending else Review.created_at.desc()
-    rows = db.scalars(select(Review).where(Review.status == status_).order_by(order, Review.id).offset((page - 1) * size).limit(size)).all()
+    rows = db.scalars(
+        select(Review).options(joinedload(Review.station))
+        .where(Review.status == status_).order_by(order, Review.id).offset((page - 1) * size).limit(size)
+    ).all()
     return Page(items=[_admin_review(r) for r in rows], total=total, page=page, size=size)
 
 
@@ -144,7 +147,8 @@ def list_officer_verifications(
     total = db.scalar(select(func.count(OfficerVerification.id)).where(OfficerVerification.status == status_)) or 0
     order = OfficerVerification.created_at.asc() if status_ == VerificationStatus.pending else OfficerVerification.created_at.desc()
     rows = db.scalars(
-        select(OfficerVerification).where(OfficerVerification.status == status_)
+        select(OfficerVerification).options(joinedload(OfficerVerification.station), joinedload(OfficerVerification.user))
+        .where(OfficerVerification.status == status_)
         .order_by(order, OfficerVerification.id).offset((page - 1) * size).limit(size)
     ).all()
     return Page(items=[_admin_verify(v) for v in rows], total=total, page=page, size=size)
@@ -206,10 +210,10 @@ def revoke_verification(verification_id: int, body: RejectIn, admin: User = Depe
 
 
 # ---------- 신고 처리 ----------
-def _admin_report(db: Session, r: Report) -> AdminReportOut:
+def _admin_report(r: Report, preview: str) -> AdminReportOut:
     return AdminReportOut(
         id=r.id, reporter_nickname=r.reporter.nickname, target_type=r.target_type.value, target_id=r.target_id,
-        target_preview=target_preview(db, r.target_type, r.target_id), reason=r.reason, status=r.status.value,
+        target_preview=preview, reason=r.reason, status=r.status.value,
         resolved_by=r.resolved_by, resolution_action=r.resolution_action, resolution_note=r.resolution_note,
         created_at=iso(r.created_at),
     )
@@ -223,9 +227,13 @@ def list_reports(
     total = db.scalar(select(func.count(Report.id)).where(Report.status == status_)) or 0
     order = Report.created_at.asc() if status_ == ReportStatus.pending else Report.created_at.desc()
     rows = db.scalars(
-        select(Report).where(Report.status == status_).order_by(order, Report.id).offset((page - 1) * size).limit(size)
+        select(Report).options(joinedload(Report.reporter)).where(Report.status == status_)
+        .order_by(order, Report.id).offset((page - 1) * size).limit(size)
     ).all()
-    return Page(items=[_admin_report(db, r) for r in rows], total=total, page=page, size=size)
+    previews = batch_target_previews(db, rows)
+    return Page(
+        items=[_admin_report(r, previews[(r.target_type, r.target_id)]) for r in rows], total=total, page=page, size=size,
+    )
 
 
 @router.post("/reports/{report_id}/resolve", response_model=AdminReportOut)
@@ -247,7 +255,7 @@ def resolve_report(report_id: int, body: ResolveReportIn, admin: User = Depends(
         {"action": r.resolution_action, "target_type": r.target_type.value, "target_id": r.target_id},
     )
     db.commit()
-    return _admin_report(db, r)
+    return _admin_report(r, target_preview(db, r.target_type, r.target_id))
 
 
 # ---------- 삭제·정정 요청 ----------
@@ -397,6 +405,7 @@ def update_officer(officer_id: int, body: OfficerUpdate, admin: User = Depends(r
 class AuditOut(BaseModel):
     id: int
     actor_id: int | None
+    actor_email: str | None
     action: str
     target_type: str
     target_id: int | None
@@ -413,7 +422,15 @@ def audit_logs(
     if action:
         q, cq = q.where(AuditLog.action == action), cq.where(AuditLog.action == action)
     rows = db.scalars(q.order_by(AuditLog.id.desc()).offset((page - 1) * size).limit(size)).all()
+    actor_ids = {a.actor_id for a in rows if a.actor_id is not None}
+    emails = dict(db.execute(select(User.id, User.email).where(User.id.in_(actor_ids))).all()) if actor_ids else {}
     return Page(
-        items=[AuditOut(id=a.id, actor_id=a.actor_id, action=a.action, target_type=a.target_type, target_id=a.target_id, detail=a.detail, created_at=iso(a.created_at)) for a in rows],
+        items=[
+            AuditOut(
+                id=a.id, actor_id=a.actor_id, actor_email=emails.get(a.actor_id), action=a.action,
+                target_type=a.target_type, target_id=a.target_id, detail=a.detail, created_at=iso(a.created_at),
+            )
+            for a in rows
+        ],
         total=db.scalar(cq) or 0, page=page, size=size,
     )

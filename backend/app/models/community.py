@@ -103,6 +103,11 @@ class Post(Base):
     title: Mapped[str] = mapped_column(String(200))
     body: Mapped[str] = mapped_column(Text)
     view_count: Mapped[int] = mapped_column(default=0)
+    # 추천-비추천 집계를 비정규화해 둔 캐시 컬럼. "인기순" 정렬이 매 요청마다 post_votes 를
+    # 전부 훑는 상관 서브쿼리를 쓰지 않도록, vote_post() 에서 투표가 바뀔 때마다 갱신한다.
+    # 화면에 보여주는 점수는 여전히 vote_summaries() 로 투표 테이블에서 실시간 계산한 값을 쓴다
+    # (이 컬럼은 오직 정렬용) — 둘이 같은 투표 테이블을 보고 계산하므로 항상 일치한다.
+    score: Mapped[int] = mapped_column(default=0, server_default="0", index=True)
     is_removed: Mapped[bool] = mapped_column(default=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

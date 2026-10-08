@@ -64,6 +64,7 @@ def test_audit_log_records_every_admin_action(db, admin_client, world):
     logs = admin_client.get(f"{API}/admin/audit-logs").json()
     assert [l["action"] for l in logs["items"]] == ["review_rejected", "review_approved"]  # 최신순
     assert logs["items"][0]["detail"] == {"reason": "사유가 충분히 긴 반려 사유"} and logs["items"][0]["actor_id"]
+    assert logs["items"][0]["actor_email"]  # 관리자 화면에서 바로 누가 처리했는지 보이도록
     assert admin_client.get(f"{API}/admin/audit-logs", params={"action": "review_approved"}).json()["total"] == 1
     # 감사 로그는 읽기 전용: 수정·삭제 경로가 없다
     assert admin_client.delete(f"{API}/admin/audit-logs/1").status_code in (404, 405)

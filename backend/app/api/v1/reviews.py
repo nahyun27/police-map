@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1._present import reply_out, review_public
 from app.core.database import get_db
@@ -49,7 +49,8 @@ def list_my_reviews(
     base = Review.author_id == user.id
     total = db.scalar(select(func.count(Review.id)).where(base)) or 0
     rows = db.scalars(
-        select(Review).where(base).order_by(Review.created_at.desc()).offset((page - 1) * size).limit(size)
+        select(Review).options(joinedload(Review.station)).where(base)
+        .order_by(Review.created_at.desc()).offset((page - 1) * size).limit(size)
     ).all()
     ids = [r.id for r in rows]
     votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, user.id)
