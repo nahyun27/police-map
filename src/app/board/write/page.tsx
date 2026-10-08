@@ -25,7 +25,10 @@ function errorMessage(e: unknown): string {
 
 export default function BoardWritePage() {
   const router = useRouter();
-  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
+  // 글쓰기 버튼을 눌렀을 때 전체 화면이 "불러오는 중"에 막혀 있다가 지역 목록 호출이
+  // 조금이라도 실패하면 아예 폼 자체를 못 보여주던 문제를 고쳤다. 이제 폼은 항상 바로
+  // 뜨고, 지역 목록은 그 위에서 따로 불러온다. 실패해도 이 칸 하나만 재시도하면 된다.
+  const [regionsState, setRegionsState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [regions, setRegions] = useState<RegionOut[]>([]);
   const [regionId, setRegionId] = useState('');
   const [stations, setStations] = useState<StationItem[]>([]);
@@ -36,16 +39,14 @@ export default function BoardWritePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 평가(리뷰)와 동일하게 로그인 없이도 글을 쓸 수 있어서, 여기서는 로그인 여부를 확인하지
-  // 않고 지역 목록만 불러온다. 그래도 네트워크 오류는 그대로 날 수 있으니 재시도 버튼은 둔다.
-  const load = useCallback(() => {
-    setLoadState('loading');
+  const loadRegions = useCallback(() => {
+    setRegionsState('loading');
     getRegions()
-      .then((rs) => { setRegions(rs); setLoadState('ready'); })
-      .catch(() => setLoadState('error'));
+      .then((rs) => { setRegions(rs); setRegionsState('ready'); })
+      .catch(() => setRegionsState('error'));
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadRegions(); }, [loadRegions]);
 
   useEffect(() => {
     setStationId('');
@@ -71,16 +72,6 @@ export default function BoardWritePage() {
     }
   };
 
-  if (loadState === 'loading') return <Card><p className="sub">불러오는 중…</p></Card>;
-  if (loadState === 'error') {
-    return (
-      <Card>
-        <p className="warn">정보를 불러오지 못했습니다. 네트워크 상태를 확인하고 다시 시도해 주세요.</p>
-        <button className="btn line sm" style={{ marginTop: 10 }} onClick={load}>다시 시도</button>
-      </Card>
-    );
-  }
-
   return (
     <>
       <Crumb items={[{ label: '홈', to: '/' }, { label: '커뮤니티 게시판', to: '/board' }, { label: '글쓰기' }]} />
@@ -94,10 +85,20 @@ export default function BoardWritePage() {
         <form onSubmit={submit}>
           <div className="field">
             <label>지역</label>
-            <select className="sel" style={{ width: '100%' }} value={regionId} onChange={(e) => setRegionId(e.target.value)} required>
-              <option value="">지역 선택</option>
-              {regions.map((r) => <option key={r.id} value={r.id}>{r.full_name}</option>)}
-            </select>
+            {regionsState === 'error' ? (
+              <div className="warn" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                지역 목록을 불러오지 못했습니다.
+                <button type="button" className="btn line sm" onClick={loadRegions}>다시 시도</button>
+              </div>
+            ) : (
+              <select
+                className="sel" style={{ width: '100%' }} value={regionId} onChange={(e) => setRegionId(e.target.value)}
+                disabled={regionsState === 'loading'} required
+              >
+                <option value="">{regionsState === 'loading' ? '불러오는 중…' : '지역 선택'}</option>
+                {regions.map((r) => <option key={r.id} value={r.id}>{r.full_name}</option>)}
+              </select>
+            )}
           </div>
           {regionId && (
             <div className="field">

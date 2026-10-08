@@ -30,3 +30,5 @@ policemap_beta_*.html
 # 일부 시트(성명공개 파일럿 등)에는 수사관 개인 성명이 들어 있어 저장소엔 두지 않음
 police_stations_db*.xlsx
 police_stations_db*.csv
+backend/app/*.pdf
+*.pdf

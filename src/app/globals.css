@@ -223,16 +223,20 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 
 /* 글머리 등 하위 카테고리를 탭으로 보여줄 때 쓰는 가로 스크롤 탭바. */
 .cat-tabs {
-  display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  position: relative; display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
   border-bottom: 1px solid var(--line); margin-bottom: 14px;
 }
 .cat-tabs::-webkit-scrollbar { display: none; }
 .cat-tabs a, .cat-tabs button {
-  flex: 0 0 auto; padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--muted);
+  position: relative; z-index: 1; flex: 0 0 auto; padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--muted);
   border-bottom: 2px solid transparent; white-space: nowrap; background: none; border-left: none; border-right: none; border-top: none; cursor: pointer;
+  transition: color .2s;
 }
 .cat-tabs a.on, .cat-tabs button.on { color: var(--brand); border-bottom-color: var(--brand); }
 .cat-tabs a:hover, .cat-tabs button:hover { color: var(--ink); }
+/* 탭이 바뀔 때 흰 알약이 그 자리로 슬라이드하는 배경(세그먼트 컨트롤 스타일, .board-ui
+   에서만 보이게 함 — components/CategoryTabs.tsx 에서 위치를 계산해 넣는다). */
+.cat-tabs-indicator { display: none; position: absolute; top: 0; bottom: 0; left: 0; z-index: 0; transition: transform .25s cubic-bezier(.4,0,.2,1), width .25s; }
 
 /* 모바일 전용 글쓰기 플로팅 버튼. 데스크톱에선 PageHead 안의 인라인 버튼을 쓰므로 숨긴다. */
 .fab-write { display: none; }
@@ -278,7 +282,8 @@ footer.site p { line-height: 1.8; max-width: 720px; }
   border-bottom: none; padding: 4px; gap: 2px; margin-bottom: 16px;
 }
 .board-ui .cat-tabs a, .board-ui .cat-tabs button { border-bottom: none; border-radius: 999px; padding: 9px 16px; }
-.board-ui .cat-tabs a.on, .board-ui .cat-tabs button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(16, 24, 40, .14); }
+.board-ui .cat-tabs a.on, .board-ui .cat-tabs button.on { color: var(--ink); }
+.board-ui .cat-tabs-indicator { display: block; top: 4px; bottom: 4px; background: #fff; border-radius: 999px; box-shadow: 0 1px 3px rgba(16, 24, 40, .14); }
 
 /* 추천·댓글·스크랩 버튼을 항상 옅은 배경이 있는 알약 버튼으로(윤곽선 대신 면 색으로 구분). */
 .board-ui .engage-bar { gap: 6px; }

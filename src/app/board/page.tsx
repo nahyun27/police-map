@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PenLine, Search } from 'lucide-react';
 import { Card, Crumb, PageHead } from '@/components/ui';
+import { CategoryTabs } from '@/components/CategoryTabs';
 import { RegionFilterSelect } from '@/components/RegionFilterSelect';
 import { getRegions, listPosts, type PopularPeriod, type PostCategory } from '@/lib/api';
 import { formatDate } from '@/lib/format';
@@ -63,18 +64,17 @@ export default async function BoardPage({ searchParams }: Props) {
         <Link href="/board/write" className="btn sm pagehead-write-inline" style={{ marginTop: 10 }}>글쓰기</Link>
       </PageHead>
 
-      <nav className="cat-tabs" aria-label="글머리 선택">
-        <Link href={buildHref({ ...f, category: undefined, page: 1 })} className={!category ? 'on' : ''}>전체</Link>
-        {CATEGORY_OPTIONS.map(([v, l]) => (
-          <Link key={v} href={buildHref({ ...f, category: v, page: 1 })} className={category === v ? 'on' : ''}>{l}</Link>
-        ))}
-      </nav>
+      <CategoryTabs
+        active={category ?? ''}
+        tabs={[
+          { key: '', label: '전체', href: buildHref({ ...f, category: undefined, page: 1 }) },
+          ...CATEGORY_OPTIONS.map(([v, l]) => ({ key: v, label: l, href: buildHref({ ...f, category: v, page: 1 }) })),
+        ]}
+      />
 
       <Card className="flat">
-        <div className="btn-row" style={{ marginBottom: 10 }}>
+        <div className="btn-row" style={{ marginBottom: 10, alignItems: 'center' }}>
           <RegionFilterSelect regions={regions} value={region ?? ''} category={category} sort={sort} period={period} q={q} />
-        </div>
-        <div className="btn-row" style={{ marginBottom: 10 }}>
           <Link href={buildHref({ ...f, sort: 'new', page: 1 })} className={`btn sm ${sort === 'new' ? '' : 'line'}`}>최신순</Link>
           <Link href={buildHref({ ...f, sort: 'top', page: 1 })} className={`btn sm ${sort === 'top' ? '' : 'line'}`}>인기순</Link>
           {sort === 'top' && PERIOD_OPTIONS.map(([v, l]) => (
