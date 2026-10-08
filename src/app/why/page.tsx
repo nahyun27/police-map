@@ -8,8 +8,9 @@ import {
 import { Card } from '@/components/ui';
 import { getStats } from '@/lib/api';
 
-// 기피신청 통계를 실시간으로 반영하므로 빌드 시점에 정적 생성하지 않는다.
-export const dynamic = 'force-dynamic';
+// getStats() 가 이미 60초 캐시돼 있어(src/lib/api.ts), force-dynamic 없이도 신선도는
+// 동일하게 유지된다 — ISR 로 바꿔 매 요청 재렌더링 비용만 없앤다.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: '폴리스맵 소개',

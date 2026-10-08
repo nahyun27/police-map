@@ -4,8 +4,9 @@ import ClickableRow from '@/components/ClickableRow';
 import { Bars, Card, PageHead, Score } from '@/components/ui';
 import { getStats, type StatsOverview } from '@/lib/api';
 
-// 백엔드의 실시간 데이터를 그리므로 빌드 시점에 정적 생성하지 않는다.
-export const dynamic = 'force-dynamic';
+// getStats() 가 이미 60초 캐시돼 있어(src/lib/api.ts), force-dynamic 없이도 신선도는
+// 동일하게 유지된다 — ISR 로 바꿔 매 요청 재렌더링 비용만 없앤다.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: '전국 통계',

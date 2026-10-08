@@ -7,8 +7,10 @@ import { Bars, Card, Score, Stars } from '@/components/ui';
 import { getPopularPosts, getRecentReviews, getRegions, getStats, type StatsOverview } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
-// 백엔드의 실시간 데이터를 그리므로 빌드 시점에 정적 생성하지 않는다.
-export const dynamic = 'force-dynamic';
+// 여기서 쓰는 모든 fetch 가 이미 30~60초로 캐시돼 있으므로(src/lib/api.ts 의
+// revalidateSeconds), force-dynamic 으로 매 요청마다 새로 렌더링해도 데이터 신선도는
+// 똑같다 — 그 손해만 없애려고 가장 느슨한 캐시 주기(60초)에 맞춰 ISR 로 바꾼다.
+export const revalidate = 60;
 
 const FEATURES = [
   { to: '/policy', icon: ShieldCheck, title: '사실 기반 평가', body: '직무수행에 대한 구조화된 평가만 받습니다. 금칙어는 자동 필터링되고, 인신공격·사생활 게시물은 사후 삭제됩니다.', more: '운영원칙 보기' },
