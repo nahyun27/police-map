@@ -512,18 +512,21 @@ table.list td a { font-weight: 650; color: var(--ink); }
    붙는 히어로(권리구제·제보 페이지). main 의 max-width 컨테이너를 뚫고 나가되, 안의
    글자는 padding 으로 다시 본문과 같은 자리에 맞춘다. */
 .hero.hero-bleed {
+  /* 본문(헤더 .hwrap, main)과 똑같이 좌우 여백을 계산해서 변수 하나로 공유한다 —
+     .hero-photo 도 이 값을 그대로 써서 이미지 오른쪽 끝이 "뷰포트 끝"이 아니라
+     "본문 끝"(검색창·회원가입 버튼이 끝나는 자리)에 맞춰지게 한다. */
+  --hero-pad: calc((100vw - min(100vw, var(--container))) / 2 + 24px);
   width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); margin-top: -32px;
   border-radius: 0;
-  padding-left: calc((100vw - min(100vw, var(--container))) / 2 + 24px);
-  padding-right: calc((100vw - min(100vw, var(--container))) / 2 + 24px);
+  padding-left: var(--hero-pad);
+  padding-right: var(--hero-pad);
 }
 @media (max-width: 860px) {
   .hero { padding: 40px 24px 0; border-radius: 22px; }
   .hero.compact { padding: 30px 22px 32px; }
   .hero.hero-bleed {
+    --hero-pad: calc((100vw - min(100vw, var(--container))) / 2 + 16px);
     margin-top: -20px;
-    padding-left: calc((100vw - min(100vw, var(--container))) / 2 + 16px);
-    padding-right: calc((100vw - min(100vw, var(--container))) / 2 + 16px);
   }
   .hero-stats { margin: 36px -24px 0; }
   .hero-stats > div { padding: 18px 12px; text-align: center; }
@@ -784,7 +787,9 @@ table.list td a { font-weight: 650; color: var(--ink); }
 /* 배경이 투명한 PNG/WebP라 네이비 사각형 테두리가 안 생긴다 — 더는 배경색을 숨기려고
    불투명도를 낮출 필요가 없어서 거의 그대로 보여주고, 왼쪽 가장자리만 살짝 페이드한다. */
 .hero-photo {
-  position: absolute; right: 0; top: 0; height: 100%; width: auto;
+  /* right:0 이면 풀블리드 히어로(.hero-bleed)에서 뷰포트 맨 끝까지 가버린다 — 본문이
+     끝나는 자리(--hero-pad, 헤더의 검색창·회원가입 버튼이 끝나는 자리와 동일)에 맞춘다. */
+  position: absolute; right: var(--hero-pad, 0px); top: 0; height: 100%; width: auto;
   opacity: .96; pointer-events: none;
   -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, .7) 10%, #000 28%);
   mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, .7) 10%, #000 28%);
