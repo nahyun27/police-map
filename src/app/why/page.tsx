@@ -109,7 +109,7 @@ export default async function WhyPage() {
           </Card>
         </div>
       ) : (
-        <Card className="kpi why" style={{ maxWidth: 480, margin: '0 auto 20px' }}>
+        <Card className="kpi why why-solo">
           <div className="ico"><Landmark size={22} /></div>
           <div>
             <div className="num">3억 5천만 원</div>

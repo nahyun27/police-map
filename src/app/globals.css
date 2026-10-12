@@ -334,6 +334,10 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 
 .kpi.why { display: flex; align-items: flex-start; gap: 16px; }
 .kpi.why .ico { flex-shrink: 0; width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); }
+/* 통계 카드가 하나만 있을 때(grid2 짝이 없을 때) 쓰는 변형 — 좁은 박스를 어중간한
+   위치에 혼자 띄우는 대신, 풀와이드 카드 안에서 아이콘+숫자 묶음을 가운데로 모아
+   페이지의 다른 풀와이드 섹션들과 리듬이 맞는 "헤드라인 스탯 밴드"처럼 보이게 한다. */
+.kpi.why.why-solo { justify-content: center; text-align: left; padding: 28px 24px; }
 
 /* ---------- Table ---------- */
 .table-wrap { overflow-x: auto; margin: 0 -8px; }
