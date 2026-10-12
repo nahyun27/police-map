@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { PenLine, Search } from 'lucide-react';
+import { Eye, MessageSquare, PenLine, Search, ThumbsUp } from 'lucide-react';
 import { Card, Crumb, PageHead } from '@/components/ui';
 import { CategoryTabs } from '@/components/CategoryTabs';
 import { RegionFilterSelect } from '@/components/RegionFilterSelect';
@@ -93,24 +93,27 @@ export default async function BoardPage({ searchParams }: Props) {
 
       <Card>
         {posts.items.length ? (
-          <div className="post-list">
-            {posts.items.map((p) => (
-              <Link href={`/board/${p.id}`} key={p.id} className="post-row">
-                <div className="post-row-top">
-                  <span className={`badge cat-${p.category}`}>{p.category_label}</span>
-                  <span className="sub">{p.region_name ?? '전체'}{p.station_name ? ` · ${p.station_name}` : ''}</span>
-                </div>
-                <div className="post-row-title">{p.title}</div>
-                <div className="post-row-meta sub">
-                  <span>{p.author_nickname}</span>
-                  <span>{formatDate(p.created_at)}</span>
-                  <span>조회 {p.view_count}</span>
-                  <span>추천 {p.score}</span>
-                  <span>댓글 {p.comment_count}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <>
+            <div className="post-list-head sub">전체 {posts.total}건</div>
+            <div className="post-list">
+              {posts.items.map((p) => (
+                <Link href={`/board/${p.id}`} key={p.id} className="post-row">
+                  <div className="post-row-top">
+                    <span className={`badge cat-${p.category}`}>{p.category_label}</span>
+                    <span className="sub">{p.region_name ?? '전체'}{p.station_name ? ` · ${p.station_name}` : ''}</span>
+                  </div>
+                  <div className="post-row-title">{p.title}</div>
+                  <div className="post-row-meta">
+                    <span className="who">{p.author_nickname}</span>
+                    <span className="sub">{formatDate(p.created_at)}</span>
+                    <span className="stat"><Eye size={12} />{p.view_count}</span>
+                    <span className="stat"><ThumbsUp size={12} />{p.score}</span>
+                    <span className="stat"><MessageSquare size={12} />{p.comment_count}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </>
         ) : (
           <p className="sub">
             {failed ? '목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.' : q ? '검색 결과가 없습니다.' : '등록된 글이 없습니다. 첫 글을 남겨 보세요.'}
