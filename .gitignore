@@ -33,3 +33,4 @@ police_stations_db*.csv
 backend/app/*.pdf
 *.pdf
 backend/data/.geo-cache/
+*.ai
