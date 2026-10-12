@@ -291,13 +291,15 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 .why-chapter-head h2 { margin-bottom: 4px; }
 .why-chapter-head .eyebrow { margin-bottom: 4px; }
 
-.why-case { border-top: 3px solid transparent; }
-.why-case .ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 14px; }
+.why-case { border-top: 3px solid transparent; border-radius: 0; }
+.why-case-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.why-case .ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; margin-bottom: 0; }
+.why-case .badge { margin-bottom: 4px; }
 .why-case.tone-danger { border-top-color: var(--low); }
 .why-case.tone-danger .ico { background: var(--low-soft); color: var(--low); }
 .why-case.tone-brand { border-top-color: var(--brand); }
 .why-case.tone-brand .ico { background: var(--brand-soft); color: var(--brand); }
-.why-case h3 { font-size: 16.5px; margin-bottom: 8px; }
+.why-case h3 { font-size: 16.5px; margin-bottom: 0; }
 .why-refs { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 12px; color: var(--muted); }
 .why-refs svg { flex-shrink: 0; opacity: .7; }
 

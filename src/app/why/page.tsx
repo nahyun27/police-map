@@ -37,9 +37,13 @@ function WhyCase({
 }) {
   return (
     <Card className={`why-case tone-${tone}`}>
-      <div className="ico"><Icon size={20} /></div>
-      <span className="badge brand">{tag}</span>
-      <h3>{title}</h3>
+      <div className="why-case-head">
+        <div className="ico"><Icon size={20} /></div>
+        <div>
+          <span className="badge brand">{tag}</span>
+          <h3>{title}</h3>
+        </div>
+      </div>
       <p style={{ color: 'var(--ink2)', fontSize: 14 }}>{children}</p>
       <div className="guidebox" style={{ marginBottom: 0 }}>{after}</div>
       <div className="why-refs"><Link2 size={12} />{refs}</div>
