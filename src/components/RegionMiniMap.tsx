@@ -30,6 +30,9 @@ export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps
   // 핀 반지름을 이 지역의 viewBox 폭에 비례시켜야 서울처럼 좁게 확대된 지역에서도
   // 핀끼리 서로 뭉개지지 않고 화면상 크기가 일정하게 유지된다.
   const pinR = Math.min(5, Math.max(1.1, vbWidth * 0.012));
+  // 라벨 글자 크기도 핀 반지름과 같은 방식(viewBox 폭 비례)으로 잡아야 지역마다 화면에
+  // 찍히는 실제 글자 크기가 똑같이 유지된다(위 pinR 주석 참고).
+  const labelFontSize = Math.min(9, Math.max(3.4, vbWidth * 0.024));
 
   return (
     <Card>
@@ -43,7 +46,12 @@ export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps
             if (!st) return null;
             const overall = st.rating.overall;
             const tone = overall === null ? 'none' : overall >= 3.8 ? 'good' : overall >= 3.2 ? 'mid' : 'low';
-            return <RegionPin key={p.id} x={p.x} y={p.y} r={pinR} name={st.name} tone={tone} stationId={p.id} />;
+            return (
+              <RegionPin
+                key={p.id} x={p.x} y={p.y} r={pinR} name={st.name} tone={tone} stationId={p.id}
+                labelFontSize={labelFontSize}
+              />
+            );
           })}
         </svg>
       </div>
@@ -65,9 +73,22 @@ function shieldPath(r: number): string {
 }
 
 function RegionPin({
-  x, y, r, name, tone, stationId,
-}: { x: number; y: number; r: number; name: string; tone: string; stationId: number }) {
+  x, y, r, name, tone, stationId, labelFontSize,
+}: { x: number; y: number; r: number; name: string; tone: string; stationId: number; labelFontSize: number }) {
   const router = useRouter();
+
+  // 브라우저 기본 title 툴팁(딜레이 길고 각지고 못생김) 대신 핀 위에 뜨는 말풍선 라벨을
+  // 직접 그린다. getBBox로 실측하지 않고 글자 수로 폭을 어림하는 이유는 이 컴포넌트가
+  // 서버에서도 렌더되는 Region 상세 페이지 하위라 마운트 시점에 측정 깜빡임을 피하고
+  // 싶어서 — 경찰서 이름은 한글 완성형뿐이라 글자당 너비가 거의 균일해 어림해도 충분하다.
+  const padX = labelFontSize * 0.62;
+  const labelW = name.length * labelFontSize * 1.04 + padX * 2;
+  const labelH = labelFontSize * 2.15;
+  const gap = r * 0.55 + labelFontSize * 0.3;
+  const labelBottom = -r * 1.6 - gap;
+  const labelTop = labelBottom - labelH;
+  const arrowW = labelFontSize * 0.68;
+
   return (
     <g
       className={`region-pin tone-${tone}`}
@@ -83,8 +104,20 @@ function RegionPin({
         }
       }}
     >
-      <title>{name}</title>
       <path d={shieldPath(r)} strokeWidth={r * 0.3} strokeLinejoin="round" className="pin-shield" />
+      <g className="pin-label">
+        <path
+          d={`M${-arrowW},${labelBottom} L${arrowW},${labelBottom} L0,${labelBottom + gap * 0.9} Z`}
+          className="pin-label-arrow"
+        />
+        <rect
+          x={-labelW / 2} y={labelTop} width={labelW} height={labelH} rx={labelH / 2}
+          className="pin-label-bg"
+        />
+        <text x={0} y={(labelTop + labelBottom) / 2} fontSize={labelFontSize} className="pin-label-text">
+          {name}
+        </text>
+      </g>
     </g>
   );
 }

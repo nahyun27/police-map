@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Bookmark, LogOut, ShieldCheck, X } from 'lucide-react';
+import { Bookmark, FileText, Info, LogOut, MapPin, ShieldCheck, X } from 'lucide-react';
 import { Card, PageHead, Score } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import {
@@ -60,7 +60,7 @@ function RegionFollows() {
 
   return (
     <Card>
-      <h2>관심 지역</h2>
+      <h2><MapPin size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />관심 지역</h2>
       <p className="sub">등록하면 홈 화면 상단에 그 지역 경찰서의 새 평가 소식을 먼저 보여드립니다.</p>
       {error && <div className="warn">{error}</div>}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '14px 0' }}>
@@ -107,7 +107,7 @@ function MyScraps() {
 
   return (
     <Card>
-      <h2><Bookmark size={18} style={{ verticalAlign: -3, marginRight: 4 }} />내 스크랩</h2>
+      <h2><Bookmark size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />내 스크랩</h2>
       {error && <div className="warn">{error}</div>}
       {reviews === null || posts === null ? (
         <p className="sub">불러오는 중…</p>
@@ -183,16 +183,31 @@ export default function MyPage() {
 
   return (
     <>
-      <PageHead eyebrow="마이페이지" title={`${user.nickname}님`} sub={user.email} />
+      <PageHead title="마이페이지" />
 
-      <Card className="flat" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <p className="sub">계정 없이 작성한 평가는 여기 목록에 나타나지 않습니다(계정과 연결되지 않아요).</p>
+      <Card className="profile-head">
+        <div className="profile-avatar">{user.nickname.charAt(0)}</div>
+        <div className="profile-info">
+          <h2 style={{ marginBottom: 2 }}>{user.nickname}님</h2>
+          <p className="email">{user.email}</p>
+          {user.officer_station_id && (
+            <div className="profile-badges">
+              <span className="badge good"><ShieldCheck size={11} />{user.officer_station_name} 인증</span>
+            </div>
+          )}
+        </div>
         <button className="btn line sm" onClick={doLogout}><LogOut size={14} />로그아웃</button>
       </Card>
 
-      <Card className="flat" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Card className="flat notice-card">
+        <div className="ico"><Info size={18} /></div>
+        <p className="sub">계정 없이 작성한 평가는 여기 목록에 나타나지 않습니다(계정과 연결되지 않아요).</p>
+      </Card>
+
+      <Card className="flat notice-card">
+        <div className={`ico${user.officer_station_id ? ' good' : ''}`}><ShieldCheck size={18} /></div>
         {user.officer_station_id ? (
-          <p className="sub"><ShieldCheck size={14} style={{ verticalAlign: -2, marginRight: 4 }} />{user.officer_station_name} 소속({user.officer_rank})으로 인증된 계정입니다.</p>
+          <p className="sub">{user.officer_station_name} 소속({user.officer_rank})으로 인증된 계정입니다.</p>
         ) : (
           <p className="sub">경찰관이신가요? 신원 인증을 받으면 소속 경찰서 평가에 해명을 남길 수 있어요.</p>
         )}
@@ -205,7 +220,7 @@ export default function MyPage() {
       <MyScraps />
 
       <Card>
-        <h2>내가 쓴 평가</h2>
+        <h2><FileText size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />내가 쓴 평가</h2>
         {error && <div className="warn">{error}</div>}
         {data === null ? (
           <p className="sub">불러오는 중…</p>

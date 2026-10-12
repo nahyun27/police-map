@@ -74,8 +74,8 @@ export function Crumb({ items }: { items: { label: string; to?: string }[] }) {
   );
 }
 
-export function Card({ children, className = '', style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
-  return <div className={`card ${className}`.trim()} style={style}>{children}</div>;
+export function Card({ children, className = '', style, id }: { children: ReactNode; className?: string; style?: CSSProperties; id?: string }) {
+  return <div id={id} className={`card ${className}`.trim()} style={style}>{children}</div>;
 }
 
 export function PageHead({

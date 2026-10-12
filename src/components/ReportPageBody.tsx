@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Landmark, Newspaper, ShieldAlert } from 'lucide-react';
+import { ArrowDown, Landmark, Newspaper, ShieldAlert } from 'lucide-react';
 import ReportForm from '@/components/ReportForm';
 import { Card } from '@/components/ui';
 import { OVERSIGHT_ORGS, PRESS_CHANNELS } from '@/data/report';
@@ -16,6 +16,9 @@ export default function ReportPageBody({ stationName }: { stationName?: string }
           갖춘 언론·감독기관에 직접 제보하는 것이 더 안전하고 더 강력합니다. 폴리스맵은 아래에서 제보문 작성을 돕고 공식 창구로
           연결할 뿐, <b>제보 내용을 저장하거나 전달받지 않습니다.</b>
         </p>
+        <div className="quick">
+          <a href="#report-form-card" className="btn gold sm">제보하러 가기<ArrowDown size={14} /></a>
+        </div>
       </section>
 
       {stationName && (
@@ -66,7 +69,7 @@ export default function ReportPageBody({ stationName }: { stationName?: string }
         </Card>
       </div>
 
-      <Card>
+      <Card id="report-form-card">
         <h2>제보문 작성 도우미 <span className="tag">브라우저에서만 작성 · 서버 전송 없음</span></h2>
         <ReportForm stationName={stationName} />
       </Card>

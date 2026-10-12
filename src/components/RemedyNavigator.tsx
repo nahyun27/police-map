@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowRight, Check, ExternalLink, FileText, Lightbulb, Share2 } from 'lucide-react';
-import { Card, TableWrap } from '@/components/ui';
+import { ArrowRight, Check, ExternalLink, FileText, Lightbulb, Megaphone, Share2 } from 'lucide-react';
+import { Card, EmptyState, TableWrap } from '@/components/ui';
 import { REMEDY } from '@/data/sample';
 
 const CHANNELS = [
@@ -16,10 +16,6 @@ const CHANNELS = [
   ['인권위 진정', '조사 중 인권침해', '국가인권위 (1331)', '조사 후 권고'],
   ['권익위 신고', '부패·공익신고', '국민권익위', '신고자 보호 적용'],
   ['감찰 제보', '중대 비위', '경찰청·시도청 감찰', '감찰 조사'],
-];
-
-const BOARD: [string, number][] = [
-  ['국민신문고 민원', 128], ['기피신청', 54], ['불송치 이의신청', 41], ['인권위 진정', 12],
 ];
 
 /** "절차 찾기" 탭 — 겪은 문제를 고르면 맞는 채널을 알려주는 마법사. */
@@ -188,17 +184,11 @@ export default function RemedyNavigator({ contextLabel, stationId }: { contextLa
 
       <div className="grid2">
         <Card>
-          <h2>민원 진행 현황 보드 <span className="tag">익명 통계 · 샘플</span></h2>
-          {BOARD.map(([k, v]) => (
-            <div className="barrow" key={k}>
-              <div className="lb" style={{ width: 120 }}>{k}</div>
-              <div className="bar"><i style={{ width: `${(v / 128) * 100}%` }} /></div>
-              <div className="vl" style={{ width: 44 }}>{v}건</div>
-            </div>
-          ))}
-          <p className="sub" style={{ marginTop: 14 }}>
-            이용자가 자발적으로 공유한 민원 진행 결과를 개인 식별 없이 관서·유형 단위로만 통계화합니다(샘플).
-          </p>
+          <h2>민원 진행 현황 보드 <span className="tag">익명 통계</span></h2>
+          <EmptyState icon={<FileText size={20} />}>
+            아직 집계된 민원 진행 사례가 없습니다. 이용자가 자발적으로 공유한 민원 진행 결과를
+            개인 식별 없이 관서·유형 단위로만 통계화할 예정입니다.
+          </EmptyState>
         </Card>
         <Card className="tint">
           <h2>이용 전 꼭 확인하세요</h2>
@@ -213,9 +203,8 @@ export default function RemedyNavigator({ contextLabel, stationId }: { contextLa
       <div className="adslot">
         <h3 style={{ marginBottom: 4 }}>변호사의 도움이 필요하신가요? <span className="tag ad">광고</span></h3>
         <p className="sub">아래 영역은 광고입니다. 폴리스맵은 특정 변호사를 알선·소개하지 않으며, 정액 광고료 외 어떠한 대가도 받지 않습니다.</p>
-        <div className="grid2" style={{ marginTop: 14, marginBottom: 0 }}>
-          <Card className="flat"><b>형사 전문 ○○○ 변호사</b> <span className="tag ad">광고</span><br /><span className="sub">수사 단계 대응 · 서울 (샘플 광고 슬롯)</span></Card>
-          <Card className="flat"><b>△△ 법률사무소</b> <span className="tag ad">광고</span><br /><span className="sub">고소대리 · 경기 (샘플 광고 슬롯)</span></Card>
+        <div style={{ marginTop: 14 }}>
+          <EmptyState icon={<Megaphone size={20} />}>현재 집행 중인 광고가 없습니다.</EmptyState>
         </div>
       </div>
     </>

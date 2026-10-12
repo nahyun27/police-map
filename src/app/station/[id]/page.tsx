@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Bars, Card, Crumb, Stars } from '@/components/ui';
 import { ReviewList } from '@/components/ReviewList';
-import { ShieldCheck } from 'lucide-react';
+import { ExternalLink, ShieldCheck } from 'lucide-react';
 import { ApiError, getStation } from '@/lib/api';
 import stationJurisdiction from '@/data/stationJurisdiction.json';
 
@@ -58,10 +58,7 @@ export default async function StationPage({ params, searchParams }: Props) {
           <div className="grow">
             <div className="eyebrow">경찰서</div>
             <h1>{s.name}</h1>
-            <p className="sub" style={{ marginTop: 8 }}>
-              {s.address ?? '주소 정보 없음'}
-              {s.website && <> · <a href={s.website} target="_blank" rel="noopener noreferrer">공식 홈페이지 ↗</a></>}
-            </p>
+            <p className="sub" style={{ marginTop: 8 }}>{s.address ?? '주소 정보 없음'}</p>
           </div>
           <div className="bigscore">
             <div className="num">{s.rating.overall !== null ? s.rating.overall.toFixed(1) : '–'}</div>
@@ -72,6 +69,11 @@ export default async function StationPage({ params, searchParams }: Props) {
           <Link href={`/station/${s.id}/write`} className="btn">이 경찰서 평가 작성</Link>
           <Link href={`/remedy/${s.id}`} className="btn line">민원·권리구제 안내</Link>
           <Link href={`/report/${s.id}`} className="btn line">언론·기관 제보</Link>
+          {s.website && (
+            <a href={s.website} target="_blank" rel="noopener noreferrer" className="btn line">
+              경찰서 홈페이지<ExternalLink size={14} />
+            </a>
+          )}
         </div>
       </Card>
 

@@ -7,7 +7,6 @@ import { ChevronDown, MapPinned, Menu, Search, User, X } from 'lucide-react';
 import { getMe, type UserOut } from '@/lib/api';
 
 const NAV = [
-  { to: '/', label: '지도 탐색', end: true },
   { to: '/board', label: '커뮤니티' },
   {
     to: '/why', label: '폴리스맵 소개',
@@ -75,7 +74,7 @@ export default function Header() {
                   </div>
                 </div>
               ) : (
-                <Link key={n.to} href={n.to} className={isActive(n.to, n.end) ? 'active' : ''}>
+                <Link key={n.to} href={n.to} className={isActive(n.to) ? 'active' : ''}>
                   {n.label}
                 </Link>
               )

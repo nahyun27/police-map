@@ -33,36 +33,29 @@ export function MyRegionFeed() {
     return () => { cancelled = true; };
   }, []);
 
-  if (!loggedIn || regions === null) return null;
+  // 관심 지역을 등록하지 않았거나, 등록했어도 새 평가가 아직 없으면 위젯 자체를 숨긴다
+  // (빈 카드·안내 문구로 홈 화면만 차지하지 않도록, 2026-10 결정).
+  if (!loggedIn || regions === null || regions.length === 0 || reviews === null || reviews.length === 0) return null;
 
   return (
     <Card>
       <div className="sec-head">
         <div>
           <h2 style={{ marginBottom: 4 }}>내 지역 소식</h2>
-          <p className="sub">등록한 관심 지역에 새로 게시된 평가입니다.</p>
         </div>
       </div>
-      {regions.length === 0 ? (
-        <p className="sub">관심 지역을 등록하면 소식을 받아볼 수 있어요. <Link href="/mypage">관심 지역 등록하기</Link></p>
-      ) : reviews === null ? (
-        <p className="sub">불러오는 중…</p>
-      ) : reviews.length === 0 ? (
-        <p className="sub">아직 새로 게시된 평가가 없습니다.</p>
-      ) : (
-        reviews.map((rv) => (
-          <div className="review" key={rv.id}>
-            <div className="meta">
-              <span className="badge">{rv.role_label}</span>{rv.station_name} · {formatDate(rv.published_at)}
-              {rv.evidence_verified && <span className="badge good"><ShieldCheck size={11} />증빙확인</span>}
-            </div>
-            <p>
-              {rv.body ? rv.body.slice(0, 70) + (rv.body.length > 70 ? '…' : '') : '(서술 없음, 별점만 등록)'}{' '}
-              <Link href={`/station/${rv.station_id}`}>더보기</Link>
-            </p>
+      {reviews.map((rv) => (
+        <div className="review" key={rv.id}>
+          <div className="meta">
+            <span className="badge">{rv.role_label}</span>{rv.station_name} · {formatDate(rv.published_at)}
+            {rv.evidence_verified && <span className="badge good"><ShieldCheck size={11} />증빙확인</span>}
           </div>
-        ))
-      )}
+          <p>
+            {rv.body ? rv.body.slice(0, 70) + (rv.body.length > 70 ? '…' : '') : '(서술 없음, 별점만 등록)'}{' '}
+            <Link href={`/station/${rv.station_id}`}>더보기</Link>
+          </p>
+        </div>
+      ))}
     </Card>
   );
 }

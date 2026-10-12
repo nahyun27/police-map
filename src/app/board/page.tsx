@@ -81,12 +81,14 @@ export default async function BoardPage({ searchParams }: Props) {
             <Search size={16} />
             <input type="text" name="q" defaultValue={q} placeholder="제목·내용 검색" aria-label="게시판 검색" />
           </form>
-          <RegionFilterSelect regions={regions} value={region ?? ''} category={category} sort={sort} period={period} q={q} />
-          <Link href={buildHref({ ...f, sort: 'new', page: 1 })} className={`btn sm ${sort === 'new' ? '' : 'line'}`}>최신순</Link>
-          <Link href={buildHref({ ...f, sort: 'top', page: 1 })} className={`btn sm ${sort === 'top' ? '' : 'line'}`}>인기순</Link>
-          {sort === 'top' && PERIOD_OPTIONS.map(([v, l]) => (
-            <Link key={v} href={buildHref({ ...f, sort: 'top', period: v, page: 1 })} className={`btn sm ${period === v ? '' : 'line'}`}>{l}</Link>
-          ))}
+          <div className="btn-row board-filter-group">
+            <RegionFilterSelect regions={regions} value={region ?? ''} category={category} sort={sort} period={period} q={q} />
+            <Link href={buildHref({ ...f, sort: 'new', page: 1 })} className={`btn sm ${sort === 'new' ? '' : 'line'}`}>최신순</Link>
+            <Link href={buildHref({ ...f, sort: 'top', page: 1 })} className={`btn sm ${sort === 'top' ? '' : 'line'}`}>인기순</Link>
+            {sort === 'top' && PERIOD_OPTIONS.map(([v, l]) => (
+              <Link key={v} href={buildHref({ ...f, sort: 'top', period: v, page: 1 })} className={`btn sm ${period === v ? '' : 'line'}`}>{l}</Link>
+            ))}
+          </div>
         </div>
       </Card>
 

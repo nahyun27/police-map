@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Flame, Scale, ShieldCheck } from 'lucide-react';
 import HeroSearch from '@/components/HeroSearch';
-import KoreaMap from '@/components/KoreaMap';
 import { MyRegionFeed } from '@/components/MyRegionFeed';
+import RegionMapSwitcher from '@/components/RegionMapSwitcher';
 import { Bars, Card, Score, Stars } from '@/components/ui';
 import { getPopularPosts, getRecentReviews, getRegions, getStats, type StatsOverview } from '@/lib/api';
 import { formatDate } from '@/lib/format';
@@ -80,7 +80,7 @@ export default async function Home() {
         <Card>
           <h2>지도에서 찾기</h2>
           <p className="sub">시·도경찰청을 선택하면 관할 경찰서 목록으로 이동합니다.</p>
-          <KoreaMap regions={regions} />
+          <RegionMapSwitcher regions={regions} />
         </Card>
 
         <Card>
