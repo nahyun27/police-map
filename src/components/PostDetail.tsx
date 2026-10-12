@@ -37,8 +37,10 @@ export function PostDetail({ initial }: { initial: PostOut }) {
 
   return (
     <>
-      <div className="eyebrow">{post.region_name ?? '전체'}{post.station_name ? ` · ${post.station_name}` : ''}</div>
-      <span className={`badge cat-${post.category}`}>{post.category_label}</span>
+      <div className="flex" style={{ gap: 8, marginBottom: 12 }}>
+        <span className="eyebrow" style={{ marginBottom: 0 }}>{post.region_name ?? '전체'}{post.station_name ? ` · ${post.station_name}` : ''}</span>
+        <span className={`badge cat-${post.category}`}>{post.category_label}</span>
+      </div>
       <h1>{post.title}</h1>
       <p className="sub" style={{ marginTop: 6 }}>
         {post.author_nickname} · {formatDate(post.created_at)} · <Eye size={12} style={{ verticalAlign: -1 }} /> {post.view_count}

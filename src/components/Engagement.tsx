@@ -188,7 +188,9 @@ export function Engagement({
       )}
       {replyTo === c.id && (
         <div className="cmt-form">
-          <input value={replyDraft} onChange={(e) => setReplyDraft(e.target.value)} placeholder="답글을 입력하세요" maxLength={1000} />
+          <textarea
+            value={replyDraft} onChange={(e) => setReplyDraft(e.target.value)} placeholder="답글을 입력하세요" maxLength={1000} rows={1}
+          />
           <button type="button" className="btn sm" onClick={() => submit(replyDraft, c.id)} disabled={!replyDraft.trim()}>등록</button>
         </div>
       )}
@@ -231,7 +233,7 @@ export function Engagement({
           {comments && comments.length === 0 && <p className="sub">첫 댓글을 남겨 보세요.</p>}
           {comments?.map((c) => renderComment(c))}
           <div className="cmt-form">
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="댓글을 입력하세요" maxLength={1000} />
+            <textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="댓글을 입력하세요" maxLength={1000} rows={1} />
             <button type="button" className="btn sm" onClick={() => submit(draft)} disabled={!draft.trim()}>등록</button>
           </div>
         </div>

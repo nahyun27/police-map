@@ -226,6 +226,8 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 @media (max-width: 860px) { .grid2, .grid3 { grid-template-columns: 1fr; gap: 16px; } .card { padding: 20px; } }
 
 .pagehead { margin: 8px 0 28px; }
+.pagehead-title-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.pagehead-title-row h1 { margin: 0; }
 .crumb { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 13.5px; color: var(--muted); margin-bottom: 18px; }
 .crumb a { color: var(--muted); font-weight: 500; }
 .crumb a:hover { color: var(--ink); }
@@ -402,7 +404,7 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 /* 댓글: 점선 구분 대신 옅은 배경 말풍선 카드로. */
 .board-ui .cmt-list { border-top: none; margin-top: 16px; gap: 10px; }
 .board-ui .cmt { background: #f8f9fb; border-radius: 16px; padding: 12px 14px; }
-.board-ui .cmt-form input, .board-ui .field input, .board-ui .field select, .board-ui .field textarea { border-radius: 16px; }
+.board-ui .cmt-form textarea, .board-ui .field input, .board-ui .field select, .board-ui .field textarea { border-radius: 16px; }
 .board-ui .sel { border-radius: 14px; padding: 10px 14px; min-width: 150px; border-color: var(--line2); }
 
 /* 모바일 플로팅 글쓰기 버튼 그림자를 브랜드 컬러로. */
@@ -583,11 +585,13 @@ table.list td a { font-weight: 650; color: var(--ink); }
 .cmt-meta b { font-size: 13px; }
 .cmt p { color: var(--ink2); white-space: pre-wrap; word-break: break-word; }
 .cmt-actions { display: flex; gap: 10px; margin-top: 2px; }
-.cmt-form { display: flex; gap: 8px; margin-top: 6px; flex-basis: 100%; }
-.cmt-form input {
-  flex: 1; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 8px 12px; font-size: 13.5px; color: var(--ink);
+.cmt-form { display: flex; gap: 8px; margin-top: 6px; flex-basis: 100%; align-items: flex-end; }
+.cmt-form textarea {
+  flex: 1; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 8px 12px; font-size: 13.5px;
+  color: var(--ink); font-family: inherit; line-height: 1.5; resize: none; min-height: 36px; max-height: 160px;
 }
-.cmt-form input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.cmt-form textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.cmt-form .btn { flex-shrink: 0; }
 
 .reply-box { margin-top: 12px; padding: 14px 16px; background: var(--brand-soft); border: 1px solid #cfe0fb; border-radius: 12px; }
 .reply-head { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13.5px; color: var(--brand-ink); margin-bottom: 6px; }

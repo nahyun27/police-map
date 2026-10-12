@@ -60,9 +60,8 @@ export default async function BoardPage({ searchParams }: Props) {
         eyebrow="커뮤니티"
         title="자유 게시판"
         sub="지역·경찰서 관련 자유로운 이야기를 나누는 공간입니다. 사실 적시 평가는 경찰서 평가 작성을 이용해 주세요."
-      >
-        <Link href="/board/write" className="btn sm pagehead-write-inline" style={{ marginTop: 10 }}>글쓰기</Link>
-      </PageHead>
+        actions={<Link href="/board/write" className="btn sm pagehead-write-inline">글쓰기</Link>}
+      />
 
       <CategoryTabs
         active={category ?? ''}
@@ -74,6 +73,14 @@ export default async function BoardPage({ searchParams }: Props) {
 
       <Card className="flat">
         <div className="btn-row" style={{ marginBottom: 10, alignItems: 'center' }}>
+          <form action="/board" method="get" className="hsearch" style={{ marginLeft: 0 }}>
+            {region && <input type="hidden" name="region" value={region} />}
+            {category && <input type="hidden" name="category" value={category} />}
+            {sort !== 'new' && <input type="hidden" name="sort" value={sort} />}
+            {sort === 'top' && period !== 'all' && <input type="hidden" name="period" value={period} />}
+            <Search size={16} />
+            <input type="text" name="q" defaultValue={q} placeholder="제목·내용 검색" aria-label="게시판 검색" />
+          </form>
           <RegionFilterSelect regions={regions} value={region ?? ''} category={category} sort={sort} period={period} q={q} />
           <Link href={buildHref({ ...f, sort: 'new', page: 1 })} className={`btn sm ${sort === 'new' ? '' : 'line'}`}>최신순</Link>
           <Link href={buildHref({ ...f, sort: 'top', page: 1 })} className={`btn sm ${sort === 'top' ? '' : 'line'}`}>인기순</Link>
@@ -81,14 +88,6 @@ export default async function BoardPage({ searchParams }: Props) {
             <Link key={v} href={buildHref({ ...f, sort: 'top', period: v, page: 1 })} className={`btn sm ${period === v ? '' : 'line'}`}>{l}</Link>
           ))}
         </div>
-        <form action="/board" method="get" className="hsearch" style={{ maxWidth: 320 }}>
-          {region && <input type="hidden" name="region" value={region} />}
-          {category && <input type="hidden" name="category" value={category} />}
-          {sort !== 'new' && <input type="hidden" name="sort" value={sort} />}
-          {sort === 'top' && period !== 'all' && <input type="hidden" name="period" value={period} />}
-          <Search size={16} />
-          <input type="text" name="q" defaultValue={q} placeholder="제목·내용 검색" aria-label="게시판 검색" />
-        </form>
       </Card>
 
       <Card>
