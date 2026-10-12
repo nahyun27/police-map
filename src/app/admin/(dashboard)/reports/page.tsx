@@ -44,9 +44,9 @@ export default function AdminReportsPage() {
 
   return (
     <Card>
-      <div className="chips">
+      <div className="seg">
         {STATUS_TABS.map(([v, l]) => (
-          <button key={v} className={`chip${status === v ? ' on' : ''}`} onClick={() => setStatus(v)}>{l}</button>
+          <button key={v} type="button" className={status === v ? 'active' : ''} onClick={() => setStatus(v)}>{l}</button>
         ))}
       </div>
 

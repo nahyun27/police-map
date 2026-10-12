@@ -563,7 +563,7 @@ table.list td a { font-weight: 650; color: var(--ink); }
    늘어서 있으면 전부 똑같은 색 버튼처럼 보여 뭐가 뭔지 헷갈린다(실사용자 피드백).
    .map-toggle 과 같은 트레이 안에 옵션들을 묶어서 "이 안에서 하나만 고르는 그룹"이라는
    게 한눈에 보이게 한다. a/button 둘 다 지원(필터는 Link, 지도 토글은 button). */
-.seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--line2); border-radius: 999px; flex-wrap: nowrap; }
+.seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--line2); border-radius: 999px; flex-wrap: wrap; }
 .seg a, .seg button {
   display: inline-flex; align-items: center; border: none; background: transparent; padding: 7px 14px;
   border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
