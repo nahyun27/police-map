@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  ArrowRight, Check, CheckCircle2, Compass, ExternalLink, FileText, Landmark, Lightbulb, Megaphone,
+  ArrowRight, Check, ExternalLink, FileText, Landmark, Lightbulb, Megaphone,
   MessageCircleQuestion, ShieldAlert,
 } from 'lucide-react';
 import { Card, EmptyState, TableWrap } from '@/components/ui';
@@ -164,15 +164,8 @@ export default function RemedyNavigator({ contextLabel, stationId }: { contextLa
   return (
     <>
       <section className="card hero compact">
-        <div className="hero-illust" aria-hidden="true">
-          <div className="hero-illust-ring" />
-          <div className="hero-illust-badge">
-            <Compass size={40} strokeWidth={1.6} />
-          </div>
-          <div className="hero-illust-check">
-            <CheckCircle2 size={22} strokeWidth={2} />
-          </div>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element -- 장식용 배경 이미지라 Next Image 최적화(반응형 srcset 등)가 필요 없고, 그냥 <img> 가 더 단순하다 */}
+        <img src="/images/remedy-hero.jpg" alt="" aria-hidden="true" className="hero-photo" />
         <div className="eyebrow">권리구제</div>
         <h1>권리구제 내비게이터</h1>
         <p className="lead">

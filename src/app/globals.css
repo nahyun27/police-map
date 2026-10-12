@@ -761,26 +761,16 @@ table.list td a { font-weight: 650; color: var(--ink); }
 .hero-card .vl { color: #fff; }
 @media (max-width: 1040px) { .hero-card { display: none; } }
 
-/* ---------- 권리구제 내비게이터 히어로 그림(RemedyNavigator) — 사진 대신 브랜드
-   그라데이션을 입힌 아이콘 일러스트. 사이트 전체가 사진을 하나도 안 쓰고 아이콘+그라데이션
-   으로만 꾸며져 있어서(의도적 디자인 언어), 톤을 맞추려고 같은 방식으로 만들었다. */
-.hero-illust { position: absolute; right: 64px; top: 50%; transform: translateY(-50%); width: 180px; height: 180px; }
-.hero-illust-ring {
-  position: absolute; inset: -30px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(88, 130, 255, .45), transparent 70%); filter: blur(2px);
+/* ---------- 권리구제 내비게이터 히어로 사진(RemedyNavigator) — 의뢰인이 만든 일러스트를
+   배경에 은은하게 녹인다. 오른쪽으로 갈수록 선명해지고 왼쪽(글자 쪽)은 기존 네이비
+   그라데이션 속으로 자연스럽게 사라지게 마스크를 건다. */
+.hero-photo {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: right center;
+  opacity: .55; pointer-events: none;
+  -webkit-mask-image: linear-gradient(100deg, transparent 8%, rgba(0, 0, 0, .55) 38%, #000 68%);
+  mask-image: linear-gradient(100deg, transparent 8%, rgba(0, 0, 0, .55) 38%, #000 68%);
 }
-.hero-illust-badge {
-  position: absolute; inset: 0; border-radius: 40px; display: grid; place-items: center; color: #fff;
-  background: linear-gradient(135deg, #4a78ff, var(--brand) 55%, var(--brand-ink));
-  box-shadow: 0 24px 48px -16px rgba(20, 45, 140, .65), inset 0 1px 0 rgba(255, 255, 255, .25);
-  transform: rotate(-4deg);
-}
-.hero-illust-check {
-  position: absolute; right: -6px; bottom: 6px; width: 48px; height: 48px; border-radius: 50%;
-  background: #fff; color: var(--good); display: grid; place-items: center;
-  box-shadow: 0 10px 20px -8px rgba(11, 18, 32, .45);
-}
-@media (max-width: 1040px) { .hero-illust { display: none; } }
+@media (max-width: 760px) { .hero-photo { display: none; } }
 
 /* ---------- 마이페이지 ---------- */
 .profile-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
