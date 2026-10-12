@@ -86,8 +86,11 @@ export default async function WhyPage() {
         </p>
       </section>
 
-      <div className="grid2">
-        {latestAppeal && (
+      {/* latestAppeal 은 운영진이 통계를 입력해야 채워지는 선택 항목이라, 아직 값이
+          없을 땐 grid2 에 카드 하나만 들어가 절반만 채워진 채 나머지 절반이 텅 비어
+          보이는 문제가 있었다 — 그럴 땐 2단 그리드 대신 단일 카드를 가운데 두는 걸로 전환. */}
+      {latestAppeal ? (
+        <div className="grid2">
           <Card className="kpi why">
             <div className="ico"><TrendingUp size={22} /></div>
             <div>
@@ -96,8 +99,17 @@ export default async function WhyPage() {
               <p className="sub" style={{ marginTop: 4 }}>2018년 2,425건 대비 · 언론 보도 종합</p>
             </div>
           </Card>
-        )}
-        <Card className="kpi why">
+          <Card className="kpi why">
+            <div className="ico"><Landmark size={22} /></div>
+            <div>
+              <div className="num">3억 5천만 원</div>
+              <div className="lbl">층간소음 흉기난동 부실대응 국가배상 판결</div>
+              <p className="sub" style={{ marginTop: 4 }}>법원 판결 보도</p>
+            </div>
+          </Card>
+        </div>
+      ) : (
+        <Card className="kpi why" style={{ maxWidth: 480, margin: '0 auto 20px' }}>
           <div className="ico"><Landmark size={22} /></div>
           <div>
             <div className="num">3억 5천만 원</div>
@@ -105,7 +117,7 @@ export default async function WhyPage() {
             <p className="sub" style={{ marginTop: 4 }}>법원 판결 보도</p>
           </div>
         </Card>
-      </div>
+      )}
 
       <ChapterHead n="01" eyebrow="Chapter 01 · 국민이 치른 대가" title="현장에서 물러선 경찰, 지켜지지 않은 신변보호"
         sub="현장 대응과 초동 조치의 실패가 되돌릴 수 없는 결과로 이어진 4건의 기록" />
