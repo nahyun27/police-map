@@ -66,7 +66,7 @@ export default function Header() {
     <header className="site-header">
       <div className="hwrap">
         <Link href="/" className="logo">
-          <Image src="/images/logo.webp" alt="폴리스맵" width={200} height={72} className="logo-img" priority />
+          <Image src="/images/logo.webp" alt="폴리스맵" width={215} height={72} className="logo-img" priority />
         </Link>
         <button className="menu-btn" onClick={() => setOpen((v) => !v)} aria-label="메뉴" aria-expanded={open}>
           {open ? <X size={20} /> : <Menu size={20} />}
