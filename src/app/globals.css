@@ -511,8 +511,13 @@ table.list td a { font-weight: 650; color: var(--ink); }
 .region-mini-map-wrap { display: flex; justify-content: center; margin-top: 12px; }
 .region-mini-map { width: 100%; max-width: 420px; height: auto; }
 .region-mini-shape { fill: var(--brand-soft); stroke: #fff; stroke-width: 2; }
-.region-pin { cursor: pointer; outline: none; transform-box: fill-box; transform-origin: center; transition: transform .12s; }
-.region-pin:hover, .region-pin:focus-visible { transform: scale(1.35); }
+/* 핀(.region-pin)은 SVG transform 속성(translate)으로 위치를 잡는데, 여기에 CSS
+   transform(scale)을 같이 주면 CSS 쪽이 translate 를 통째로 덮어써서 핀이 호버할 때마다
+   엉뚱한 위치로 튀었다가 돌아오길 반복하는 버그가 났다(실사용자 리포트로 발견). 그래서
+   스케일은 translate 가 없는 자식 <path> 에만 걸어서 부모의 위치 지정과 분리한다. */
+.region-pin { cursor: pointer; outline: none; }
+.region-pin .pin-shield { transition: transform .12s; transform-box: fill-box; transform-origin: center; }
+.region-pin:hover .pin-shield, .region-pin:focus-visible .pin-shield { transform: scale(1.35); }
 .pin-shield { stroke: #fff; }
 .region-pin.tone-good .pin-shield { fill: var(--good); }
 .region-pin.tone-mid .pin-shield { fill: var(--mid); }
