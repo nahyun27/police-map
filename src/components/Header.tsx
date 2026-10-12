@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ChevronDown, MapPinned, Menu, Search, User, X } from 'lucide-react';
 import { getMe, type UserOut } from '@/lib/api';
+import { useSearchSuggestions } from '@/lib/useSearchSuggestions';
 
 const NAV = [
   { to: '/board', label: '커뮤니티' },
@@ -22,6 +23,9 @@ export default function Header() {
   const pathname = usePathname();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const { items: suggestions, loading: suggestLoading } = useSearchSuggestions(q, suggestOpen);
   const [user, setUser] = useState<UserOut | null | undefined>(undefined); // undefined=확인 중
 
   useEffect(() => {
@@ -32,10 +36,23 @@ export default function Header() {
     getMe().then(setUser).catch(() => setUser(null));
   }, [pathname]);
 
+  const goStation = (id: number) => {
+    setSuggestOpen(false);
+    router.push(`/station/${id}`);
+  };
+
   const onSearch = (e: FormEvent) => {
     e.preventDefault();
     const term = q.trim();
-    if (term) router.push(`/search?q=${encodeURIComponent(term)}`);
+    if (term) { setSuggestOpen(false); router.push(`/search?q=${encodeURIComponent(term)}`); }
+  };
+
+  const onSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (!suggestOpen || !suggestions.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => (i + 1) % suggestions.length); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => (i <= 0 ? suggestions.length - 1 : i - 1)); }
+    else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); goStation(suggestions[active].id); }
+    else if (e.key === 'Escape') setSuggestOpen(false);
   };
 
   const isActive = (to: string, end?: boolean) => (end ? pathname === to : pathname === to || pathname.startsWith(`${to}/`));
@@ -80,10 +97,36 @@ export default function Header() {
               )
             )}
           </nav>
-          <form className="hsearch" onSubmit={onSearch} role="search">
-            <Search size={16} />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="경찰서·수사관 검색" aria-label="검색" />
-          </form>
+          <div className="hsearch-wrap">
+            <form className="hsearch" onSubmit={onSearch} role="search">
+              <Search size={16} />
+              <input
+                value={q}
+                onChange={(e) => { setQ(e.target.value); setSuggestOpen(true); setActive(-1); }}
+                onFocus={() => setSuggestOpen(true)}
+                onBlur={() => setTimeout(() => setSuggestOpen(false), 120)}
+                onKeyDown={onSearchKeyDown}
+                placeholder="경찰서·수사관 검색" aria-label="검색"
+                role="combobox" aria-expanded={suggestOpen && suggestions.length > 0} aria-autocomplete="list"
+                autoComplete="off"
+              />
+            </form>
+            {suggestOpen && q.trim() && (suggestions.length > 0 || suggestLoading) && (
+              <ul className="search-suggest">
+                {suggestions.map((s, i) => (
+                  <li key={s.id}>
+                    <button
+                      type="button" className={i === active ? 'active' : ''}
+                      onMouseDown={() => goStation(s.id)} onMouseEnter={() => setActive(i)}
+                    >
+                      <b>{s.name}</b><span className="sub">{s.address ?? '주소 정보 없음'}</span>
+                    </button>
+                  </li>
+                ))}
+                {suggestLoading && !suggestions.length && <li className="search-suggest-empty">검색 중…</li>}
+              </ul>
+            )}
+          </div>
           <div className="hauth">
             {user === undefined ? null : user ? (
               <Link href="/mypage" className="hauth-user"><User size={15} />{user.nickname}님</Link>
