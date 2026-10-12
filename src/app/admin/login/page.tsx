@@ -2,8 +2,8 @@
 
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { LogIn } from 'lucide-react';
-import { Card, PageHead } from '@/components/ui';
+import { LogIn, MapPinned } from 'lucide-react';
+import { Card } from '@/components/ui';
 import { ApiError, login } from '@/lib/api';
 
 function LoginForm() {
@@ -34,7 +34,7 @@ function LoginForm() {
   };
 
   return (
-    <Card style={{ maxWidth: 420, margin: '0 auto' }}>
+    <Card style={{ maxWidth: 400, width: '100%' }}>
       <form onSubmit={submit}>
         <div className="field">
           <label>이메일</label>
@@ -55,11 +55,15 @@ function LoginForm() {
 
 export default function AdminLoginPage() {
   return (
-    <>
-      <PageHead eyebrow="관리자" title="운영 콘솔 로그인" sub="평가 검수·삭제요청 처리 권한이 있는 관리자 계정으로 로그인하세요." />
+    <div className="admin-login">
+      <div className="admin-login-brand">
+        <span className="mark"><MapPinned size={18} /></span>
+        <b>폴리스맵 운영 콘솔</b>
+        <p className="sub">평가 검수·삭제요청 처리 권한이 있는 관리자 계정으로 로그인하세요.</p>
+      </div>
       <Suspense>
         <LoginForm />
       </Suspense>
-    </>
+    </div>
   );
 }

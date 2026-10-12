@@ -41,6 +41,10 @@ export default function Header() {
 
   const isActive = (to: string, end?: boolean) => (end ? pathname === to : pathname === to || pathname.startsWith(`${to}/`));
 
+  // 관리자 콘솔은 전용 사이드바 셸(AdminShell)을 따로 쓰는 별개의 "앱" 화면이라
+  // 공개 사이트의 상단 내비게이션을 같이 보여주지 않는다.
+  if (pathname.startsWith('/admin')) return null;
+
   return (
     <header className="site-header">
       <div className="hwrap">

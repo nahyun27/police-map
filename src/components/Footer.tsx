@@ -1,6 +1,13 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export default function Footer() {
+  const pathname = usePathname();
+  // Header 와 동일한 이유로 관리자 콘솔에서는 공개 사이트 푸터를 숨긴다.
+  if (pathname.startsWith('/admin')) return null;
+
   return (
     <footer className="site">
       <div className="fwrap">
