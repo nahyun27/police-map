@@ -188,11 +188,16 @@ export default function RemedyNavigator({ contextLabel, stationId }: { contextLa
       <Card>
         <h2><Landmark size={17} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--brand)' }} />공식 채널 한눈에 보기</h2>
         <TableWrap>
-          <table className="list">
+          <table className="list channel-table">
             <thead><tr><th>채널</th><th>대상 사안</th><th>접수처</th><th>처리 특성</th></tr></thead>
             <tbody>
               {CHANNELS.map((c) => (
-                <tr key={c[0]}>{c.map((v, i) => <td key={i}>{v}</td>)}</tr>
+                <tr key={c[0]}>
+                  <td>{c[0]}</td>
+                  <td>{c[1]}</td>
+                  <td><span className="pill">{c[2]}</span></td>
+                  <td className="muted">{c[3]}</td>
+                </tr>
               ))}
             </tbody>
           </table>
