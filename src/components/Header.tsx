@@ -3,17 +3,19 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { MapPinned, Menu, Search, User, X } from 'lucide-react';
+import { ChevronDown, MapPinned, Menu, Search, User, X } from 'lucide-react';
 import { getMe, type UserOut } from '@/lib/api';
 
 const NAV = [
   { to: '/', label: '지도 탐색', end: true },
   { to: '/board', label: '커뮤니티' },
-  { to: '/why', label: '폴리스맵 소개' },
+  {
+    to: '/why', label: '폴리스맵 소개',
+    children: [{ to: '/why', label: '소개' }, { to: '/policy', label: '운영원칙' }],
+  },
   { to: '/stats', label: '통계' },
   { to: '/remedy', label: '권리구제' },
   { to: '/report', label: '제보' },
-  { to: '/policy', label: '운영원칙' },
 ];
 
 export default function Header() {
@@ -51,11 +53,29 @@ export default function Header() {
         </button>
         <div className={`hpanel${open ? ' open' : ''}`}>
           <nav className="gnb">
-            {NAV.map((n) => (
-              <Link key={n.to} href={n.to} className={isActive(n.to, n.end) ? 'active' : ''}>
-                {n.label}
-              </Link>
-            ))}
+            {NAV.map((n) =>
+              n.children ? (
+                <div key={n.to} className="gnb-drop">
+                  <Link
+                    href={n.to}
+                    className={n.children.some((c) => isActive(c.to)) ? 'active' : ''}
+                  >
+                    {n.label}<ChevronDown size={13} />
+                  </Link>
+                  <div className="gnb-drop-menu">
+                    {n.children.map((c) => (
+                      <Link key={c.to} href={c.to} className={isActive(c.to) ? 'active' : ''}>
+                        {c.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <Link key={n.to} href={n.to} className={isActive(n.to, n.end) ? 'active' : ''}>
+                  {n.label}
+                </Link>
+              )
+            )}
           </nav>
           <form className="hsearch" onSubmit={onSearch} role="search">
             <Search size={16} />
