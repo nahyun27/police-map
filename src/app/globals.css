@@ -786,3 +786,9 @@ table.list td a { font-weight: 650; color: var(--ink); }
 .btn.line.danger:hover { background: var(--low-soft); color: var(--low); border-color: var(--low); }
 .notice-card p { flex: 1; min-width: 160px; }
 @media (max-width: 560px) { .notice-card { flex-wrap: wrap; } .notice-card .btn { margin-left: auto; } }
+
+/* ---------- 관리자 가입 추이 미니 바 차트(UserStatsPanel) ---------- */
+.admin-spark { display: flex; align-items: flex-end; gap: 5px; height: 72px; padding-top: 4px; }
+.admin-spark-bar { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.admin-spark-bar i { display: block; width: 100%; border-radius: 4px 4px 0 0; background: var(--brand-soft); transition: background .12s; }
+.admin-spark-bar:hover i { background: var(--brand); }

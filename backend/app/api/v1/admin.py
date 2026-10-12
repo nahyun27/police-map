@@ -1,5 +1,5 @@
 """관리자 API — 모든 엔드포인트는 admin 권한이 필요하고, 모든 조치는 감사 로그에 남는다."""
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -17,7 +17,7 @@ from app.models import (
 )
 from app.models.officer import SOURCE_LABELS
 from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
-from app.schemas.admin import EvidenceVerifyIn, OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate
+from app.schemas.admin import EvidenceVerifyIn, OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate, UserStatsOut
 from app.schemas.public import Page
 from app.schemas.report import AdminReportOut, ResolveReportIn
 from app.schemas.verification import AdminVerifyOut
@@ -26,6 +26,31 @@ from app.services.audit import log_action
 from app.services.reports import batch_target_previews, remove_target, target_preview
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+
+
+# ---------- 가입 회원 통계 ----------
+@router.get("/stats/users", response_model=UserStatsOut)
+def user_stats(db: Session = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+    d7, d30 = now - timedelta(days=7), now - timedelta(days=30)
+    total = db.scalar(select(func.count(User.id))) or 0
+    new_7d = db.scalar(select(func.count(User.id)).where(User.created_at >= d7)) or 0
+    new_30d = db.scalar(select(func.count(User.id)).where(User.created_at >= d30)) or 0
+    officer_verified = db.scalar(select(func.count(User.id)).where(User.officer_station_id.is_not(None))) or 0
+
+    # 최근 14일 일별 가입 수 — 빈 날짜는 0으로 채운다(그래프에서 끊기지 않게).
+    since = now - timedelta(days=13)
+    day_col = func.date(User.created_at)
+    rows = dict(db.execute(
+        select(day_col, func.count(User.id)).where(User.created_at >= since).group_by(day_col)
+    ).all())
+    daily_signups = []
+    for i in range(14):
+        day = (since + timedelta(days=i)).date()
+        count = rows.get(day) or rows.get(day.isoformat()) or 0
+        daily_signups.append((day.isoformat(), int(count)))
+
+    return UserStatsOut(total_users=total, new_7d=new_7d, new_30d=new_30d, officer_verified=officer_verified, daily_signups=daily_signups)
 
 
 # ---------- 평가 검수 ----------

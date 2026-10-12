@@ -551,6 +551,15 @@ export function getMyPostScraps(opts?: { page?: number; size?: number }) {
 
 /* ===================== 관리자 ===================== */
 
+export interface UserStatsOut {
+  total_users: number;
+  new_7d: number;
+  new_30d: number;
+  officer_verified: number;
+  daily_signups: [string, number][];
+}
+export const getAdminUserStats = () => apiFetch<UserStatsOut>('/admin/stats/users');
+
 export interface AdminReview {
   id: number;
   station_id: number;

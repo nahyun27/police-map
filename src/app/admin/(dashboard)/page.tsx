@@ -1,10 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Check, ShieldCheck, Trash2, X } from 'lucide-react';
+import { Check, ShieldCheck, ShieldPlus, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { Card, TableWrap } from '@/components/ui';
 import { formatDate } from '@/lib/format';
-import { approveReview, listAdminReviews, rejectReview, removeReview, setReviewEvidence, type AdminReview, type Page } from '@/lib/api';
+import {
+  approveReview, getAdminUserStats, listAdminReviews, rejectReview, removeReview, setReviewEvidence,
+  type AdminReview, type Page, type UserStatsOut,
+} from '@/lib/api';
 
 const STATUS_TABS: [string, string][] = [
   ['pending', '검수 대기(레거시)'], ['published', '게시됨'], ['rejected', '반려됨'], ['blinded', '임시조치'], ['removed', '삭제됨'],
@@ -19,6 +22,48 @@ function ratingSummary(r: AdminReview): string {
     .filter(([, v]) => v !== null)
     .map(([k, v]) => `${labels[k] ?? k} ${v}`)
     .join(' · ') || '-';
+}
+
+/** 가입 회원 현황. 방문자(트래픽) 통계는 아직 수집하는 인프라가 없어서(비로그인으로도
+ * 다 쓸 수 있는 사이트라 방문자 추적 도구를 넣을지는 별도로 정할 문제) 여기엔 없다. */
+function UserStatsPanel() {
+  const [stats, setStats] = useState<UserStatsOut | null>(null);
+
+  useEffect(() => { getAdminUserStats().then(setStats).catch(() => {}); }, []);
+
+  if (!stats) return null;
+  const max = Math.max(1, ...stats.daily_signups.map(([, c]) => c));
+
+  return (
+    <Card>
+      <h2><Users size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />가입 회원 현황</h2>
+      <div className="grid3">
+        <Card className="kpi stat flat">
+          <div className="ico"><Users size={19} /></div>
+          <div><div className="num">{stats.total_users.toLocaleString()}</div><div className="lbl">전체 가입자</div></div>
+        </Card>
+        <Card className="kpi stat flat">
+          <div className="ico"><UserPlus size={19} /></div>
+          <div>
+            <div className="num">{stats.new_7d.toLocaleString()}</div>
+            <div className="lbl">최근 7일 신규 가입(30일 {stats.new_30d.toLocaleString()}명)</div>
+          </div>
+        </Card>
+        <Card className="kpi stat flat">
+          <div className="ico"><ShieldPlus size={19} /></div>
+          <div><div className="num">{stats.officer_verified.toLocaleString()}</div><div className="lbl">경찰관 인증 완료</div></div>
+        </Card>
+      </div>
+      <p className="sub" style={{ marginTop: 18, marginBottom: 8 }}>최근 14일 일별 가입</p>
+      <div className="admin-spark">
+        {stats.daily_signups.map(([day, count]) => (
+          <div key={day} className="admin-spark-bar" title={`${day} · ${count}명`}>
+            <i style={{ height: `${Math.max(4, (count / max) * 100)}%` }} />
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
 }
 
 export default function AdminReviewQueuePage() {
@@ -79,7 +124,9 @@ export default function AdminReviewQueuePage() {
   const colCount = 7 + 1 + (showAction ? 1 : 0) + (showReason ? 1 : 0); // +1 은 증빙 열
 
   return (
-    <Card>
+    <>
+      <UserStatsPanel />
+      <Card>
       <div className="seg">
         {STATUS_TABS.map(([v, l]) => (
           <button key={v} type="button" className={status === v ? 'active' : ''} onClick={() => setStatus(v)}>{l}</button>
@@ -170,6 +217,7 @@ export default function AdminReviewQueuePage() {
           {page < totalPages && <button className="btn line sm" onClick={() => setPage((p) => p + 1)}>다음</button>}
         </div>
       )}
-    </Card>
+      </Card>
+    </>
   );
 }

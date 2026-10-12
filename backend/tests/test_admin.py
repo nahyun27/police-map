@@ -146,3 +146,26 @@ def test_patch_officer_unpublish_and_replace_assignments(admin_client, world):
     r2 = admin_client.patch(f"{API}/admin/officers/{oid}", json={"is_published": False})
     assert r2.status_code == 200 and r2.json()["is_published"] is False
     assert admin_client.patch(f"{API}/admin/officers/9999", json={"rank": "경감"}).status_code == 404
+
+
+def test_user_stats_requires_admin(client, user_client):
+    assert client.get(f"{API}/admin/stats/users").status_code == 401
+    assert user_client.get(f"{API}/admin/stats/users").status_code == 403
+
+
+def test_user_stats_counts(admin_client, db):
+    from conftest import make_user
+
+    r = admin_client.get(f"{API}/admin/stats/users")
+    assert r.status_code == 200
+    base = r.json()
+    assert base["total_users"] >= 1  # admin_client 가 만든 관리자 본인
+
+    make_user(db, "stat-a@example.com")
+    make_user(db, "stat-b@example.com")
+    r2 = admin_client.get(f"{API}/admin/stats/users").json()
+    assert r2["total_users"] == base["total_users"] + 2
+    assert r2["new_7d"] == base["new_7d"] + 2
+    assert len(r2["daily_signups"]) == 14
+    # 오늘(마지막 항목)에 방금 만든 2명이 잡혀야 한다.
+    assert r2["daily_signups"][-1][1] >= base["daily_signups"][-1][1] + 2
