@@ -163,7 +163,7 @@ export default function RemedyNavigator({ contextLabel, stationId }: { contextLa
 
   return (
     <>
-      <section className="card hero compact">
+      <section className="card hero compact hero-bleed">
         {/* eslint-disable-next-line @next/next/no-img-element -- 장식용 배경 이미지라 Next Image 최적화(반응형 srcset 등)가 필요 없고, 그냥 <img> 가 더 단순하다 */}
         <img src="/images/remedy-hero.webp" alt="" aria-hidden="true" className="hero-photo" />
         <div className="eyebrow">권리구제</div>

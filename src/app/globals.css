@@ -507,9 +507,24 @@ table.list td a { font-weight: 650; color: var(--ink); }
 .hero.compact { padding: 40px 44px 42px; }
 .hero.compact h1 { font-size: clamp(26px, 3.6vw, 36px); }
 .hero.compact .lead { font-size: 15.5px; margin-top: 12px; }
+
+/* 카드처럼 둥글게 떠 있는 대신 뷰포트 양 끝까지 꽉 채우고, 헤더 바로 아래 여백 없이
+   붙는 히어로(권리구제·제보 페이지). main 의 max-width 컨테이너를 뚫고 나가되, 안의
+   글자는 padding 으로 다시 본문과 같은 자리에 맞춘다. */
+.hero.hero-bleed {
+  width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); margin-top: -32px;
+  border-radius: 0;
+  padding-left: calc((100vw - min(100vw, var(--container))) / 2 + 24px);
+  padding-right: calc((100vw - min(100vw, var(--container))) / 2 + 24px);
+}
 @media (max-width: 860px) {
   .hero { padding: 40px 24px 0; border-radius: 22px; }
   .hero.compact { padding: 30px 22px 32px; }
+  .hero.hero-bleed {
+    margin-top: -20px;
+    padding-left: calc((100vw - min(100vw, var(--container))) / 2 + 16px);
+    padding-right: calc((100vw - min(100vw, var(--container))) / 2 + 16px);
+  }
   .hero-stats { margin: 36px -24px 0; }
   .hero-stats > div { padding: 18px 12px; text-align: center; }
   .hero-stats .num { font-size: 21px; }

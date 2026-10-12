@@ -8,7 +8,7 @@ import { OVERSIGHT_ORGS, PRESS_CHANNELS } from '@/data/report';
 export default function ReportPageBody({ stationName }: { stationName?: string }) {
   return (
     <>
-      <section className="card hero compact">
+      <section className="card hero compact hero-bleed">
         {/* eslint-disable-next-line @next/next/no-img-element -- 장식용 배경 이미지, Next Image 최적화 불필요 */}
         <img src="/images/report-hero.webp" alt="" aria-hidden="true" className="hero-photo" />
         <div className="eyebrow">제보</div>
