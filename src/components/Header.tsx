@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronDown, MapPinned, Menu, Search, User, X } from 'lucide-react';
+import { ChevronDown, Menu, Search, User, X } from 'lucide-react';
 import { getMe, type UserOut } from '@/lib/api';
 import { useSearchSuggestions } from '@/lib/useSearchSuggestions';
 
@@ -65,8 +66,7 @@ export default function Header() {
     <header className="site-header">
       <div className="hwrap">
         <Link href="/" className="logo">
-          <span className="logo-mark"><MapPinned size={18} /></span>
-          <span>폴리스<em>맵</em></span>
+          <Image src="/images/logo.webp" alt="폴리스맵" width={200} height={72} className="logo-img" priority />
         </Link>
         <button className="menu-btn" onClick={() => setOpen((v) => !v)} aria-label="메뉴" aria-expanded={open}>
           {open ? <X size={20} /> : <Menu size={20} />}
