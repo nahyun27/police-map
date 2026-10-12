@@ -4,7 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  ArrowRight, Check, ExternalLink, FileText, Landmark, Lightbulb, Megaphone, MessageCircleQuestion, ShieldAlert,
+  ArrowRight, Check, CheckCircle2, Compass, ExternalLink, FileText, Landmark, Lightbulb, Megaphone,
+  MessageCircleQuestion, ShieldAlert,
 } from 'lucide-react';
 import { Card, EmptyState, TableWrap } from '@/components/ui';
 import { REMEDY } from '@/data/sample';
@@ -163,6 +164,15 @@ export default function RemedyNavigator({ contextLabel, stationId }: { contextLa
   return (
     <>
       <section className="card hero compact">
+        <div className="hero-illust" aria-hidden="true">
+          <div className="hero-illust-ring" />
+          <div className="hero-illust-badge">
+            <Compass size={40} strokeWidth={1.6} />
+          </div>
+          <div className="hero-illust-check">
+            <CheckCircle2 size={22} strokeWidth={2} />
+          </div>
+        </div>
         <div className="eyebrow">권리구제</div>
         <h1>권리구제 내비게이터</h1>
         <p className="lead">
