@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Bookmark, MessageSquare, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
@@ -78,6 +78,20 @@ export function Engagement({
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<number | null>(null);
   const [replyDraft, setReplyDraft] = useState('');
+  const draftRef = useRef<HTMLTextAreaElement>(null);
+  const replyDraftRef = useRef<HTMLTextAreaElement>(null);
+
+  // 댓글 입력창을 입력한 만큼 늘어나게 한다. onInput 대신 value(draft/replyDraft)를 감시하는
+  // 이유는, 등록 후 setDraft('') 처럼 "코드로" 값을 비울 때는 네이티브 input 이벤트가 안 떠서
+  // onInput 핸들러만으로는 높이가 줄어든 채로 안 돌아오기 때문(실사용자 리포트로 발견).
+  useEffect(() => {
+    const el = draftRef.current;
+    if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; }
+  }, [draft]);
+  useEffect(() => {
+    const el = replyDraftRef.current;
+    if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; }
+  }, [replyDraft]);
 
   const loginLink = `/login?next=${encodeURIComponent(pathname)}`;
 
@@ -189,7 +203,8 @@ export function Engagement({
       {replyTo === c.id && (
         <div className="cmt-form">
           <textarea
-            value={replyDraft} onChange={(e) => setReplyDraft(e.target.value)} placeholder="답글을 입력하세요" maxLength={1000} rows={1}
+            ref={replyDraftRef} value={replyDraft} onChange={(e) => setReplyDraft(e.target.value)}
+            placeholder="답글을 입력하세요" maxLength={1000} rows={1}
           />
           <button type="button" className="btn sm" onClick={() => submit(replyDraft, c.id)} disabled={!replyDraft.trim()}>등록</button>
         </div>
@@ -233,7 +248,10 @@ export function Engagement({
           {comments && comments.length === 0 && <p className="sub">첫 댓글을 남겨 보세요.</p>}
           {comments?.map((c) => renderComment(c))}
           <div className="cmt-form">
-            <textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="댓글을 입력하세요" maxLength={1000} rows={1} />
+            <textarea
+              ref={draftRef} value={draft} onChange={(e) => setDraft(e.target.value)}
+              placeholder="댓글을 입력하세요" maxLength={1000} rows={1}
+            />
             <button type="button" className="btn sm" onClick={() => submit(draft)} disabled={!draft.trim()}>등록</button>
           </div>
         </div>
