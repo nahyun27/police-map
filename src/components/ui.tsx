@@ -79,11 +79,10 @@ export function Card({ children, className = '', style }: { children: ReactNode;
 }
 
 export function PageHead({
-  eyebrow, title, sub, actions, children,
+  title, sub, actions, children,
 }: { eyebrow?: string; title: string; sub?: string; actions?: ReactNode; children?: ReactNode }) {
   return (
     <header className="pagehead">
-      {eyebrow && <div className="eyebrow">{eyebrow}</div>}
       <div className="pagehead-title-row">
         <h1>{title}</h1>
         {actions}
