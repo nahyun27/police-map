@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { useSearchSuggestions } from '@/lib/useSearchSuggestions';
@@ -12,6 +13,27 @@ export default function HeroSearch() {
   const [active, setActive] = useState(-1);
   const { items, loading } = useSearchSuggestions(q, open);
   const wrapRef = useRef<HTMLDivElement>(null);
+  // 히어로 섹션(.hero)이 둥근 모서리 배경을 잘라내려고 overflow:hidden 을 쓰고 있어서,
+  // 드롭다운을 그 안에 그대로 두면 섹션 아래로 넘치는 부분이 잘린다. document.body 에
+  // 포털로 그려서 잘림을 피하고, 입력창 위치를 재서 CSS로 좌표만 맞춰 준다.
+  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const el = wrapRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setRect({ top: r.bottom + window.scrollY + 6, left: r.left + window.scrollX, width: r.width });
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [open]);
 
   const goStation = (id: number) => {
     setOpen(false);
@@ -32,6 +54,8 @@ export default function HeroSearch() {
     else if (e.key === 'Escape') setOpen(false);
   };
 
+  const showSuggest = open && q.trim() && (items.length > 0 || loading) && rect;
+
   return (
     <div className="bigsearch-wrap" ref={wrapRef}>
       <form className="bigsearch" onSubmit={onSearch} role="search">
@@ -49,8 +73,8 @@ export default function HeroSearch() {
         />
         <button className="btn" type="submit">검색</button>
       </form>
-      {open && q.trim() && (items.length > 0 || loading) && (
-        <ul className="search-suggest">
+      {showSuggest && typeof document !== 'undefined' && createPortal(
+        <ul className="search-suggest search-suggest-portal" style={{ top: rect.top, left: rect.left, width: rect.width }}>
           {items.map((s, i) => (
             <li key={s.id}>
               <button
@@ -62,7 +86,8 @@ export default function HeroSearch() {
             </li>
           ))}
           {loading && !items.length && <li className="search-suggest-empty">검색 중…</li>}
-        </ul>
+        </ul>,
+        document.body,
       )}
     </div>
   );

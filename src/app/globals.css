@@ -110,6 +110,11 @@ nav.gnb a.active { color: var(--ink); background: var(--line2); }
   background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-hover);
   padding: 6px; max-height: 320px; overflow-y: auto;
 }
+/* 히어로 검색창은 .hero 의 overflow:hidden(둥근 모서리 배경을 잘라내는 용도)에 걸려
+   드롭다운이 섹션 밖으로 못 나가므로, document.body 에 포털로 그리고 좌표는 JS로 직접
+   맞춘다(HeroSearch.tsx) — top/left/width 를 인라인 스타일로 주므로 여기선 기본
+   top/left/right 지정을 꺼서 겹치지 않게 한다. */
+.search-suggest-portal { position: absolute; top: 0; left: 0; right: auto; }
 .search-suggest li + li { margin-top: 2px; }
 .search-suggest button {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%;
