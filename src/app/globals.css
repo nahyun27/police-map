@@ -28,12 +28,15 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; height: 100%; }
 body {
   font-family: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   background: var(--bg); color: var(--ink);
   font-size: 15px; line-height: 1.65; letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word;
+  /* 내용이 화면보다 짧은 페이지(로그인 폼 등)에서도 푸터가 중간에 떠버리지 않고 항상
+     뷰포트 하단에 붙도록 하는 sticky-footer 패턴. main 이 남는 공간을 전부 채운다. */
+  min-height: 100%; display: flex; flex-direction: column;
 }
 a { color: var(--brand); text-decoration: none; cursor: pointer; }
 a:hover { color: var(--brand-ink); }
@@ -107,9 +110,9 @@ nav.gnb a.active { color: var(--ink); background: var(--line2); }
 .hauth a:not(.btn):hover { color: var(--ink); }
 .hauth-user { display: inline-flex; align-items: center; gap: 5px; color: var(--ink) !important; }
 
-main { max-width: var(--container); margin: 0 auto; padding: 32px 24px 88px; }
+main { max-width: var(--container); margin: 0 auto; padding: 32px 24px 88px; width: 100%; flex: 1 0 auto; }
 
-footer.site { background: var(--navy); color: #94a3c4; font-size: 13px; padding: 44px 0; }
+footer.site { background: var(--navy); color: #94a3c4; font-size: 13px; padding: 44px 0; flex-shrink: 0; }
 .fwrap { max-width: var(--container); margin: 0 auto; padding: 0 24px; display: grid; gap: 14px; }
 footer.site .flogo { color: #fff; font-weight: 800; font-size: 17px; letter-spacing: -0.03em; }
 footer.site .flinks { display: flex; flex-wrap: wrap; gap: 6px 20px; }
