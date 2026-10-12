@@ -260,10 +260,12 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  background: var(--brand); color: #fff; border: 1px solid transparent; border-radius: 12px;
+  background: linear-gradient(135deg, #4a78ff, var(--brand) 55%, var(--brand-ink)); color: #fff;
+  border: 1px solid transparent; border-radius: 12px; box-shadow: 0 8px 20px -10px rgba(36, 86, 245, .65);
   padding: 11px 18px; font-size: 14.5px; font-weight: 650; cursor: pointer; transition: .15s; white-space: nowrap;
 }
-.btn:hover { background: var(--brand-ink); color: #fff; }
+.btn:hover { background: linear-gradient(135deg, #5f88ff, #3a66f0 55%, var(--brand)); color: #fff; transform: translateY(-1px); box-shadow: 0 12px 24px -10px rgba(36, 86, 245, .75); }
+.btn:active { transform: translateY(0); box-shadow: 0 4px 12px -8px rgba(36, 86, 245, .6); }
 .btn.line { background: #fff; color: var(--ink); border-color: var(--line); }
 .btn.line:hover { background: var(--bg); color: var(--ink); border-color: #cfd4df; }
 .btn.light { background: #fff; color: var(--navy); }
@@ -556,6 +558,19 @@ table.list td a { font-weight: 650; color: var(--ink); }
 .map-toggle button.active { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(11, 18, 32, .12); }
 /* 둘 중 뭘 올려도 영역 전체가 반응해 "짝"이라는 느낌을 준다(전환은 클릭해야만 일어남). */
 .map-toggle:hover button { border-color: var(--brand-soft); }
+
+/* 범용 세그먼트 토글 — 게시판 정렬/기간 필터처럼 서로 다른 성격의 버튼들이 한 줄에
+   늘어서 있으면 전부 똑같은 색 버튼처럼 보여 뭐가 뭔지 헷갈린다(실사용자 피드백).
+   .map-toggle 과 같은 트레이 안에 옵션들을 묶어서 "이 안에서 하나만 고르는 그룹"이라는
+   게 한눈에 보이게 한다. a/button 둘 다 지원(필터는 Link, 지도 토글은 button). */
+.seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--line2); border-radius: 999px; flex-wrap: nowrap; }
+.seg a, .seg button {
+  display: inline-flex; align-items: center; border: none; background: transparent; padding: 7px 14px;
+  border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
+  transition: background .12s, color .12s; white-space: nowrap;
+}
+.seg a.active, .seg button.active { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(11, 18, 32, .12); }
+.seg a:hover:not(.active), .seg button:hover:not(.active) { color: var(--ink); }
 
 /* ---------- 간소화(타일 격자) 보기(RegionGridMap) ---------- */
 .region-grid-map { display: grid; gap: 5px; max-width: 320px; margin: 6px auto 4px; aspect-ratio: 4 / 7; }

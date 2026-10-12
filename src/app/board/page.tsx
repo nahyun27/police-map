@@ -83,11 +83,17 @@ export default async function BoardPage({ searchParams }: Props) {
           </form>
           <div className="btn-row board-filter-group">
             <RegionFilterSelect regions={regions} value={region ?? ''} category={category} sort={sort} period={period} q={q} />
-            <Link href={buildHref({ ...f, sort: 'new', page: 1 })} className={`btn sm ${sort === 'new' ? '' : 'line'}`}>최신순</Link>
-            <Link href={buildHref({ ...f, sort: 'top', page: 1 })} className={`btn sm ${sort === 'top' ? '' : 'line'}`}>인기순</Link>
-            {sort === 'top' && PERIOD_OPTIONS.map(([v, l]) => (
-              <Link key={v} href={buildHref({ ...f, sort: 'top', period: v, page: 1 })} className={`btn sm ${period === v ? '' : 'line'}`}>{l}</Link>
-            ))}
+            <div className="seg">
+              <Link href={buildHref({ ...f, sort: 'new', page: 1 })} className={sort === 'new' ? 'active' : ''}>최신순</Link>
+              <Link href={buildHref({ ...f, sort: 'top', page: 1 })} className={sort === 'top' ? 'active' : ''}>인기순</Link>
+            </div>
+            {sort === 'top' && (
+              <div className="seg">
+                {PERIOD_OPTIONS.map(([v, l]) => (
+                  <Link key={v} href={buildHref({ ...f, sort: 'top', period: v, page: 1 })} className={period === v ? 'active' : ''}>{l}</Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </Card>
