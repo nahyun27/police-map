@@ -10,7 +10,7 @@ export default function ReportPageBody({ stationName }: { stationName?: string }
     <>
       <section className="card hero compact">
         {/* eslint-disable-next-line @next/next/no-img-element -- 장식용 배경 이미지, Next Image 최적화 불필요 */}
-        <img src="/images/report-hero.jpg" alt="" aria-hidden="true" className="hero-photo" />
+        <img src="/images/report-hero.webp" alt="" aria-hidden="true" className="hero-photo" />
         <div className="eyebrow">제보</div>
         <h1>언론·감독기관 제보 안내</h1>
         <p className="lead">

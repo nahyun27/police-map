@@ -766,11 +766,13 @@ table.list td a { font-weight: 650; color: var(--ink); }
    그라데이션 속으로 자연스럽게 사라지게 마스크를 건다. */
 /* 전체 폭을 덮지 않고 오른쪽에만, 세로 길이에 맞춰 원본 비율대로 보여준다(가로로
    늘리거나 위아래를 잘라내지 않음 — width:auto 로 height 기준 비율 계산). */
+/* 배경이 투명한 PNG/WebP라 네이비 사각형 테두리가 안 생긴다 — 더는 배경색을 숨기려고
+   불투명도를 낮출 필요가 없어서 거의 그대로 보여주고, 왼쪽 가장자리만 살짝 페이드한다. */
 .hero-photo {
   position: absolute; right: 0; top: 0; height: 100%; width: auto;
-  opacity: .6; pointer-events: none;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, .6) 22%, #000 50%);
-  mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, .6) 22%, #000 50%);
+  opacity: .96; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, .7) 10%, #000 28%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, .7) 10%, #000 28%);
 }
 /* 사진이 들어간 히어로는 기본 높이가 사진 비율에 비해 너무 낮아서 object-fit:cover 가
    위아래를 과하게 잘라냈다(실사용자 피드백) — 사진 있는 히어로만 최소 높이를 넉넉히 준다. */
