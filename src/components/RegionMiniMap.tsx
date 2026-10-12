@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import koreaMap from '@/data/koreaMap.json';
 import stationPinsData from '@/data/stationPins.json';
@@ -14,10 +15,12 @@ interface RegionMiniMapProps {
 /** 경찰서 좌표는 backend/scripts/geocode_stations.py 로 지오코딩한 값을 투영한 정적 데이터다
  * (src/data/stationPins.json). 좌표가 없는 관서는 핀 없이 생략된다. */
 export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps) {
+  const router = useRouter();
   const feature = koreaMap.features.find((f) => f.id === regionId);
   const pins = (stationPinsData.pins as { id: number; region: string; x: number; y: number }[]).filter(
     (p) => p.region === regionId,
   );
+  const [hoverId, setHoverId] = useState<number | null>(null);
   if (!feature || !pins.length) return null;
 
   const stationMap = new Map(stations.map((s) => [s.id, s]));
@@ -34,6 +37,23 @@ export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps
   // 찍히는 실제 글자 크기가 똑같이 유지된다(위 pinR 주석 참고).
   const labelFontSize = Math.min(9, Math.max(3.4, vbWidth * 0.024));
 
+  const visible = pins
+    .map((p) => {
+      const st = stationMap.get(p.id);
+      if (!st) return null;
+      const overall = st.rating.overall;
+      const tone = overall === null ? 'none' : overall >= 3.8 ? 'good' : overall >= 3.2 ? 'mid' : 'low';
+      return { ...p, name: st.name, tone };
+    })
+    .filter((p): p is NonNullable<typeof p> => p !== null);
+
+  const goTo = (stationId: number) => router.push(`/station/${stationId}`);
+
+  // 라벨은 핀(방패)과 별도 레이어로, 나중에 그려서 항상 지도 위에 뜨게 한다. 호버 중인
+  // 라벨이 다른 라벨에 가려지지 않도록 배열 맨 뒤로 보내 SVG 그리기 순서상 맨 위에 오게 한다
+  // (KoreaMap.tsx 의 지역명 라벨도 같은 이유로 지역 도형과 별도 pass 로 그린다).
+  const labelOrder = [...visible].sort((a, b) => (a.id === hoverId ? 1 : b.id === hoverId ? -1 : 0));
+
   return (
     <Card>
       <h2>경찰서 위치</h2>
@@ -41,18 +61,32 @@ export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps
       <div className="region-mini-map-wrap">
         <svg viewBox={viewBox} className="region-mini-map" role="img" aria-label={`${regionId} 관할 경찰서 위치`}>
           <path d={feature.d} className="region-mini-shape" />
-          {pins.map((p) => {
-            const st = stationMap.get(p.id);
-            if (!st) return null;
-            const overall = st.rating.overall;
-            const tone = overall === null ? 'none' : overall >= 3.8 ? 'good' : overall >= 3.2 ? 'mid' : 'low';
-            return (
-              <RegionPin
-                key={p.id} x={p.x} y={p.y} r={pinR} name={st.name} tone={tone} stationId={p.id}
-                labelFontSize={labelFontSize}
-              />
-            );
-          })}
+          {visible.map((p) => (
+            <g
+              key={p.id}
+              className={`region-pin tone-${p.tone}`}
+              transform={`translate(${p.x} ${p.y})`}
+              tabIndex={0}
+              role="button"
+              aria-label={`${p.name} 상세 보기`}
+              onClick={() => goTo(p.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goTo(p.id); }
+              }}
+              onMouseEnter={() => setHoverId(p.id)}
+              onMouseLeave={() => setHoverId((cur) => (cur === p.id ? null : cur))}
+              onFocus={() => setHoverId(p.id)}
+              onBlur={() => setHoverId((cur) => (cur === p.id ? null : cur))}
+            >
+              <path d={shieldPath(pinR)} strokeWidth={pinR * 0.3} strokeLinejoin="round" className="pin-shield" />
+            </g>
+          ))}
+          {labelOrder.map((p) => (
+            <PinLabel
+              key={p.id} x={p.x} y={p.y} r={pinR} name={p.name} fontSize={labelFontSize}
+              active={p.id === hoverId} dimmed={hoverId !== null && p.id !== hoverId}
+            />
+          ))}
         </svg>
       </div>
     </Card>
@@ -72,52 +106,46 @@ function shieldPath(r: number): string {
   return `M${pts.map(([px, py]) => `${px},${py}`).join(' L')} Z`;
 }
 
-function RegionPin({
-  x, y, r, name, tone, stationId, labelFontSize,
-}: { x: number; y: number; r: number; name: string; tone: string; stationId: number; labelFontSize: number }) {
-  const router = useRouter();
-
-  // 브라우저 기본 title 툴팁(딜레이 길고 각지고 못생김) 대신 핀 위에 뜨는 말풍선 라벨을
-  // 직접 그린다. getBBox로 실측하지 않고 글자 수로 폭을 어림하는 이유는 이 컴포넌트가
-  // 서버에서도 렌더되는 Region 상세 페이지 하위라 마운트 시점에 측정 깜빡임을 피하고
-  // 싶어서 — 경찰서 이름은 한글 완성형뿐이라 글자당 너비가 거의 균일해 어림해도 충분하다.
-  const padX = labelFontSize * 0.62;
-  const labelW = name.length * labelFontSize * 1.04 + padX * 2;
-  const labelH = labelFontSize * 2.15;
-  const gap = r * 0.55 + labelFontSize * 0.3;
+/**
+ * 경찰서 이름 라벨. 평소엔 글자만 회색으로 늘 떠 있다가(지역에 관서가 많아도 지도가
+ * 글자 뭉치로 덮이지 않도록 — 서울처럼 34곳이 몰린 지역에서 말풍선을 전부 띄워보면
+ * 서로 겹쳐 뭉개진다), 호버·포커스한 핀만 검정 말풍선(배경+화살표)으로 커지며 도드라진다.
+ */
+function PinLabel({
+  x, y, r, name, fontSize, active, dimmed,
+}: { x: number; y: number; r: number; name: string; fontSize: number; active: boolean; dimmed: boolean }) {
+  // getBBox로 실측하지 않고 글자 수로 폭을 어림하는 이유는 이 컴포넌트가 서버에서도
+  // 렌더되는 Region 상세 페이지 하위라 마운트 시점에 측정 깜빡임을 피하고 싶어서 —
+  // 경찰서 이름은 한글 완성형뿐이라 글자당 너비가 거의 균일해 어림해도 충분하다.
+  const padX = fontSize * 0.62;
+  const labelW = name.length * fontSize * 1.04 + padX * 2;
+  const labelH = fontSize * 2.15;
+  const gap = r * 0.55 + fontSize * 0.3;
   const labelBottom = -r * 1.6 - gap;
   const labelTop = labelBottom - labelH;
-  const arrowW = labelFontSize * 0.68;
+  const arrowW = fontSize * 0.68;
+  const textY = -r * 1.6 - fontSize * 0.55; // 말풍선 없이 텍스트만 뜰 때 핀 바로 위 기준선
 
   return (
     <g
-      className={`region-pin tone-${tone}`}
+      className={`pin-label${active ? ' active' : ''}${dimmed ? ' dimmed' : ''}`}
       transform={`translate(${x} ${y})`}
-      tabIndex={0}
-      role="button"
-      aria-label={`${name} 상세 보기`}
-      onClick={() => router.push(`/station/${stationId}`)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          router.push(`/station/${stationId}`);
-        }
-      }}
+      aria-hidden="true"
     >
-      <path d={shieldPath(r)} strokeWidth={r * 0.3} strokeLinejoin="round" className="pin-shield" />
-      <g className="pin-label">
-        <path
-          d={`M${-arrowW},${labelBottom} L${arrowW},${labelBottom} L0,${labelBottom + gap * 0.9} Z`}
-          className="pin-label-arrow"
-        />
-        <rect
-          x={-labelW / 2} y={labelTop} width={labelW} height={labelH} rx={labelH / 2}
-          className="pin-label-bg"
-        />
-        <text x={0} y={(labelTop + labelBottom) / 2} fontSize={labelFontSize} className="pin-label-text">
-          {name}
-        </text>
-      </g>
+      <path
+        d={`M${-arrowW},${labelBottom} L${arrowW},${labelBottom} L0,${labelBottom + gap * 0.9} Z`}
+        className="pin-label-arrow"
+      />
+      <rect
+        x={-labelW / 2} y={labelTop} width={labelW} height={labelH} rx={labelH / 2}
+        className="pin-label-bg"
+      />
+      <text
+        x={0} y={active ? (labelTop + labelBottom) / 2 : textY} fontSize={fontSize}
+        className="pin-label-text"
+      >
+        {name}
+      </text>
     </g>
   );
 }

@@ -295,6 +295,8 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 .chapter-chip { flex-shrink: 0; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--navy); color: #fff; font-weight: 800; font-size: 13.5px; letter-spacing: -0.02em; margin-top: 2px; }
 .why-chapter-head h2 { margin-bottom: 4px; }
 .why-chapter-head .eyebrow { margin-bottom: 4px; }
+.step-head { display: flex; align-items: center; gap: 12px; }
+.step-head .chapter-chip { margin-top: 0; }
 
 .why-case { border-top: 3px solid transparent; border-radius: 0; }
 .why-case-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
@@ -559,13 +561,22 @@ table.list td a { font-weight: 650; color: var(--ink); }
 .region-pin.tone-low .pin-shield { fill: var(--low); }
 .region-pin.tone-none .pin-shield { fill: var(--muted); }
 
-/* 핀에 호버하면 뜨는 경찰서 이름 라벨. 브라우저 기본 title 툴팁 대신 직접 그린 말풍선이라
-   디자인(둥근 배경·그림자·화살표)을 맘대로 입힐 수 있다. */
-.pin-label { opacity: 0; transform: translateY(2px); transform-box: fill-box; transform-origin: center bottom; transition: opacity .12s, transform .12s; pointer-events: none; filter: drop-shadow(0 3px 8px rgba(11, 18, 32, .22)); }
-.region-pin:hover .pin-label, .region-pin:focus-visible .pin-label { opacity: 1; transform: translateY(0); }
-.pin-label-bg { fill: var(--ink); }
-.pin-label-arrow { fill: var(--ink); }
-.pin-label-text { fill: #fff; font-weight: 700; text-anchor: middle; dominant-baseline: central; font-family: inherit; letter-spacing: -0.01em; }
+/* 경찰서 이름 라벨 — 평소엔 글자만(진한 회색 + 흰 테두리) 늘 떠 있고, 호버·포커스한 핀만
+   검정 말풍선(배경+화살표)으로 커지며 도드라진다. 핀이 많은 지역(예: 서울 34곳)에서 말풍선을
+   전부 띄우면 서로 겹쳐 뭉개지므로, 기본 상태는 KoreaMap.tsx 의 지역명 라벨과 같은 가벼운
+   텍스트-전용 방식을 쓴다. */
+.pin-label { pointer-events: none; transition: opacity .15s; }
+.pin-label-bg, .pin-label-arrow { fill: var(--ink); opacity: 0; transition: opacity .15s; }
+.pin-label-text {
+  fill: var(--ink2); font-weight: 700; text-anchor: middle; dominant-baseline: central;
+  font-family: inherit; letter-spacing: -0.01em; paint-order: stroke; stroke: #fff; stroke-width: 2.6px;
+  stroke-linejoin: round; transition: fill .15s, transform .15s; transform-box: fill-box; transform-origin: center;
+}
+.pin-label.dimmed .pin-label-text { fill: var(--muted); }
+
+.pin-label.active { filter: drop-shadow(0 2px 6px rgba(11, 18, 32, .22)); }
+.pin-label.active .pin-label-bg, .pin-label.active .pin-label-arrow { opacity: 1; }
+.pin-label.active .pin-label-text { fill: #fff; stroke: none; transform: scale(1.1); }
 
 /* ---------- Feature cards ---------- */
 .feature .ico { width: 44px; height: 44px; border-radius: 13px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; margin-bottom: 18px; }

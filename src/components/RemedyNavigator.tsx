@@ -3,9 +3,20 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowRight, Check, ExternalLink, FileText, Lightbulb, Megaphone, Share2 } from 'lucide-react';
+import {
+  ArrowRight, Check, ExternalLink, FileText, Landmark, Lightbulb, Megaphone, MessageCircleQuestion, ShieldAlert,
+} from 'lucide-react';
 import { Card, EmptyState, TableWrap } from '@/components/ui';
 import { REMEDY } from '@/data/sample';
+
+// 실제로 단일 전국 접수 사이트가 있는 절차만 "공식 접수처 바로가기" 버튼을 보여준다.
+// 기피신청·수사심의·불송치 이의신청처럼 접수처가 "해당 경찰서"·"시·도경찰청"으로 관서마다
+// 다른 경우는 가짜 링크를 달 수 없어 badge 로 보여주는 접수처 명칭만으로 안내한다.
+const REMEDY_URL: Record<string, string> = {
+  attitude: 'https://www.epeople.go.kr/',
+  rights: 'https://www.humanrights.go.kr/',
+  corrupt: 'https://www.clean.go.kr/',
+};
 
 const CHANNELS = [
   ['국민신문고', '태도·미통지 등 일반 민원', 'epeople.go.kr', '7~14일 내 처리·회신'],
@@ -26,7 +37,7 @@ function FindTab({ contextLabel, stationId }: { contextLabel?: string; stationId
   return (
     <>
       <Card>
-        <h2>어떤 문제를 겪으셨나요?</h2>
+        <h2><MessageCircleQuestion size={18} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--brand)' }} />어떤 문제를 겪으셨나요?</h2>
         {contextLabel && (
           <div className="guidebox" style={{ marginTop: 0 }}>
             선택된 맥락 · <b>{contextLabel}</b> 관련 경험을 바탕으로 안내합니다.
@@ -49,28 +60,23 @@ function FindTab({ contextLabel, stationId }: { contextLabel?: string; stationId
               <span className="badge">접수처 · {r.to}</span>
             </div>
             <p style={{ color: 'var(--ink2)' }}>{r.how}</p>
-            <div className="guidebox" style={{ display: 'flex', gap: 12 }}>
+            <div className="guidebox" style={{ display: 'flex', gap: 12, marginBottom: 0 }}>
               <Lightbulb size={18} style={{ color: 'var(--mid)', marginTop: 3 }} />
               <div><b>실무 팁:</b> {r.tip}</div>
             </div>
-            <div className="btn-row">
-              <button className="btn"
-                onClick={() => alert(`데모: 실서비스에서는 항목을 채우면 완성되는 자가 작성용 ${r.ch} 템플릿이 제공됩니다.\n(서류 작성·제출 대행이 아닌 정보 제공입니다)`)}>
-                <FileText size={16} />서식 템플릿 열기
-              </button>
-              <button className="btn line" onClick={() => alert('데모: 실서비스에서는 공식 접수처(국민신문고 등) 링크로 이동합니다.')}>
-                <ExternalLink size={16} />공식 접수처 바로가기
-              </button>
-              <button className="btn line" onClick={() => alert('데모: 진행 결과를 익명 통계로 공유하는 화면으로 이동합니다.')}>
-                <Share2 size={16} />진행 결과 공유(익명)
-              </button>
-            </div>
+            {REMEDY_URL[r.id] && (
+              <div className="btn-row" style={{ marginTop: 16 }}>
+                <a href={REMEDY_URL[r.id]} target="_blank" rel="noopener noreferrer" className="btn">
+                  <ExternalLink size={16} />공식 접수처 바로가기
+                </a>
+              </div>
+            )}
           </div>
         )}
       </Card>
 
       <Card>
-        <h2>언론·감독기관에 알리고 싶은 사안인가요?</h2>
+        <h2><Megaphone size={17} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--brand)' }} />언론·감독기관에 알리고 싶은 사안인가요?</h2>
         <p className="sub">중대 비위나 구조적 문제는 민원보다 제보가 효과적일 수 있습니다.</p>
         <Link href={stationId ? `/report/${stationId}` : '/report'} className="btn line sm" style={{ marginTop: 8 }}>
           제보 안내 및 작성 도우미로 <ArrowRight size={14} />
@@ -85,9 +91,11 @@ function AllTab() {
   return (
     <>
       <Card>
-        <span className="badge brand">절차 1</span>
-        <h2 style={{ marginTop: 10 }}>수사관 기피신청 <span className="sub" style={{ fontWeight: 500 }}>범죄수사규칙 제9조 등</span></h2>
-        <p style={{ color: 'var(--ink2)' }}>
+        <div className="step-head">
+          <span className="chapter-chip">1</span>
+          <h2 style={{ marginBottom: 0 }}>수사관 기피신청 <span className="sub" style={{ fontWeight: 500 }}>범죄수사규칙 제9조 등</span></h2>
+        </div>
+        <p style={{ color: 'var(--ink2)', marginTop: 14 }}>
           담당 수사관이 불공정한 수사를 하였거나 그러한 염려가 있다고 볼 객관적·구체적 사정이 있는 경우,
           피의자·피해자와 그 변호인은 수사관 교체를 신청할 수 있습니다.
         </p>
@@ -106,19 +114,25 @@ function AllTab() {
 
       <div className="grid3">
         <Card>
-          <span className="badge brand">절차 2</span>
-          <h3 style={{ marginTop: 10 }}>수사심의신청</h3>
-          <p className="sub">수사 절차·결과의 적정성이 현저히 침해되었다고 판단되는 경우 시·도경찰청 수사심의계에 심의를 신청할 수 있습니다.</p>
+          <div className="step-head">
+            <span className="chapter-chip">2</span>
+            <h3 style={{ marginBottom: 0 }}>수사심의신청</h3>
+          </div>
+          <p className="sub" style={{ marginTop: 10 }}>수사 절차·결과의 적정성이 현저히 침해되었다고 판단되는 경우 시·도경찰청 수사심의계에 심의를 신청할 수 있습니다.</p>
         </Card>
         <Card>
-          <span className="badge brand">절차 3</span>
-          <h3 style={{ marginTop: 10 }}>불송치 결정 이의신청</h3>
-          <p className="sub">형사소송법 제245조의7: 고소인 등은 불송치 결정에 대해 해당 경찰서에 이의신청할 수 있고, 이 경우 사건은 검찰로 송치됩니다.</p>
+          <div className="step-head">
+            <span className="chapter-chip">3</span>
+            <h3 style={{ marginBottom: 0 }}>불송치 결정 이의신청</h3>
+          </div>
+          <p className="sub" style={{ marginTop: 10 }}>형사소송법 제245조의7: 고소인 등은 불송치 결정에 대해 해당 경찰서에 이의신청할 수 있고, 이 경우 사건은 검찰로 송치됩니다.</p>
         </Card>
         <Card>
-          <span className="badge brand">절차 4</span>
-          <h3 style={{ marginTop: 10 }}>기타</h3>
-          <p className="sub">국민신문고 민원, 국가인권위원회 진정(인권침해), 수사 이의제도 등을 사안에 따라 활용할 수 있습니다.</p>
+          <div className="step-head">
+            <span className="chapter-chip">4</span>
+            <h3 style={{ marginBottom: 0 }}>기타</h3>
+          </div>
+          <p className="sub" style={{ marginTop: 10 }}>국민신문고 민원, 국가인권위원회 진정(인권침해), 수사 이의제도 등을 사안에 따라 활용할 수 있습니다.</p>
         </Card>
       </div>
     </>
@@ -169,7 +183,7 @@ export default function RemedyNavigator({ contextLabel, stationId }: { contextLa
       {tab === 'find' ? <FindTab contextLabel={contextLabel} stationId={stationId} /> : <AllTab />}
 
       <Card>
-        <h2>공식 채널 한눈에 보기</h2>
+        <h2><Landmark size={17} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--brand)' }} />공식 채널 한눈에 보기</h2>
         <TableWrap>
           <table className="list">
             <thead><tr><th>채널</th><th>대상 사안</th><th>접수처</th><th>처리 특성</th></tr></thead>
@@ -191,7 +205,7 @@ export default function RemedyNavigator({ contextLabel, stationId }: { contextLa
           </EmptyState>
         </Card>
         <Card className="tint">
-          <h2>이용 전 꼭 확인하세요</h2>
+          <h2><ShieldAlert size={17} style={{ verticalAlign: -3, marginRight: 6, color: 'var(--mid)' }} />이용 전 꼭 확인하세요</h2>
           <ul className="checks">
             <li><Check size={16} /><span>허위 사실에 기초한 신고·고소는 <b>무고죄</b> 등 법적 책임이 발생할 수 있습니다. 사실에 근거해 작성하세요.</span></li>
             <li><Check size={16} /><span>폴리스맵이 제공하는 서식은 <b>자가 작성 지원용 안내 템플릿</b>이며, 서류 작성 대행·제출 대행은 하지 않습니다.</span></li>
