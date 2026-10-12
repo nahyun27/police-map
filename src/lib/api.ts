@@ -116,6 +116,8 @@ export interface ReviewPublic {
   body: string;
   published_at: string | null;
   comment_count: number;
+  up: number;
+  down: number;
   score: number;
   my_vote: number;
   evidence_verified: boolean;
@@ -329,6 +331,8 @@ export interface MyReviewOut {
   created_at: string | null;
   published_at: string | null;
   comment_count: number;
+  up: number;
+  down: number;
   score: number;
   evidence_note: string | null;
   evidence_verified: boolean;
@@ -409,6 +413,8 @@ export interface CommentOut {
   is_removed: boolean;
   is_mine: boolean;
   parent_id: number | null;
+  up: number;
+  down: number;
   score: number;
   my_vote: number;
   created_at: string | null;
@@ -473,6 +479,8 @@ export interface PostOut {
   body: string;
   view_count: number;
   comment_count: number;
+  up: number;
+  down: number;
   score: number;
   my_vote: number;
   is_scrapped: boolean;

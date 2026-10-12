@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1._present import reply_out, review_public
 from app.core.database import get_db
-from app.core.deps import get_current_user, get_current_user_optional
+from app.core.deps import get_client_ip_hash, get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
 from app.core.rate_limit import comment_limiter, reply_limiter, review_limiter, vote_limiter
 from app.core.security import hash_case_number
@@ -20,7 +20,9 @@ from app.schemas.review import MyReviewOut, ReviewCreate, ReviewReceipt
 from app.schemas.verification import ReplyCreate, ReplyOut
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
-from app.services.engagement import ANON_LABEL, comment_counts, comment_tree, reply_rows, scrapped_set, vote_summaries
+from app.services.engagement import (
+    ANON_LABEL, cast_vote, comment_counts, comment_tree, reply_rows, scrapped_set, vote_summaries,
+)
 from app.services.ratings import DIMS, visible_reviews
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
@@ -63,7 +65,7 @@ def list_my_reviews(
             role=r.role.value, role_label=ROLE_LABELS[r.role], case_type=r.case_type.value, case_type_label=CASE_TYPE_LABELS[r.case_type],
             ratings=_ratings_dict(r), overall=_overall(r), body=r.body, status=r.status.value, reject_reason=r.reject_reason,
             created_at=_iso(r.created_at), published_at=_iso(r.published_at),
-            comment_count=counts[r.id], score=votes[r.id].score,
+            comment_count=counts[r.id], up=votes[r.id].up, down=votes[r.id].down, score=votes[r.id].score,
             evidence_note=r.evidence_note, evidence_verified=r.evidence_verified,
             reply=reply_out(*replies[r.id], user.id) if r.id in replies else None,
             is_scrapped=r.id in scrapped,
@@ -184,7 +186,7 @@ def _published_or_404(db: Session, review_id: int) -> Review:
 
 @router.get("/{review_id}/comments", response_model=list[CommentOut])
 def list_review_comments(
-    review_id: int, sort: str = Query("new", pattern="^(new|top)$"),
+    request: Request, review_id: int, sort: str = Query("new", pattern="^(new|top)$"),
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
 ):
     _published_or_404(db, review_id)
@@ -196,8 +198,9 @@ def list_review_comments(
         ).all()
     ]
     ids = [c.id for c, _ in rows]
-    votes = vote_summaries(db, ReviewCommentVote, ReviewCommentVote.comment_id, ids, user.id if user else None)
-    return comment_tree(rows, user.id if user else None, votes, sort)
+    uid = user.id if user else None
+    votes = vote_summaries(db, ReviewCommentVote, ReviewCommentVote.comment_id, ids, uid, None if uid else get_client_ip_hash(request))
+    return comment_tree(rows, uid, votes, sort)
 
 
 @router.post(
@@ -242,35 +245,29 @@ def delete_review_comment(comment_id: int, db: Session = Depends(get_db), user: 
 
 
 @router.post("/comments/{comment_id}/vote", response_model=VoteSummary, dependencies=[Depends(vote_limiter)])
-def vote_review_comment(comment_id: int, body: VoteIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def vote_review_comment(
+    request: Request, comment_id: int, body: VoteIn, db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
     comment = db.get(ReviewComment, comment_id)
     if not comment or comment.is_removed:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "댓글을 찾을 수 없습니다.")
-    existing = db.scalar(select(ReviewCommentVote).where(ReviewCommentVote.comment_id == comment_id, ReviewCommentVote.user_id == user.id))
-    if body.value == 0:
-        if existing:
-            db.delete(existing)
-    elif existing:
-        existing.value = body.value
-    else:
-        db.add(ReviewCommentVote(comment_id=comment_id, user_id=user.id, value=body.value))
-    db.commit()
-    return vote_summaries(db, ReviewCommentVote, ReviewCommentVote.comment_id, [comment_id], user.id)[comment_id]
+    uid = user.id if user else None
+    ip_hash = None if uid else get_client_ip_hash(request)
+    cast_vote(db, ReviewCommentVote, ReviewCommentVote.comment_id, "comment_id", comment_id, body.value, uid, ip_hash)
+    return vote_summaries(db, ReviewCommentVote, ReviewCommentVote.comment_id, [comment_id], uid, ip_hash)[comment_id]
 
 
 @router.post("/{review_id}/vote", response_model=VoteSummary, dependencies=[Depends(vote_limiter)])
-def vote_review(review_id: int, body: VoteIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def vote_review(
+    request: Request, review_id: int, body: VoteIn, db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
     _published_or_404(db, review_id)
-    existing = db.scalar(select(ReviewVote).where(ReviewVote.review_id == review_id, ReviewVote.user_id == user.id))
-    if body.value == 0:
-        if existing:
-            db.delete(existing)
-    elif existing:
-        existing.value = body.value
-    else:
-        db.add(ReviewVote(review_id=review_id, user_id=user.id, value=body.value))
-    db.commit()
-    return vote_summaries(db, ReviewVote, ReviewVote.review_id, [review_id], user.id)[review_id]
+    uid = user.id if user else None
+    ip_hash = None if uid else get_client_ip_hash(request)
+    cast_vote(db, ReviewVote, ReviewVote.review_id, "review_id", review_id, body.value, uid, ip_hash)
+    return vote_summaries(db, ReviewVote, ReviewVote.review_id, [review_id], uid, ip_hash)[review_id]
 
 
 def _require_officer(user: User, station_id: int) -> None:

@@ -55,7 +55,7 @@ export function PostDetail({ initial }: { initial: PostOut }) {
       <Engagement
         key={`post-${post.id}-${post.my_vote}-${post.is_scrapped}`}
         kind="post" targetId={post.id}
-        initialScore={post.score} initialMyVote={post.my_vote} initialCommentCount={post.comment_count}
+        initialUp={post.up} initialDown={post.down} initialMyVote={post.my_vote} initialCommentCount={post.comment_count}
         initialScrapped={post.is_scrapped}
       />
     </>

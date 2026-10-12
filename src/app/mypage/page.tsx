@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Bookmark, FileText, Info, LogOut, MapPin, ShieldCheck, X } from 'lucide-react';
+import { Bookmark, Eye, FileText, Info, LogOut, MapPin, MessageSquare, ShieldCheck, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { Card, PageHead, Score } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import {
@@ -115,26 +115,43 @@ function MyScraps() {
         <>
           {reviews.length > 0 && (
             <>
-              <p className="sub" style={{ marginTop: 10, fontWeight: 700 }}>스크랩한 평가</p>
+              <p className="sub scrap-sub">스크랩한 평가</p>
               {reviews.map((rv) => (
-                <div className="review" key={rv.id}>
-                  <div className="meta"><span className="badge">{rv.role_label}</span>{rv.station_name} · {formatDate(rv.published_at)}</div>
-                  <p>
-                    {rv.body ? rv.body.slice(0, 70) + (rv.body.length > 70 ? '…' : '') : '(서술 없음, 별점만 등록)'}{' '}
-                    <Link href={`/station/${rv.station_id}`}>더보기</Link>
-                  </p>
-                </div>
+                <Link href={`/station/${rv.station_id}`} className="post-row" key={rv.id}>
+                  <div className="post-row-top">
+                    <span className="badge brand">{rv.role_label}</span>
+                    <span className="sub">{rv.station_name}</span>
+                  </div>
+                  <div className="post-row-title">
+                    {rv.body ? rv.body.slice(0, 70) + (rv.body.length > 70 ? '…' : '') : '(서술 없음, 별점만 등록)'}
+                  </div>
+                  <div className="post-row-meta">
+                    <span className="sub">{formatDate(rv.published_at)}</span>
+                    {rv.evidence_verified && <span className="badge good"><ShieldCheck size={11} />증빙확인</span>}
+                  </div>
+                </Link>
               ))}
             </>
           )}
           {posts.length > 0 && (
             <>
-              <p className="sub" style={{ marginTop: 10, fontWeight: 700 }}>스크랩한 게시글</p>
+              <p className="sub scrap-sub">스크랩한 게시글</p>
               {posts.map((p) => (
-                <div className="review" key={p.id}>
-                  <div className="meta">{p.region_name}{p.station_name ? ` · ${p.station_name}` : ''} · {formatDate(p.created_at)}</div>
-                  <p><Link href={`/board/${p.id}`}>{p.title}</Link></p>
-                </div>
+                <Link href={`/board/${p.id}`} className="post-row" key={p.id}>
+                  <div className="post-row-top">
+                    <span className={`badge cat-${p.category}`}>{p.category_label}</span>
+                    <span className="sub">{p.region_name ?? '전체'}{p.station_name ? ` · ${p.station_name}` : ''}</span>
+                  </div>
+                  <div className="post-row-title">{p.title}</div>
+                  <div className="post-row-meta">
+                    <span className="who">{p.author_nickname}</span>
+                    <span className="sub">{formatDate(p.created_at)}</span>
+                    <span className="stat"><Eye size={12} />{p.view_count}</span>
+                    <span className="stat"><ThumbsUp size={12} />{p.up}</span>
+                    <span className="stat"><ThumbsDown size={12} />{p.down}</span>
+                    <span className="stat"><MessageSquare size={12} />{p.comment_count}</span>
+                  </div>
+                </Link>
               ))}
             </>
           )}
@@ -238,7 +255,8 @@ export default function MyPage() {
                 <p><Link href={`/station/${r.station_id}`}>{r.station_name}</Link></p>
                 <div className="post-row-meta sub" style={{ marginTop: 8 }}>
                   <span className={`badge ${st.tone}`}>{st.label}</span>
-                  <span>추천 {r.score > 0 ? `+${r.score}` : r.score}</span>
+                  <span className="stat"><ThumbsUp size={12} />{r.up}</span>
+                  <span className="stat"><ThumbsDown size={12} />{r.down}</span>
                   <span>댓글 {r.comment_count}</span>
                 </div>
                 {r.status === 'rejected' && r.reject_reason && (

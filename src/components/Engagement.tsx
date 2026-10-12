@@ -19,11 +19,11 @@ type CommentSort = 'new' | 'top';
 const COMMENT_REPORT_TYPE: Record<Kind, ReportTargetType> = { review: 'review_comment', post: 'post_comment' };
 
 const ACTIONS: Record<Kind, {
-  vote: (id: number, value: 1 | -1 | 0) => Promise<{ score: number; my_vote: number }>;
+  vote: (id: number, value: 1 | -1 | 0) => Promise<{ up: number; down: number; score: number; my_vote: number }>;
   list: (id: number, sort?: CommentSort) => Promise<CommentOut[]>;
   create: (id: number, body: string, parentId?: number) => Promise<CommentOut>;
   remove: (commentId: number) => Promise<void>;
-  commentVote: (commentId: number, value: 1 | -1 | 0) => Promise<{ score: number; my_vote: number }>;
+  commentVote: (commentId: number, value: 1 | -1 | 0) => Promise<{ up: number; down: number; score: number; my_vote: number }>;
   scrap: (id: number) => Promise<{ scrapped: boolean }>;
   unscrap: (id: number) => Promise<{ scrapped: boolean }>;
 }> = {
@@ -57,14 +57,15 @@ function findComment(nodes: CommentOut[], id: number): CommentOut | undefined {
  * 로그인 여부를 미리 조회하지 않고, 실제 조치 시 401 을 받으면 그때 로그인 안내를 띄운다
  * (목록에 여러 개가 함께 뜨는 화면에서 카드마다 /auth/me 를 따로 호출하지 않기 위함). */
 export function Engagement({
-  kind, targetId, initialScore, initialMyVote, initialCommentCount, initialScrapped = false,
+  kind, targetId, initialUp, initialDown, initialMyVote, initialCommentCount, initialScrapped = false,
 }: {
-  kind: Kind; targetId: number; initialScore: number; initialMyVote: number; initialCommentCount: number;
-  initialScrapped?: boolean;
+  kind: Kind; targetId: number; initialUp: number; initialDown: number; initialMyVote: number;
+  initialCommentCount: number; initialScrapped?: boolean;
 }) {
   const pathname = usePathname();
   const api = ACTIONS[kind];
-  const [score, setScore] = useState(initialScore);
+  const [up, setUp] = useState(initialUp);
+  const [down, setDown] = useState(initialDown);
   const [myVote, setMyVote] = useState(initialMyVote);
   const [commentCount, setCommentCount] = useState(initialCommentCount);
   const [scrapped, setScrapped] = useState(initialScrapped);
@@ -100,7 +101,7 @@ export function Engagement({
     const next = myVote === value ? 0 : value;
     try {
       const sum = await api.vote(targetId, next);
-      setScore(sum.score); setMyVote(sum.my_vote);
+      setUp(sum.up); setDown(sum.down); setMyVote(sum.my_vote);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) setAuthNeeded(true);
       else setError('처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
@@ -141,7 +142,7 @@ export function Engagement({
     const next = current?.my_vote === value ? 0 : value;
     try {
       const sum = await api.commentVote(commentId, next);
-      setComments((cs) => (cs ? updateCommentNode(cs, commentId, { score: sum.score, my_vote: sum.my_vote }) : cs));
+      setComments((cs) => (cs ? updateCommentNode(cs, commentId, { up: sum.up, down: sum.down, my_vote: sum.my_vote }) : cs));
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) setAuthNeeded(true);
       else setError('처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
@@ -185,10 +186,10 @@ export function Engagement({
       {!c.is_removed && (
         <div className="cmt-actions">
           <button type="button" className={`link-btn ${c.my_vote === 1 ? 'on' : ''}`} onClick={() => voteComment(c.id, 1)} aria-label="추천">
-            <ThumbsUp size={11} />{c.score}
+            <ThumbsUp size={11} />{c.up}
           </button>
           <button type="button" className={`link-btn ${c.my_vote === -1 ? 'on' : ''}`} onClick={() => voteComment(c.id, -1)} aria-label="비추천">
-            <ThumbsDown size={11} />
+            <ThumbsDown size={11} />{c.down}
           </button>
           {depth === 0 && (
             <button type="button" className="link-btn" onClick={() => setReplyTo(replyTo === c.id ? null : c.id)}>답글</button>
@@ -216,12 +217,11 @@ export function Engagement({
   return (
     <div className="engage">
       <div className="engage-bar">
-        <button type="button" className={`vote-btn ${myVote === 1 ? 'active up' : ''}`} onClick={() => doVote(1)} aria-label="추천">
-          <ThumbsUp size={14} />
+        <button type="button" className={`vote-btn count ${myVote === 1 ? 'active up' : ''}`} onClick={() => doVote(1)} aria-label="추천">
+          <ThumbsUp size={14} /><b>{up}</b>
         </button>
-        <b className={score > 0 ? 'up' : score < 0 ? 'down' : 'sub'}>{score}</b>
-        <button type="button" className={`vote-btn ${myVote === -1 ? 'active down' : ''}`} onClick={() => doVote(-1)} aria-label="비추천">
-          <ThumbsDown size={14} />
+        <button type="button" className={`vote-btn count ${myVote === -1 ? 'active down' : ''}`} onClick={() => doVote(-1)} aria-label="비추천">
+          <ThumbsDown size={14} /><b>{down}</b>
         </button>
         <button type="button" className="link-btn" onClick={toggleOpen}><MessageSquare size={14} />댓글 {commentCount}</button>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>

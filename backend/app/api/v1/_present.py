@@ -45,6 +45,7 @@ def review_public(
         id=r.id, role=r.role.value, role_label=ROLE_LABELS[r.role], case_type=r.case_type.value,
         case_type_label=CASE_TYPE_LABELS[r.case_type], ratings=ratings_dict(r), overall=review_overall(r),
         body=r.body, published_at=iso(r.published_at),
-        comment_count=comment_count, score=vote.score, my_vote=vote.my_vote, evidence_verified=r.evidence_verified,
+        comment_count=comment_count, up=vote.up, down=vote.down, score=vote.score, my_vote=vote.my_vote,
+        evidence_verified=r.evidence_verified,
         reply=reply, is_scrapped=is_scrapped,
     )

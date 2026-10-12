@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Eye, MessageSquare, PenLine, Search, ThumbsUp } from 'lucide-react';
+import { Eye, MessageSquare, PenLine, Search, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { Card, Crumb, PageHead } from '@/components/ui';
 import { CategoryTabs } from '@/components/CategoryTabs';
 import { RegionFilterSelect } from '@/components/RegionFilterSelect';
@@ -108,7 +108,8 @@ export default async function BoardPage({ searchParams }: Props) {
                     <span className="who">{p.author_nickname}</span>
                     <span className="sub">{formatDate(p.created_at)}</span>
                     <span className="stat"><Eye size={12} />{p.view_count}</span>
-                    <span className="stat"><ThumbsUp size={12} />{p.score}</span>
+                    <span className="stat"><ThumbsUp size={12} />{p.up}</span>
+                    <span className="stat"><ThumbsDown size={12} />{p.down}</span>
                     <span className="stat"><MessageSquare size={12} />{p.comment_count}</span>
                   </div>
                 </Link>

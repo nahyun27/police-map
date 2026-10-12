@@ -33,7 +33,7 @@ export function ReviewList({ stationId, stationName, items }: { stationId: numbe
           <ReplyBox reviewId={rv.id} initialReply={rv.reply} canWrite={canReply && !rv.reply} />
           <Engagement
             kind="review" targetId={rv.id}
-            initialScore={rv.score} initialMyVote={rv.my_vote} initialCommentCount={rv.comment_count}
+            initialUp={rv.up} initialDown={rv.down} initialMyVote={rv.my_vote} initialCommentCount={rv.comment_count}
             initialScrapped={rv.is_scrapped}
           />
           <Link href={`/takedown/review/${rv.id}?station=${encodeURIComponent(stationName)}`} className="sub" style={{ display: 'inline-block', marginTop: 8 }}>

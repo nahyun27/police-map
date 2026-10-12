@@ -1,3 +1,6 @@
+from fastapi.testclient import TestClient
+
+from app.main import app
 from conftest import login, make_user
 
 API = "/api/v1"
@@ -138,11 +141,22 @@ def test_review_comment_vote_and_sort_top(user_client, world):
     assert cancel.json() == {"up": 0, "down": 0, "score": 0, "my_vote": 0}
 
 
-def test_review_comment_vote_requires_login(client, world):
-    """댓글 작성은 익명으로 되지만, 추천/투표는 신뢰도 핵심 지표라 로그인이 필요하다."""
+def test_review_comment_vote_allowed_anonymously_once_per_ip(client, world):
+    """댓글 추천도 글 작성과 마찬가지로 비로그인 허용(2026-10 결정) — 다만 같은 IP는 한 표만
+    인정된다(재투표는 갱신, 중복 가산은 안 됨). 서로 다른 IP는 각자 한 표씩 더해진다."""
     rid = world["reviews"][0].id
     cid = client.post(f"{API}/reviews/{rid}/comments", json={"body": "익명 댓글"}).json()["id"]
-    assert client.post(f"{API}/reviews/comments/{cid}/vote", json={"value": 1}).status_code == 401
+    first = client.post(f"{API}/reviews/comments/{cid}/vote", json={"value": 1})
+    assert first.status_code == 200
+    assert first.json() == {"up": 1, "down": 0, "score": 1, "my_vote": 1}
+
+    # 같은 IP(같은 TestClient)에서 다시 투표하면 갱신일 뿐 중복 가산되지 않는다.
+    again = client.post(f"{API}/reviews/comments/{cid}/vote", json={"value": -1}).json()
+    assert again == {"up": 0, "down": 1, "score": -1, "my_vote": -1}
+
+    other = TestClient(app, client=("203.0.113.9", 1))
+    other_vote = other.post(f"{API}/reviews/comments/{cid}/vote", json={"value": 1}).json()
+    assert other_vote == {"up": 1, "down": 1, "score": 0, "my_vote": 1}
 
 
 def test_review_comment_anonymous_removable_by_admin_only(client, admin_client, world):
@@ -153,8 +167,19 @@ def test_review_comment_anonymous_removable_by_admin_only(client, admin_client, 
     assert tree[0]["is_removed"] is True
 
 
-def test_review_vote_requires_login(client, world):
-    assert client.post(f"{API}/reviews/{world['reviews'][0].id}/vote", json={"value": 1}).status_code == 401
+def test_review_vote_allowed_anonymously_once_per_ip(client, world):
+    rid = world["reviews"][0].id
+    first = client.post(f"{API}/reviews/{rid}/vote", json={"value": 1})
+    assert first.status_code == 200
+    assert first.json() == {"up": 1, "down": 0, "score": 1, "my_vote": 1}
+
+    # 같은 IP 가 또 투표하면 중복 가산되지 않는다.
+    same_ip_again = client.post(f"{API}/reviews/{rid}/vote", json={"value": 1}).json()
+    assert same_ip_again == {"up": 1, "down": 0, "score": 1, "my_vote": 1}
+
+    other = TestClient(app, client=("203.0.113.9", 1))
+    other_vote = other.post(f"{API}/reviews/{rid}/vote", json={"value": 1}).json()
+    assert other_vote == {"up": 2, "down": 0, "score": 2, "my_vote": 1}
 
 
 def test_review_vote_toggle_and_switch(user_client, world):
@@ -285,6 +310,27 @@ def test_post_score_cache_stays_correct_through_vote_switch(db, user_client, wor
     assert db.get(Post, pid).score == 0
 
 
+def test_post_vote_allowed_anonymously_once_per_ip(db, client, world):
+    """게시글 추천도 비로그인 허용(2026-10 결정) — 같은 IP 는 한 표, 다른 IP 는 또 한 표."""
+    pid = client.post(f"{API}/posts", json=post_payload()).json()["id"]
+    first = client.post(f"{API}/posts/{pid}/vote", json={"value": 1})
+    assert first.status_code == 200
+    assert first.json() == {"up": 1, "down": 0, "score": 1, "my_vote": 1}
+
+    same_ip_again = client.post(f"{API}/posts/{pid}/vote", json={"value": 1}).json()
+    assert same_ip_again == {"up": 1, "down": 0, "score": 1, "my_vote": 1}  # 중복 가산 안 됨
+
+    other = TestClient(app, client=("203.0.113.9", 1))
+    other_vote = other.post(f"{API}/posts/{pid}/vote", json={"value": -1}).json()
+    assert other_vote == {"up": 1, "down": 1, "score": 0, "my_vote": -1}
+
+    # sort=top 정렬에 쓰는 Post.score 캐시 컬럼도 익명 투표 기준으로 맞게 갱신됐는지 확인.
+    from app.models import Post
+
+    db.expire_all()
+    assert db.get(Post, pid).score == 0
+
+
 def test_post_default_category_is_chat(user_client, world):
     pid = user_client.post(f"{API}/posts", json=post_payload()).json()["id"]
     detail = user_client.get(f"{API}/posts/{pid}").json()
@@ -379,7 +425,8 @@ def test_post_comment_delete_shows_removed_at(user_client, world):
 
 
 def test_post_comment_anonymous_allowed(client, admin_client, world):
-    """게시글 댓글도 로그인 없이 달 수 있다(2026-10 결정) — 투표는 여전히 로그인 필요."""
+    """게시글 댓글도 로그인 없이 달 수 있다(2026-10 결정). 추천도 마찬가지로 비로그인
+    허용이지만(2026-10 결정, IP 1개당 1표) 댓글 삭제는 여전히 작성자 계정이 있어야 한다."""
     pid = client.post(f"{API}/posts", json=post_payload()).json()["id"]
     r = client.post(f"{API}/posts/{pid}/comments", json={"body": "익명 댓글"})
     assert r.status_code == 201
@@ -387,7 +434,9 @@ def test_post_comment_anonymous_allowed(client, admin_client, world):
     assert r.json()["is_mine"] is False
 
     cid = r.json()["id"]
-    assert client.post(f"{API}/post-comments/{cid}/vote", json={"value": 1}).status_code == 401
+    vote = client.post(f"{API}/post-comments/{cid}/vote", json={"value": 1})
+    assert vote.status_code == 200
+    assert vote.json() == {"up": 1, "down": 0, "score": 1, "my_vote": 1}
 
     # 익명 댓글은 본인이 지울 수 없고(로그인 자체가 안 됨) 관리자만 지울 수 있다
     assert client.delete(f"{API}/post-comments/{cid}").status_code == 401

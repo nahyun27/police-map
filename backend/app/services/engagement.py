@@ -12,9 +12,32 @@ REMOVED_BODY = "삭제된 댓글입니다."
 ANON_LABEL = "익명"  # 로그인 없이 작성된 글/댓글의 작성자 표시(Review 의 익명 제출과 동일한 정책)
 
 
+def cast_vote(
+    db: Session, vote_model, fk_col: InstrumentedAttribute, fk_name: str, target_id: int, value: int,
+    user_id: int | None, ip_hash: str | None,
+) -> None:
+    """추천/비추천을 기록한다(2026-10 — 비로그인도 IP 1개당 1표로 투표 허용). 로그인 상태면
+    user_id 로, 아니면 ip_hash 로 "이미 투표했는지" 를 가린다 — 정확히 하나만 쓰도록
+    호출하는 쪽에서 맞춰 넘겨야 한다(둘 다 None 이면 아무 투표도 못 찾아 매번 새로 생기므로
+    주의). value=0 이면 기존 투표를 취소(행 삭제)한다."""
+    voter_filter = vote_model.user_id == user_id if user_id is not None else vote_model.ip_hash == ip_hash
+    existing = db.scalar(select(vote_model).where(fk_col == target_id, voter_filter))
+    if value == 0:
+        if existing:
+            db.delete(existing)
+    elif existing:
+        existing.value = value
+    else:
+        db.add(vote_model(**{fk_name: target_id, "user_id": user_id, "ip_hash": ip_hash, "value": value}))
+    db.commit()
+
+
 def vote_summaries(
-    db: Session, vote_model, fk_col: InstrumentedAttribute, target_ids: list[int], user_id: int | None,
+    db: Session, vote_model, fk_col: InstrumentedAttribute, target_ids: list[int],
+    user_id: int | None, ip_hash: str | None = None,
 ) -> dict[int, VoteSummary]:
+    """ip_hash 는 비로그인 투표자의 식별자(2026-10 결정, IP 1개당 1표) — user_id 가 있으면
+    무시하고 그쪽으로 my_vote 를 찾는다(로그인 상태가 우선)."""
     result = {tid: VoteSummary(up=0, down=0, score=0, my_vote=0) for tid in target_ids}
     if not target_ids:
         return result
@@ -23,8 +46,9 @@ def vote_summaries(
     for tid, u, d in db.execute(select(fk_col, up, down).where(fk_col.in_(target_ids)).group_by(fk_col)).all():
         u, d = int(u or 0), int(d or 0)
         result[tid] = VoteSummary(up=u, down=d, score=u - d, my_vote=0)
-    if user_id is not None:
-        mine = db.execute(select(fk_col, vote_model.value).where(fk_col.in_(target_ids), vote_model.user_id == user_id)).all()
+    voter_col = vote_model.user_id == user_id if user_id is not None else vote_model.ip_hash == ip_hash
+    if user_id is not None or ip_hash is not None:
+        mine = db.execute(select(fk_col, vote_model.value).where(fk_col.in_(target_ids), voter_col)).all()
         for tid, v in mine:
             result[tid].my_vote = v
     return result
@@ -79,7 +103,7 @@ def comment_tree(
         node = CommentOut(
             id=c.id, author_nickname=nickname, body=REMOVED_BODY if c.is_removed else c.body,
             is_removed=c.is_removed, is_mine=(user_id is not None and c.author_id == user_id),
-            parent_id=c.parent_id, score=vote.score, my_vote=vote.my_vote,
+            parent_id=c.parent_id, up=vote.up, down=vote.down, score=vote.score, my_vote=vote.my_vote,
             created_at=c.created_at.isoformat() if c.created_at else None,
             removed_at=c.removed_at.isoformat() if c.removed_at else None, replies=[],
         )

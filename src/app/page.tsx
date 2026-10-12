@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Flame, Scale, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Flame, Scale, ShieldCheck, ThumbsDown, ThumbsUp } from 'lucide-react';
 import HeroSearch from '@/components/HeroSearch';
 import { MyRegionFeed } from '@/components/MyRegionFeed';
 import RegionMapSwitcher from '@/components/RegionMapSwitcher';
@@ -124,7 +124,8 @@ export default async function Home() {
                 </div>
                 <div className="post-row-title">{p.title}</div>
                 <div className="post-row-meta sub">
-                  <span>추천 {p.score}</span>
+                  <span className="stat"><ThumbsUp size={12} />{p.up}</span>
+                  <span className="stat"><ThumbsDown size={12} />{p.down}</span>
                   <span>댓글 {p.comment_count}</span>
                 </div>
               </Link>

@@ -66,7 +66,9 @@ class ReviewPublic(BaseModel):
     body: str
     published_at: str | None
     comment_count: int = 0
-    score: int = 0  # 추천 - 비추천
+    up: int = 0  # 추천 수(비추천과 따로 집계 — 2026-10 결정, 상쇄된 순점수만으론 반응 규모를 알 수 없어서)
+    down: int = 0  # 비추천 수
+    score: int = 0  # 추천 - 비추천(정렬용으로는 여전히 순점수를 쓴다)
     my_vote: int = 0  # 로그인 + 투표한 경우만 1/-1, 그 외 0
     evidence_verified: bool = False  # 운영자가 증빙자료를 확인했을 때만 true(공개 배지용)
     reply: ReplyOut | None = None  # 인증된 경찰관의 공식 해명(있으면)

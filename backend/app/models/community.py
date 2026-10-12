@@ -1,7 +1,9 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, SmallInteger, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    CheckConstraint, DateTime, Enum, ForeignKey, Index, SmallInteger, String, Text, UniqueConstraint, func, text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -27,6 +29,23 @@ POST_CATEGORY_LABELS = {
 # 제약조건 이름이 먼저 붙은 테이블 이름으로 고정되어 버린다(alembic autogenerate 로 확인된 버그).
 def _vote_check() -> CheckConstraint:
     return CheckConstraint("value IN (1, -1)", name="value_updown")
+
+
+# 비로그인 투표(2026-10 결정, IP 1개당 1표)를 더하면서 투표자 식별자가 user_id 또는
+# ip_hash 둘 중 하나로 갈린다. "둘 다 비어있지 않고 딱 하나만" 을 DB 레벨에서 보장하고,
+# 중복 투표 방지용 유니크 제약도 식별자 종류별로 따로 둔다(부분 유니크 인덱스 — user_id가
+# NULL인 행끼리는 (review_id, user_id) 유니크가 전부 NULL이라 걸리지 않으므로 WHERE 로
+# 범위를 나눠야 한다). CheckConstraint 와 마찬가지로 테이블마다 새 객체를 만들어야
+# 제약조건 이름이 뒤섞이지 않는다.
+def _voter_check() -> CheckConstraint:
+    return CheckConstraint("(user_id IS NULL) <> (ip_hash IS NULL)", name="voter_identity_xor")
+
+
+def _voter_indexes(table: str, fk_col: str) -> tuple[Index, Index]:
+    return (
+        Index(f"ix_{table}_user_unique", fk_col, "user_id", unique=True, postgresql_where=text("user_id IS NOT NULL")),
+        Index(f"ix_{table}_ip_unique", fk_col, "ip_hash", unique=True, postgresql_where=text("ip_hash IS NOT NULL")),
+    )
 
 
 class RegionFollow(Base):
@@ -67,14 +86,16 @@ class ReviewComment(Base):
 
 
 class ReviewVote(Base):
-    """평가 추천/비추천. 회원 1인당 평가 1건에 1표(갱신 가능, value=0 요청 시 행을 삭제)."""
+    """평가 추천/비추천. 회원이면 1인당, 비로그인이면 IP(해시) 1개당 평가 1건에 1표
+    (갱신 가능, value=0 요청 시 행을 삭제, 2026-10 비로그인 투표 허용 결정)."""
 
     __tablename__ = "review_votes"
-    __table_args__ = (UniqueConstraint("review_id", "user_id"), _vote_check())
+    __table_args__ = (_vote_check(), _voter_check(), *_voter_indexes("review_votes", "review_id"))
 
     id: Mapped[int] = mapped_column(primary_key=True)
     review_id: Mapped[int] = mapped_column(ForeignKey("reviews.id"), index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    ip_hash: Mapped[str | None] = mapped_column(String(32), index=True)
     value: Mapped[int] = mapped_column(SmallInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -83,11 +104,12 @@ class ReviewCommentVote(Base):
     """평가 댓글 추천/비추천. ReviewVote 와 동일한 규칙 — 댓글 정렬(추천순)에 쓴다."""
 
     __tablename__ = "review_comment_votes"
-    __table_args__ = (UniqueConstraint("comment_id", "user_id"), _vote_check())
+    __table_args__ = (_vote_check(), _voter_check(), *_voter_indexes("review_comment_votes", "comment_id"))
 
     id: Mapped[int] = mapped_column(primary_key=True)
     comment_id: Mapped[int] = mapped_column(ForeignKey("review_comments.id"), index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    ip_hash: Mapped[str | None] = mapped_column(String(32), index=True)
     value: Mapped[int] = mapped_column(SmallInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -145,14 +167,15 @@ class PostComment(Base):
 
 
 class PostVote(Base):
-    """게시판 글 추천/비추천. ReviewVote 와 동일한 규칙."""
+    """게시판 글 추천/비추천. ReviewVote 와 동일한 규칙(비로그인은 IP 1개당 1표)."""
 
     __tablename__ = "post_votes"
-    __table_args__ = (UniqueConstraint("post_id", "user_id"), _vote_check())
+    __table_args__ = (_vote_check(), _voter_check(), *_voter_indexes("post_votes", "post_id"))
 
     id: Mapped[int] = mapped_column(primary_key=True)
     post_id: Mapped[int] = mapped_column(ForeignKey("posts.id"), index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    ip_hash: Mapped[str | None] = mapped_column(String(32), index=True)
     value: Mapped[int] = mapped_column(SmallInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -161,11 +184,12 @@ class PostCommentVote(Base):
     """게시판 댓글 추천/비추천. ReviewCommentVote 와 동일한 규칙."""
 
     __tablename__ = "post_comment_votes"
-    __table_args__ = (UniqueConstraint("comment_id", "user_id"), _vote_check())
+    __table_args__ = (_vote_check(), _voter_check(), *_voter_indexes("post_comment_votes", "comment_id"))
 
     id: Mapped[int] = mapped_column(primary_key=True)
     comment_id: Mapped[int] = mapped_column(ForeignKey("post_comments.id"), index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    ip_hash: Mapped[str | None] = mapped_column(String(32), index=True)
     value: Mapped[int] = mapped_column(SmallInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

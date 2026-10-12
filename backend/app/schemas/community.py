@@ -46,6 +46,8 @@ class CommentOut(BaseModel):
     is_removed: bool
     is_mine: bool
     parent_id: int | None
+    up: int = 0
+    down: int = 0
     score: int = 0
     my_vote: int = 0
     created_at: str | None
@@ -88,6 +90,8 @@ class PostOut(BaseModel):
     body: str
     view_count: int
     comment_count: int
+    up: int
+    down: int
     score: int
     my_vote: int
     is_scrapped: bool

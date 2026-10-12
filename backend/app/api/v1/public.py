@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta, timezone
 from math import asin, cos, radians, sin, sqrt
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1._present import reply_out, review_public
 from app.core.database import get_db
-from app.core.deps import get_current_user_optional
+from app.core.deps import get_client_ip_hash, get_current_user_optional
 from app.core.rate_limit import view_limiter
 from app.models import (
     Department, PublicStatistic, Region, Report, ReportStatus, Review, ReviewComment, ReviewScrap, ReviewStatus,
@@ -79,7 +79,7 @@ def get_region(region_id: str, db: Session = Depends(get_db)):
 
 @router.get("/stations/{station_id}", response_model=StationDetail)
 def get_station(
-    station_id: int, page: int = Query(1, ge=1), size: int = Query(10, ge=1, le=50),
+    request: Request, station_id: int, page: int = Query(1, ge=1), size: int = Query(10, ge=1, le=50),
     evidence_only: bool = Query(False, description="증빙확인된 평가만 보기"),
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
 ):
@@ -95,7 +95,7 @@ def get_station(
     ).all()
     ids = [r.id for r in reviews]
     uid = user.id if user else None
-    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, uid)
+    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, uid, None if uid else get_client_ip_hash(request))
     counts = comment_counts(db, ReviewComment, ReviewComment.review_id, ids)
     replies = reply_rows(db, ids)
     scrapped = scrapped_set(db, ReviewScrap, ReviewScrap.review_id, ids, uid)
@@ -132,6 +132,7 @@ def get_station(
 
 @router.get("/reviews/recent", response_model=list[RecentReview])
 def recent_reviews(
+    request: Request,
     limit: int = Query(3, ge=1, le=20), region: str | None = Query(None, description="쉼표로 구분된 지역 id 목록"),
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
 ):
@@ -142,7 +143,7 @@ def recent_reviews(
     rows = db.execute(q.order_by(Review.published_at.desc(), Review.id.desc()).limit(limit)).all()
     ids = [r.id for r, _ in rows]
     uid = user.id if user else None
-    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, uid)
+    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, uid, None if uid else get_client_ip_hash(request))
     counts = comment_counts(db, ReviewComment, ReviewComment.review_id, ids)
     replies = reply_rows(db, ids)
     scrapped = scrapped_set(db, ReviewScrap, ReviewScrap.review_id, ids, uid)

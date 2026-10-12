@@ -329,6 +329,9 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 .post-row-meta .who { font-weight: 650; color: var(--ink2); }
 .post-row-meta .stat { display: inline-flex; align-items: center; gap: 3px; }
 .post-row-meta .stat svg { opacity: .7; }
+/* 마이페이지 스크랩처럼 평가/게시글 두 묶음을 .post-row 목록으로 나눠 보여줄 때 쓰는 소제목. */
+.scrap-sub { font-weight: 700; color: var(--ink2); margin: 18px 0 2px; }
+.scrap-sub:first-of-type { margin-top: 4px; }
 
 /* 글머리 등 하위 카테고리를 탭으로 보여줄 때 쓰는 가로 스크롤 탭바. */
 .cat-tabs {
@@ -622,13 +625,14 @@ table.list td a { font-weight: 650; color: var(--ink); }
   display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px;
   border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer; transition: .15s;
 }
+/* 추천/비추천 수를 상쇄된 순점수 하나로 합치지 않고 각 버튼 옆에 따로 보여준다(2026-10
+   결정) — 정사각형 아이콘 버튼 대신 숫자가 들어갈 너비를 내준다. */
+.vote-btn.count { width: auto; padding: 0 10px; gap: 5px; }
+.vote-btn.count b { font-size: 13.5px; font-weight: 700; color: inherit; }
 .vote-btn:hover { border-color: var(--brand); color: var(--brand); }
 .vote-btn.active.up { background: var(--good-soft); border-color: var(--good); color: var(--good); }
 .vote-btn.active.down { background: var(--low-soft); border-color: var(--low); color: var(--low); }
 .vote-btn.active.scrap { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); }
-.engage-bar > b { min-width: 20px; text-align: center; font-size: 13.5px; }
-.engage-bar > b.up { color: var(--good); }
-.engage-bar > b.down { color: var(--low); }
 .engage-bar .link-btn { margin-left: 8px; }
 
 .cmt-list { margin-top: 12px; border-top: 1px dashed var(--line2); padding-top: 12px; display: flex; flex-direction: column; gap: 12px; }

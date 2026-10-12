@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
-from app.core.deps import get_current_user, get_current_user_optional
+from app.core.deps import get_client_ip_hash, get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
 from app.core.rate_limit import comment_limiter, post_limiter, view_limiter, vote_limiter
 from app.models import (
@@ -20,7 +20,7 @@ from app.schemas.community import (
 from app.schemas.public import Page
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
-from app.services.engagement import ANON_LABEL, comment_counts, comment_tree, scrapped_set, vote_summaries
+from app.services.engagement import ANON_LABEL, cast_vote, comment_counts, comment_tree, scrapped_set, vote_summaries
 
 router = APIRouter(tags=["community"])
 
@@ -74,8 +74,8 @@ def _post_out(
         region_id=p.region_id, region_name=p.region.name if p.region else None, station_id=p.station_id,
         station_name=p.station.name if p.station else None,
         category=p.category.value, category_label=POST_CATEGORY_LABELS[p.category],
-        title=p.title, body=p.body, view_count=p.view_count, comment_count=comment_count, score=vote.score,
-        my_vote=vote.my_vote, is_scrapped=is_scrapped,
+        title=p.title, body=p.body, view_count=p.view_count, comment_count=comment_count,
+        up=vote.up, down=vote.down, score=vote.score, my_vote=vote.my_vote, is_scrapped=is_scrapped,
         created_at=p.created_at.isoformat() if p.created_at else None,
         updated_at=p.updated_at.isoformat() if p.updated_at else None,
     )
@@ -86,6 +86,7 @@ _PERIOD_DAYS = {"today": 1, "week": 7, "month": 30}
 
 @router.get("/posts", response_model=Page[PostOut])
 def list_posts(
+    request: Request,
     region_id: str | None = None, station_id: int | None = None, category: PostCategory | None = None,
     q: str | None = Query(None, max_length=50, description="제목·본문 검색어"),
     sort: str = Query("new", pattern="^(new|top)$"),
@@ -113,7 +114,7 @@ def list_posts(
 
     ids = [p.id for p in posts]
     uid = user.id if user else None
-    votes = vote_summaries(db, PostVote, PostVote.post_id, ids, uid)
+    votes = vote_summaries(db, PostVote, PostVote.post_id, ids, uid, None if uid else get_client_ip_hash(request))
     counts = comment_counts(db, PostComment, PostComment.post_id, ids)
     scrapped = scrapped_set(db, PostScrap, PostScrap.post_id, ids, uid)
     nicknames = _nicknames(db, posts)
@@ -123,6 +124,7 @@ def list_posts(
 
 @router.get("/posts/popular", response_model=list[PostOut])
 def popular_posts(
+    request: Request,
     region_id: str | None = None, period: str = Query("week", pattern="^(today|week|month|all)$"),
     limit: int = Query(5, ge=1, le=20),
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
@@ -138,7 +140,7 @@ def popular_posts(
     posts = db.scalars(rows.order_by(Post.score.desc(), Post.created_at.desc(), Post.id.desc()).limit(limit)).all()
     ids = [p.id for p in posts]
     uid = user.id if user else None
-    votes = vote_summaries(db, PostVote, PostVote.post_id, ids, uid)
+    votes = vote_summaries(db, PostVote, PostVote.post_id, ids, uid, None if uid else get_client_ip_hash(request))
     counts = comment_counts(db, PostComment, PostComment.post_id, ids)
     scrapped = scrapped_set(db, PostScrap, PostScrap.post_id, ids, uid)
     nicknames = _nicknames(db, posts)
@@ -178,12 +180,15 @@ def create_post(body: PostCreate, db: Session = Depends(get_db), user: User | No
 
 
 @router.get("/posts/{post_id}", response_model=PostOut)
-def get_post(post_id: int, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
+def get_post(
+    request: Request, post_id: int, db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
     p = db.get(Post, post_id)
     if not p or p.is_removed:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
     uid = user.id if user else None
-    votes = vote_summaries(db, PostVote, PostVote.post_id, [post_id], uid)
+    votes = vote_summaries(db, PostVote, PostVote.post_id, [post_id], uid, None if uid else get_client_ip_hash(request))
     counts = comment_counts(db, PostComment, PostComment.post_id, [post_id])
     scrapped = scrapped_set(db, PostScrap, PostScrap.post_id, [post_id], uid)
     nickname = db.scalar(select(User.nickname).where(User.id == p.author_id)) if p.author_id else None
@@ -215,7 +220,7 @@ def delete_post(post_id: int, db: Session = Depends(get_db), user: User = Depend
 # ---------- 게시판 댓글 ----------
 @router.get("/posts/{post_id}/comments", response_model=list[CommentOut])
 def list_post_comments(
-    post_id: int, sort: str = Query("new", pattern="^(new|top)$"),
+    request: Request, post_id: int, sort: str = Query("new", pattern="^(new|top)$"),
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
 ):
     p = db.get(Post, post_id)
@@ -229,8 +234,9 @@ def list_post_comments(
         ).all()
     ]
     ids = [c.id for c, _ in rows]
-    votes = vote_summaries(db, PostCommentVote, PostCommentVote.comment_id, ids, user.id if user else None)
-    return comment_tree(rows, user.id if user else None, votes, sort)
+    uid = user.id if user else None
+    votes = vote_summaries(db, PostCommentVote, PostCommentVote.comment_id, ids, uid, None if uid else get_client_ip_hash(request))
+    return comment_tree(rows, uid, votes, sort)
 
 
 @router.post(
@@ -276,30 +282,33 @@ def delete_post_comment(comment_id: int, db: Session = Depends(get_db), user: Us
 
 
 @router.post("/post-comments/{comment_id}/vote", response_model=VoteSummary, dependencies=[Depends(vote_limiter)])
-def vote_post_comment(comment_id: int, body: VoteIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def vote_post_comment(
+    request: Request, comment_id: int, body: VoteIn, db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
     comment = db.get(PostComment, comment_id)
     if not comment or comment.is_removed:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "댓글을 찾을 수 없습니다.")
-    existing = db.scalar(select(PostCommentVote).where(PostCommentVote.comment_id == comment_id, PostCommentVote.user_id == user.id))
-    if body.value == 0:
-        if existing:
-            db.delete(existing)
-    elif existing:
-        existing.value = body.value
-    else:
-        db.add(PostCommentVote(comment_id=comment_id, user_id=user.id, value=body.value))
-    db.commit()
-    return vote_summaries(db, PostCommentVote, PostCommentVote.comment_id, [comment_id], user.id)[comment_id]
+    uid = user.id if user else None
+    ip_hash = None if uid else get_client_ip_hash(request)
+    cast_vote(db, PostCommentVote, PostCommentVote.comment_id, "comment_id", comment_id, body.value, uid, ip_hash)
+    return vote_summaries(db, PostCommentVote, PostCommentVote.comment_id, [comment_id], uid, ip_hash)[comment_id]
 
 
 @router.post("/posts/{post_id}/vote", response_model=VoteSummary, dependencies=[Depends(vote_limiter)])
-def vote_post(post_id: int, body: VoteIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def vote_post(
+    request: Request, post_id: int, body: VoteIn, db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
     # 글 행을 잠그고 시작한다 — 같은 글에 동시에 들어오는 투표 요청들이 서로 Post.score 증분을
     # 덮어써서(lost update) 캐시 컬럼이 실제 투표 합계와 어긋나는 걸 막는다(정렬 조작 방지).
     p = db.scalar(select(Post).where(Post.id == post_id).with_for_update())
     if not p or p.is_removed:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
-    existing = db.scalar(select(PostVote).where(PostVote.post_id == post_id, PostVote.user_id == user.id))
+    uid = user.id if user else None
+    ip_hash = None if uid else get_client_ip_hash(request)
+    voter_filter = PostVote.user_id == uid if uid is not None else PostVote.ip_hash == ip_hash
+    existing = db.scalar(select(PostVote).where(PostVote.post_id == post_id, voter_filter))
     before = existing.value if existing else 0
     if body.value == 0:
         if existing:
@@ -307,12 +316,12 @@ def vote_post(post_id: int, body: VoteIn, db: Session = Depends(get_db), user: U
     elif existing:
         existing.value = body.value
     else:
-        db.add(PostVote(post_id=post_id, user_id=user.id, value=body.value))
+        db.add(PostVote(post_id=post_id, user_id=uid, ip_hash=ip_hash, value=body.value))
     # SQL 쪽 상대 증분(score = score + delta)으로 적용한다 — 파이썬에서 읽은 값에 더해 그대로
     # 덮어쓰면 위 잠금이 있어도 계산 경로 자체가 read-modify-write 라 방어가 약해진다.
     db.execute(update(Post).where(Post.id == post_id).values(score=Post.score + (body.value - before)))
     db.commit()
-    return vote_summaries(db, PostVote, PostVote.post_id, [post_id], user.id)[post_id]
+    return vote_summaries(db, PostVote, PostVote.post_id, [post_id], uid, ip_hash)[post_id]
 
 
 @router.get("/me/scraps/posts", response_model=Page[PostOut])

@@ -61,6 +61,8 @@ class MyReviewOut(BaseModel):
     created_at: str | None
     published_at: str | None
     comment_count: int = 0
+    up: int = 0
+    down: int = 0
     score: int = 0
     evidence_note: str | None = None
     evidence_verified: bool = False
