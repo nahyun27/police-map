@@ -48,7 +48,7 @@ export function MyRegionFeed() {
         <div className="review" key={rv.id}>
           <div className="meta">
             <span className="badge">{rv.role_label}</span>{rv.station_name} · {formatDate(rv.published_at)}
-            {rv.evidence_verified && <span className="badge good"><ShieldCheck size={11} />증빙확인</span>}
+            {rv.evidence_verified && <span className="badge good" title="운영진이 증빙자료 제출 사실을 확인했다는 표시입니다. 서술 내용 전체의 사실 여부를 보증하지는 않습니다."><ShieldCheck size={11} />증빙확인</span>}
           </div>
           <p>
             {rv.body ? rv.body.slice(0, 70) + (rv.body.length > 70 ? '…' : '') : '(서술 없음, 별점만 등록)'}{' '}

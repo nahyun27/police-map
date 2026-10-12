@@ -1,5 +1,8 @@
 import Link from 'next/link';
-import { ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Flame, Scale, ShieldCheck, ThumbsDown, ThumbsUp } from 'lucide-react';
+import {
+  ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Flame, Megaphone, Scale, Search, ShieldCheck, Star,
+  ThumbsDown, ThumbsUp,
+} from 'lucide-react';
 import HeroSearch from '@/components/HeroSearch';
 import { MyRegionFeed } from '@/components/MyRegionFeed';
 import RegionMapSwitcher from '@/components/RegionMapSwitcher';
@@ -16,6 +19,16 @@ const FEATURES = [
   { to: '/policy', icon: ShieldCheck, title: '사실 기반 평가', body: '직무수행에 대한 구조화된 평가만 받습니다. 금칙어는 자동 필터링되고, 인신공격·사생활 게시물은 사후 삭제됩니다.', more: '운영원칙 보기' },
   { to: '/remedy', icon: Scale, title: '권리구제 내비게이터', body: '후기에서 멈추지 않도록, 겪은 문제에 맞는 공식 절차와 접수처를 안내합니다.', more: '내 상황에 맞는 절차 찾기' },
   { to: '/stats', icon: BarChart3, title: '공개 통계', body: '이용자 평가와 정보공개청구로 확보한 기피신청·수용률 통계를 함께 제공합니다.', more: '전국 통계 보기' },
+];
+
+// 메뉴가 검색·커뮤니티·소개·통계·권리구제·제보로 나뉘어 있어 처음 온 사람은 뭐부터
+// 봐야 할지 헷갈릴 수 있다는 피드백(2026-10)으로, "기능 설명"이 아니라 "지금 뭐 하러
+// 왔는지"를 바로 고르게 하는 진입 카드를 히어로 바로 아래에 둔다.
+const PURPOSES = [
+  { to: '#find-map', icon: Search, title: '경찰서 찾기', body: '관할 경찰서와 부서 확인' },
+  { to: '/search', icon: Star, title: '수사 경험 평가', body: '직접 겪은 절차 평가' },
+  { to: '/remedy', icon: Scale, title: '권리구제 방법 찾기', body: '내 상황에 맞는 공식 절차' },
+  { to: '/report', icon: Megaphone, title: '문제 제보하기', body: '감독기관·언론 제보 안내' },
 ];
 
 // 법원 판결·국정조사로 이미 확정된 사건만 담는다(미확인 사건 제외, 2026-09-30 결정). 전문은 /why 참고.
@@ -74,10 +87,23 @@ export default async function Home() {
         </div>
       </section>
 
+      <section className="purpose-section">
+        <h2 className="purpose-title">어떤 도움이 필요하신가요?</h2>
+        <div className="purpose-grid">
+          {PURPOSES.map((p) => (
+            <Link href={p.to} key={p.to} className="purpose-card">
+              <div className="ico"><p.icon size={20} /></div>
+              <b>{p.title}</b>
+              <span className="sub">{p.body}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       <MyRegionFeed />
 
       <div className="grid2">
-        <Card>
+        <Card id="find-map">
           <h2>지도에서 찾기</h2>
           <p className="sub">시·도경찰청을 선택하면 관할 경찰서 목록으로 이동합니다.</p>
           <RegionMapSwitcher regions={regions} />
@@ -94,7 +120,7 @@ export default async function Home() {
             <div className="review" key={rv.id}>
               <div className="meta">
                 <span className="badge">{rv.role_label}</span>{rv.station_name} · {formatDate(rv.published_at)}
-                {rv.evidence_verified && <span className="badge good"><ShieldCheck size={11} />증빙확인</span>}
+                {rv.evidence_verified && <span className="badge good" title="운영진이 증빙자료 제출 사실을 확인했다는 표시입니다. 서술 내용 전체의 사실 여부를 보증하지는 않습니다."><ShieldCheck size={11} />증빙확인</span>}
               </div>
               <div className="head"><Score value={rv.overall} /></div>
               <p>
