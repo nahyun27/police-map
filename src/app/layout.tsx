@@ -22,6 +22,9 @@ export const metadata: Metadata = {
     locale: 'ko_KR',
     type: 'website',
   },
+  // 트위터는 twitter:image 가 없으면 og:image(위 openGraph, opengraph-image.tsx 가 자동
+  // 생성)로 알아서 대체해서 보여준다 — 카드 종류만 지정하면 이미지는 따로 안 줘도 된다.
+  twitter: { card: 'summary_large_image' },
 };
 
 export const viewport: Viewport = { themeColor: '#0a1b3d' };
