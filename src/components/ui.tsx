@@ -92,3 +92,14 @@ export function PageHead({ eyebrow, title, sub, children }: { eyebrow?: string; 
 export function TableWrap({ children }: { children: ReactNode }) {
   return <div className="table-wrap">{children}</div>;
 }
+
+/** 통계·목록 등에서 데이터가 아직 없을 때 쓰는 공통 빈 상태. 밋밋한 회색 문장 한 줄 대신
+ * 아이콘을 곁들여서 "아직 비어 있을 뿐 고장난 게 아니다"라는 느낌을 준다. */
+export function EmptyState({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <div className="empty-state">
+      <div className="empty-ico">{icon}</div>
+      <p className="sub">{children}</p>
+    </div>
+  );
+}

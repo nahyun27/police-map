@@ -269,7 +269,13 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 .bigscore .lbl { font-size: 13px; color: var(--muted); margin-top: 6px; }
 
 .kpi .num { font-size: 34px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi .num.muted { font-size: 17px; font-weight: 700; color: var(--muted); letter-spacing: -0.02em; }
 .kpi .lbl { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.kpi.stat { display: flex; align-items: flex-start; gap: 14px; }
+.kpi.stat .ico { flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); }
+
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 34px 16px; text-align: center; }
+.empty-ico { width: 44px; height: 44px; border-radius: 14px; background: var(--line2); color: var(--muted); display: grid; place-items: center; }
 
 .divider { border: none; border-top: 1px solid var(--line); margin: 20px 0; }
 .flex { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }

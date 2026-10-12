@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { BarChart3, FileCheck2, Percent, Scale, Star, TrendingUp, Trophy } from 'lucide-react';
 import ClickableRow from '@/components/ClickableRow';
-import { Bars, Card, PageHead, Score } from '@/components/ui';
+import { Bars, Card, EmptyState, PageHead, Score } from '@/components/ui';
 import { getStats, getTransparencyReport, type StatsOverview, type TransparencyQuarter } from '@/lib/api';
 
 // getStats() 가 이미 60초 캐시돼 있어(src/lib/api.ts), force-dynamic 없이도 신선도는
@@ -39,67 +40,84 @@ export default async function StatsPage() {
       />
 
       <div className="grid3">
-        <Card className="kpi">
-          <div className="num">{stats.national.overall !== null ? stats.national.overall.toFixed(1) : '–'}</div>
-          <div className="lbl">전국 평균 평가(5점 만점, {stats.totals.reviews.toLocaleString()}건)</div>
+        <Card className="kpi stat">
+          <div className="ico"><Star size={19} /></div>
+          <div>
+            {stats.national.overall !== null ? (
+              <div className="num">{stats.national.overall.toFixed(1)}</div>
+            ) : <div className="num muted">집계 전</div>}
+            <div className="lbl">전국 평균 평가(5점 만점, {stats.totals.reviews.toLocaleString()}건)</div>
+          </div>
         </Card>
-        <Card className="kpi">
-          <div className="num">{latestAppeal ? latestAppeal.value.toLocaleString() : '–'}</div>
-          <div className="lbl">연간 수사관 기피신청{latestAppeal ? `(${latestAppeal.year}, 공개통계)` : ''}</div>
+        <Card className="kpi stat">
+          <div className="ico"><Scale size={19} /></div>
+          <div>
+            {latestAppeal ? <div className="num">{latestAppeal.value.toLocaleString()}</div> : <div className="num muted">등록 전</div>}
+            <div className="lbl">연간 수사관 기피신청{latestAppeal ? `(${latestAppeal.year}, 공개통계)` : ''}</div>
+          </div>
         </Card>
-        <Card className="kpi">
-          <div className="num">{stats.appeal_acceptance_rate ? `약 ${stats.appeal_acceptance_rate.value}%` : '–'}</div>
-          <div className="lbl">기피신청 수용률(공개통계 기준)</div>
+        <Card className="kpi stat">
+          <div className="ico"><Percent size={19} /></div>
+          <div>
+            {stats.appeal_acceptance_rate ? <div className="num">약 {stats.appeal_acceptance_rate.value}%</div> : <div className="num muted">등록 전</div>}
+            <div className="lbl">기피신청 수용률(공개통계 기준)</div>
+          </div>
         </Card>
       </div>
 
       <div className="grid2">
         <Card>
-          <h2>항목별 전국 평균</h2>
+          <h2><BarChart3 size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />항목별 전국 평균</h2>
           {stats.national.count ? (
             <Bars rating={stats.national} />
           ) : (
-            <p className="sub">아직 게시된 평가가 없습니다.</p>
+            <EmptyState icon={<BarChart3 size={20} />}>아직 게시된 평가가 없습니다. 첫 평가가 등록되면 이곳에 항목별 평균이 표시됩니다.</EmptyState>
           )}
         </Card>
         <Card>
-          <h2>수사관 기피신청 추이(공개통계)</h2>
-          {appeals.length ? appeals.map((a) => (
-            <div className="barrow" key={a.year}>
-              <div className="lb" style={{ width: 44 }}>{a.year}</div>
-              <div className="bar"><i style={{ width: `${(a.value / max) * 100}%` }} /></div>
-              <div className="vl" style={{ width: 52 }}>{a.value.toLocaleString()}</div>
-            </div>
-          )) : <p className="sub">등록된 공개통계가 없습니다.</p>}
-          <p className="sub" style={{ marginTop: 14 }}>실서비스에서는 정보공개청구 원자료를 게재합니다.</p>
+          <h2><TrendingUp size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />수사관 기피신청 추이(공개통계)</h2>
+          {appeals.length ? (
+            <>
+              {appeals.map((a) => (
+                <div className="barrow" key={a.year}>
+                  <div className="lb" style={{ width: 44 }}>{a.year}</div>
+                  <div className="bar"><i style={{ width: `${(a.value / max) * 100}%` }} /></div>
+                  <div className="vl" style={{ width: 52 }}>{a.value.toLocaleString()}</div>
+                </div>
+              ))}
+              <p className="sub" style={{ marginTop: 14 }}>실서비스에서는 정보공개청구 원자료를 게재합니다.</p>
+            </>
+          ) : (
+            <EmptyState icon={<TrendingUp size={20} />}>등록된 공개통계가 없습니다. 실서비스에서는 정보공개청구로 확보한 원자료를 게재합니다.</EmptyState>
+          )}
         </Card>
       </div>
 
       <Card>
-        <h2>관서별 평가 순위</h2>
-        <div className="table-wrap">
-          <table className="list">
-            <thead><tr><th style={{ width: 56 }}>순위</th><th>경찰서</th><th>평균</th><th>평가 수</th></tr></thead>
-            <tbody>
-              {stats.station_ranking.length ? (
-                stats.station_ranking.map((s, i) => (
+        <h2><Trophy size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--star)' }} />관서별 평가 순위</h2>
+        {stats.station_ranking.length ? (
+          <div className="table-wrap">
+            <table className="list">
+              <thead><tr><th style={{ width: 56 }}>순위</th><th>경찰서</th><th>평균</th><th>평가 수</th></tr></thead>
+              <tbody>
+                {stats.station_ranking.map((s, i) => (
                   <ClickableRow key={s.id} href={`/station/${s.id}`}>
                     <td style={{ fontWeight: 700, color: i < 3 ? 'var(--brand)' : 'var(--muted)' }}>{i + 1}</td>
                     <td><Link href={`/station/${s.id}`}>{s.name}</Link></td>
                     <td><Score value={s.rating} /></td>
                     <td>{s.review_count}건</td>
                   </ClickableRow>
-                ))
-              ) : (
-                <tr><td colSpan={4} className="sub">아직 평가가 집계된 경찰서가 없습니다.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState icon={<Trophy size={20} />}>아직 평가가 집계된 경찰서가 없습니다. 평가가 쌓이면 순위가 집계됩니다.</EmptyState>
+        )}
       </Card>
 
       <Card>
-        <h2>분기별 투명성 보고서</h2>
+        <h2><FileCheck2 size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />분기별 투명성 보고서</h2>
         <p className="sub" style={{ marginBottom: 14 }}>
           운영원칙에 따라 평가 반려·사후삭제, 신고 처리, 삭제·정정 요청 처리 건수를 분기별로 공개합니다.
         </p>
@@ -128,7 +146,7 @@ export default async function StatsPage() {
             </table>
           </div>
         ) : (
-          <p className="sub">아직 집계할 처리 건이 없습니다.</p>
+          <EmptyState icon={<FileCheck2 size={20} />}>아직 집계할 처리 건이 없습니다. 분기가 마감되면 자동으로 집계됩니다.</EmptyState>
         )}
       </Card>
     </>
