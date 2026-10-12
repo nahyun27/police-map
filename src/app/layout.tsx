@@ -28,7 +28,7 @@ export const viewport: Viewport = { themeColor: '#0a1b3d' };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" data-scroll-behavior="smooth">
       <head>
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link

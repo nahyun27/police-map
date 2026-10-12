@@ -1,4 +1,4 @@
-from conftest import make_user
+from conftest import make_user, review_payload
 
 API = "/api/v1/auth"
 
@@ -57,3 +57,48 @@ def test_access_token_cannot_be_used_as_refresh(client, db):
 def test_login_rate_limit(client):
     codes = [client.post(f"{API}/login", json={"email": "x@example.com", "password": "nope-nope"}).status_code for _ in range(12)]
     assert codes[:10] == [401] * 10 and codes[10:] == [429, 429]
+
+
+def test_withdraw_requires_correct_password(user_client):
+    assert user_client.request("DELETE", f"{API}/me", json={"password": "wrong-password"}).status_code == 401
+    assert user_client.get(f"{API}/me").status_code == 200  # 비밀번호 틀리면 탈퇴 안 됨
+
+
+def test_withdraw_requires_login(client):
+    assert client.request("DELETE", f"{API}/me", json={"password": "password123"}).status_code == 401
+
+
+def test_withdraw_deactivates_and_logs_out(user_client, db):
+    from sqlalchemy import select
+
+    from app.models import User
+
+    assert user_client.request("DELETE", f"{API}/me", json={"password": "password123"}).status_code == 204
+    assert user_client.get(f"{API}/me").status_code == 401  # 쿠키도 같이 비워짐
+
+    u = db.scalar(select(User).where(User.nickname == "탈퇴한 회원"))
+    assert u is not None and u.is_active is False
+
+    # 비밀번호 재확인으로도 더 이상 못 들어온다(비밀번호 자체가 랜덤값으로 덮어써짐).
+    assert user_client.post(f"{API}/login", json={"email": "user@example.com", "password": "password123"}).status_code == 401
+
+
+def test_withdraw_frees_email_for_reregistration(user_client):
+    user_client.request("DELETE", f"{API}/me", json={"password": "password123"})
+    r = user_client.post(f"{API}/register", json={"email": "user@example.com", "password": "password123", "nickname": "새계정"})
+    assert r.status_code == 201
+
+
+def test_withdraw_anonymizes_content_instead_of_deleting_it(user_client, world):
+    """탈퇴해도 작성한 평가·게시글은 "익명"으로만 바뀌고 그대로 공개 기록에 남는다."""
+    rid = user_client.post("/api/v1/reviews", json=review_payload(world["station"].id)).json()["id"]
+    pid = user_client.post("/api/v1/posts", json={"region_id": "seoul", "title": "탈퇴 전 글", "body": "본문"}).json()["id"]
+
+    assert user_client.request("DELETE", f"{API}/me", json={"password": "password123"}).status_code == 204
+
+    station = world["station"]
+    review_after = [r for r in user_client.get(f"/api/v1/stations/{station.id}").json()["reviews"]["items"] if r["id"] == rid]
+    assert review_after and review_after[0]["id"] == rid  # 비로그인으로도 여전히 조회 가능(공개 기록 유지)
+
+    post_after = user_client.get(f"/api/v1/posts/{pid}").json()
+    assert post_after["author_nickname"] == "익명" and post_after["is_mine"] is False

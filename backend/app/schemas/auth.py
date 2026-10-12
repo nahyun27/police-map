@@ -25,6 +25,12 @@ class LoginIn(BaseModel):
     password: str = Field(max_length=200)
 
 
+class DeleteAccountIn(BaseModel):
+    """탈퇴는 세션 탈취 등으로 실수·악의적으로 눌려도 되돌릴 수 없으니, 로그인 상태와
+    별개로 비밀번호를 한 번 더 받아 확인한다(로그아웃과 달리 되돌릴 수 없는 조치라서)."""
+    password: str = Field(max_length=200)
+
+
 class UserOut(BaseModel):
     id: int
     email: str

@@ -741,5 +741,10 @@ table.list td a { font-weight: 650; color: var(--ink); }
   background: var(--brand-soft); color: var(--brand);
 }
 .notice-card .ico.good { background: var(--good-soft); color: var(--good); }
+.notice-card .ico.danger { background: var(--low-soft); color: var(--low); }
+.btn.danger { background: var(--low); border-color: var(--low); color: #fff; }
+.btn.danger:hover { background: #a92622; border-color: #a92622; color: #fff; }
+.btn.line.danger { background: #fff; color: var(--low); border-color: var(--low-soft); }
+.btn.line.danger:hover { background: var(--low-soft); color: var(--low); border-color: var(--low); }
 .notice-card p { flex: 1; min-width: 160px; }
 @media (max-width: 560px) { .notice-card { flex-wrap: wrap; } .notice-card .btn { margin-left: auto; } }

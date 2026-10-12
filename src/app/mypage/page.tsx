@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Bookmark, Eye, FileText, Info, LogOut, MapPin, MessageSquare, ShieldCheck, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import {
+  Bookmark, Eye, FileText, Info, LogOut, MapPin, MessageSquare, ShieldCheck, ThumbsDown, ThumbsUp, UserX, X,
+} from 'lucide-react';
 import { Card, PageHead, Score } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import {
-  ApiError, followRegion, getMe, getMyRegions, getMyReviews, getMyReviewScraps, getMyPostScraps, getRegions,
-  logout, unfollowRegion,
+  ApiError, deleteAccount, followRegion, getMe, getMyRegions, getMyReviews, getMyReviewScraps, getMyPostScraps,
+  getRegions, logout, unfollowRegion,
   type MyReviewOut, type Page, type PostOut, type RecentReview, type RegionFollowOut, type RegionOut, type UserOut,
 } from '@/lib/api';
 
@@ -161,6 +163,65 @@ function MyScraps() {
   );
 }
 
+/** 탈퇴는 되돌릴 수 없어서 로그인 세션과 별개로 비밀번호를 한 번 더 받는다(백엔드도 같은
+ * 전제로 비밀번호를 다시 검사한다, backend/app/api/v1/auth.py 참고). 작성한 평가·게시글은
+ * 지워지지 않고 "익명"으로 바뀔 뿐이라는 걸 누르기 전에 미리 알려 준다. */
+function WithdrawAccount() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    if (!confirm('정말 탈퇴하시겠어요? 되돌릴 수 없습니다.')) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteAccount(password);
+      router.replace('/');
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) setError('비밀번호가 올바르지 않습니다.');
+      else setError('탈퇴하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card className="flat notice-card">
+      <div className="ico danger"><UserX size={18} /></div>
+      {!open ? (
+        <>
+          <p className="sub">더 이상 이용하지 않으신다면 탈퇴할 수 있습니다. 작성한 평가·게시글은 삭제되지 않고 &quot;익명&quot;으로 남습니다.</p>
+          <button type="button" className="btn line sm danger" onClick={() => setOpen(true)}>회원 탈퇴</button>
+        </>
+      ) : (
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <p className="sub" style={{ marginBottom: 8 }}>탈퇴하려면 비밀번호를 입력하세요. 계정은 즉시 비활성화되고 되돌릴 수 없습니다.</p>
+          <div className="btn-row">
+            <div className="field" style={{ margin: 0, maxWidth: 200 }}>
+              <input
+                type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                placeholder="비밀번호" autoComplete="current-password"
+              />
+            </div>
+            <button type="button" className="btn sm danger" onClick={submit} disabled={!password || busy}>
+              {busy ? '처리 중…' : '탈퇴 확인'}
+            </button>
+            <button
+              type="button" className="btn line sm"
+              onClick={() => { setOpen(false); setPassword(''); setError(null); }}
+            >
+              취소
+            </button>
+          </div>
+          {error && <div className="warn" style={{ marginTop: 8 }}>{error}</div>}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function MyPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserOut | null>(null);
@@ -170,6 +231,11 @@ export default function MyPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // 의존성 배열을 [router]로 두면, 로그아웃/탈퇴로 router.replace('/') 를 호출해 페이지를
+    // 벗어나는 바로 그 순간에도(아직 마운트 해제 전) useRouter() 가 새 참조를 돌려줘 이
+    // effect가 다시 돌아 getMe() 를 또 호출하는 경쟁 상태가 있었다 — 그 시점엔 쿠키가 이미
+    // 지워져 있어 401 → router.replace('/login?next=/mypage') 가 먼저 한 replace('/') 를
+    // 덮어써 버렸다(실사용자 테스트로 발견). 마운트 시 한 번만 돌면 되므로 []로 고정한다.
     getMe()
       .then(setUser)
       .catch((e) => {
@@ -177,7 +243,8 @@ export default function MyPage() {
         else setError('내 정보를 불러오지 못했습니다.');
       })
       .finally(() => setLoading(false));
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadReviews = useCallback(() => {
     getMyReviews({ page, size: SIZE }).then(setData).catch(() => setError('내가 쓴 글을 불러오지 못했습니다.'));
@@ -190,7 +257,6 @@ export default function MyPage() {
   const doLogout = async () => {
     await logout().catch(() => {});
     router.replace('/');
-    router.refresh();
   };
 
   if (loading) return <Card><p className="sub">불러오는 중…</p></Card>;
@@ -279,6 +345,8 @@ export default function MyPage() {
           </div>
         )}
       </Card>
+
+      <WithdrawAccount />
     </>
   );
 }

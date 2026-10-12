@@ -6,10 +6,11 @@ from sqlalchemy.orm import Session
 from app.core.cookies import clear_auth_cookies, get_refresh_token, set_auth_cookies
 from app.core.database import get_db
 from app.core.deps import get_current_user
-from app.core.rate_limit import login_limiter, register_limiter
+from app.core.rate_limit import delete_account_limiter, login_limiter, register_limiter
 from app.core.security import create_access_token, create_refresh_token, decode_token, hash_password, verify_password
 from app.models import User
-from app.schemas.auth import LoginIn, RegisterIn, UserOut
+from app.schemas.auth import DeleteAccountIn, LoginIn, RegisterIn, UserOut
+from app.services.account import delete_account
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -76,3 +77,14 @@ def logout(response: Response):
 @router.get("/me", response_model=UserOut)
 def me(user: User = Depends(get_current_user)):
     return user_out(user)
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(delete_account_limiter)])
+def withdraw(
+    body: DeleteAccountIn, response: Response, db: Session = Depends(get_db), user: User = Depends(get_current_user),
+):
+    """회원 탈퇴. 되돌릴 수 없는 조치라 로그인 세션과 별개로 비밀번호를 한 번 더 확인한다."""
+    if not verify_password(body.password, user.password_hash):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "비밀번호가 올바르지 않습니다.")
+    delete_account(db, user)
+    clear_auth_cookies(response)

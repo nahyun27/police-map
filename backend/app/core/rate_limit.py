@@ -42,7 +42,8 @@ verify_limiter = RateLimiter(3, 86400, "officer_verify")
 reply_limiter = RateLimiter(20, 3600, "reply")
 report_limiter = RateLimiter(20, 3600, "report")
 view_limiter = RateLimiter(120, 3600, "view")
+delete_account_limiter = RateLimiter(5, 3600, "delete_account")
 ALL_LIMITERS = [
     login_limiter, register_limiter, takedown_limiter, review_limiter, post_limiter, comment_limiter, vote_limiter,
-    verify_limiter, reply_limiter, report_limiter, view_limiter,
+    verify_limiter, reply_limiter, report_limiter, view_limiter, delete_account_limiter,
 ]

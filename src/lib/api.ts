@@ -314,6 +314,8 @@ export const login = (email: string, password: string) =>
   apiFetch<UserOut>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
 export const logout = () => apiFetch<void>('/auth/logout', { method: 'POST' });
 export const getMe = () => apiFetch<UserOut>('/auth/me');
+export const deleteAccount = (password: string) =>
+  apiFetch<void>('/auth/me', { method: 'DELETE', body: JSON.stringify({ password }) });
 
 export interface MyReviewOut {
   id: number;
