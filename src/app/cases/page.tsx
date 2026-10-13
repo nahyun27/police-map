@@ -63,6 +63,8 @@ export default async function CasesPage({ searchParams }: Props) {
   return (
     <>
       <section className="card hero compact hero-bleed">
+        {/* eslint-disable-next-line @next/next/no-img-element -- 장식용 배경 이미지(권리구제·제보 히어로와 동일 방식) */}
+        <img src="/images/cases-hero.webp" alt="" aria-hidden="true" className="hero-photo" />
         <div className="eyebrow">사건 공론화</div>
         <h1>혼자 겪은 일을,<br />함께 살펴볼 수 있도록</h1>
         <p className="lead">
