@@ -6,7 +6,6 @@ import { CategoryTabs } from '@/components/CategoryTabs';
 import { RegionFilterSelect } from '@/components/RegionFilterSelect';
 import { getRegions, listBoardFeed, type BoardFeedCategory, type PopularPeriod } from '@/lib/api';
 import { formatDate } from '@/lib/format';
-import { AdSlots } from '@/components/AdSlots';
 
 type Props = {
   searchParams: Promise<{ region?: string; category?: string; sort?: string; period?: string; q?: string; page?: string }>;
@@ -174,7 +173,6 @@ export default async function BoardPage({ searchParams }: Props) {
       <Link href={writeHref} className="fab-write" aria-label="글쓰기">
         <PenLine size={22} /><span>글쓰기</span>
       </Link>
-      <AdSlots regionId={region} />
     </>
   );
 }

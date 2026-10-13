@@ -5,7 +5,6 @@ import ClickableRow from '@/components/ClickableRow';
 import RegionMiniMap from '@/components/RegionMiniMap';
 import { Card, Crumb, PageHead, Score, TableWrap } from '@/components/ui';
 import { ApiError, getRegion } from '@/lib/api';
-import { AdSlots } from '@/components/AdSlots';
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -71,7 +70,6 @@ export default async function RegionPage({ params }: Props) {
           </table>
         </TableWrap>
       </Card>
-      <AdSlots regionId={rg.id} />
     </>
   );
 }

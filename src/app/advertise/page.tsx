@@ -9,8 +9,8 @@ import { ApiError, createInquiry, type InquiryType } from '@/lib/api';
 const TYPES: [InquiryType, string][] = [['ad', '광고 문의'], ['partnership', '제휴·비즈니스'], ['other', '기타']];
 
 const POINTS = [
-  { icon: MapPin, title: '지역 타겟 광고', body: '시·도 단위로 그 지역 페이지와 관할 경찰서 페이지에만 노출할 수 있어요. 전국 노출도 가능합니다.' },
-  { icon: Megaphone, title: '눈에 띄는 자리', body: 'PC에서는 본문 양옆 고정 배너, 모바일에서는 본문 하단 배너로 노출됩니다. 권리구제 페이지 광고란도 있어요.' },
+  { icon: MapPin, title: '지역 타겟 광고', body: '시·도 단위로 그 지역 경찰서 상세 페이지에만 노출할 수 있어요. 전국 노출도 가능합니다.' },
+  { icon: Megaphone, title: '눈에 띄는 자리', body: '경찰서를 찾아 들어온 사람이 보는 경찰서 상세 페이지에 노출됩니다. PC에서는 본문 옆 고정 배너, 모바일에서는 본문 하단 배너예요. 권리구제 페이지 광고란도 있어요.' },
   { icon: MousePointerClick, title: '성과 확인', body: '노출 수와 클릭 수를 집계해 알려 드립니다.' },
 ];
 

@@ -48,7 +48,7 @@ export default function AdminAdsPage() {
       <Card>
         <div className="btn-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
           <p className="sub" style={{ margin: 0 }}>
-            지역을 고르면 그 지역 페이지와 관할 경찰서 페이지에, &quot;전국&quot;이면 홈·커뮤니티 등 일반 페이지와 지역 광고가 없는 곳에 노출됩니다.
+            광고는 경찰서 상세 페이지(양옆·하단)와 권리구제 광고란에 나옵니다. 지역을 고르면 그 지역 경찰서에 우선, &quot;전국&quot;이면 지역 광고가 없는 경찰서에 노출됩니다.
           </p>
           <button className="btn sm" onClick={() => setOpen((v) => !v)}><Plus size={14} />광고 등록</button>
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import koreaMap from '@/data/koreaMap.json';
 import stationPinsData from '@/data/stationPins.json';
@@ -21,6 +21,20 @@ export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps
     (p) => p.region === regionId,
   );
   const [hoverId, setHoverId] = useState<number | null>(null);
+  // 터치 화면엔 호버가 없어서 핀을 누르면 이름을 못 본 채 바로 이동해 버린다 — 터치일 땐 첫 탭은
+  // 이름만 보여주고, 같은 핀을 한 번 더 누르면 이동한다(마우스·키보드는 기존처럼 바로 이동).
+  const lastPointer = useRef<string>('mouse');
+  // 지도가 화면에 실제로 그려진 폭(px). 핀·이름표를 화면 기준 고정 크기로 맞추는 데 쓴다 — 지도를 크게
+  // 그릴수록 같은 크기의 이름표가 들어갈 자리가 늘어나 더 많은 이름을 겹치지 않게 보여줄 수 있다.
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [renderW, setRenderW] = useState(560);
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => { if (e.contentRect.width) setRenderW(e.contentRect.width); });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   if (!feature || !pins.length) return null;
 
   const stationMap = new Map(stations.map((s) => [s.id, s]));
@@ -29,13 +43,11 @@ export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps
   const padY = Math.max((y1 - y0) * 0.18, 12);
   const vbWidth = x1 - x0 + padX * 2;
   const viewBox = `${x0 - padX} ${y0 - padY} ${vbWidth} ${y1 - y0 + padY * 2}`;
-  // 화면에 찍히는 실제 지도 폭(.region-mini-map의 max-width)은 모든 지역이 동일하므로,
-  // 핀 반지름을 이 지역의 viewBox 폭에 비례시켜야 서울처럼 좁게 확대된 지역에서도
-  // 핀끼리 서로 뭉개지지 않고 화면상 크기가 일정하게 유지된다.
-  const pinR = Math.min(5, Math.max(1.1, vbWidth * 0.012));
-  // 라벨 글자 크기도 핀 반지름과 같은 방식(viewBox 폭 비례)으로 잡아야 지역마다 화면에
-  // 찍히는 실제 글자 크기가 똑같이 유지된다(위 pinR 주석 참고).
-  const labelFontSize = Math.min(9, Math.max(3.4, vbWidth * 0.024));
+  // viewBox 단위 ↔ 화면 px 환산. 핀 반지름 5px, 이름 글자 11px 가 어느 지역·어느 화면 폭에서도
+  // 같은 크기로 찍히도록 실제 렌더 폭(renderW) 기준으로 viewBox 단위를 역산한다.
+  const unit = vbWidth / renderW;
+  const pinR = 5 * unit;
+  const labelFontSize = 11 * unit;
 
   const visible = pins
     .map((p) => {
@@ -48,18 +60,40 @@ export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps
     .filter((p): p is NonNullable<typeof p> => p !== null);
 
   const goTo = (stationId: number) => router.push(`/station/${stationId}`);
+  const onPinClick = (stationId: number) => {
+    if (lastPointer.current === 'touch' && hoverId !== stationId) { setHoverId(stationId); return; }
+    goTo(stationId);
+  };
 
-  // 라벨은 핀(방패)과 별도 레이어로, 나중에 그려서 항상 지도 위에 뜨게 한다. 호버 중인
-  // 라벨이 다른 라벨에 가려지지 않도록 배열 맨 뒤로 보내 SVG 그리기 순서상 맨 위에 오게 한다
-  // (KoreaMap.tsx 의 지역명 라벨도 같은 이유로 지역 도형과 별도 pass 로 그린다).
-  const labelOrder = [...visible].sort((a, b) => (a.id === hoverId ? 1 : b.id === hoverId ? -1 : 0));
+  // 경찰서가 몰린 지역(경기남부·대구 등)에서 이름을 전부 띄우면 서로 겹쳐 하나도 안 읽힌다.
+  // 그래서 이름표 자리를 어림해서, 이미 놓인 이름표나 다른 핀과 겹치는 이름은 숨기고 핀만 둔다
+  // (숨긴 이름은 핀에 마우스를 올리거나 탭하면 말풍선으로 보인다). 위쪽 핀부터 차례로 놓는다.
+  const textY = -pinR * 1.6 - labelFontSize * 0.55; // PinLabel 의 글자 기준선과 같은 값
+  const margin = labelFontSize * 0.25;
+  const pinBoxes = visible.map((p) => [p.x - pinR, p.y - pinR * 1.2, p.x + pinR, p.y + pinR * 1.2]);
+  const placed: number[][] = [];
+  const shownLabels = new Set<number>();
+  for (const p of [...visible].sort((a, b) => a.y - b.y || a.x - b.x)) {
+    const w = p.name.length * labelFontSize * 1.0;
+    const box = [p.x - w / 2 - margin, p.y + textY - labelFontSize - margin, p.x + w / 2 + margin, p.y + textY + labelFontSize * 0.3 + margin];
+    const hits = (o: number[]) => box[0] < o[2] && box[2] > o[0] && box[1] < o[3] && box[3] > o[1];
+    const ownPin = (o: number[]) => o[0] === p.x - pinR && o[1] === p.y - pinR * 1.2;
+    if (placed.some(hits) || pinBoxes.some((o) => !ownPin(o) && hits(o))) continue;
+    placed.push(box);
+    shownLabels.add(p.id);
+  }
+  const hiddenCount = visible.length - shownLabels.size;
+  const active = visible.find((p) => p.id === hoverId);
 
   return (
     <Card>
       <h2>경찰서 위치</h2>
-      <p className="sub">핀을 클릭하면 해당 경찰서 상세 페이지로 이동합니다.</p>
+      <p className="sub">
+        핀을 클릭하면 해당 경찰서 상세 페이지로 이동합니다.
+        {hiddenCount > 0 && ' 이름이 겹치는 곳은 핀에 마우스를 올리면(모바일은 한 번 탭) 이름이 보여요.'}
+      </p>
       <div className="region-mini-map-wrap">
-        <svg viewBox={viewBox} className="region-mini-map" role="img" aria-label={`${regionId} 관할 경찰서 위치`}>
+        <svg ref={svgRef} viewBox={viewBox} className="region-mini-map" role="img" aria-label={`${regionId} 관할 경찰서 위치`}>
           <path d={feature.d} className="region-mini-shape" />
           {visible.map((p) => (
             <g
@@ -69,7 +103,8 @@ export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps
               tabIndex={0}
               role="button"
               aria-label={`${p.name} 상세 보기`}
-              onClick={() => goTo(p.id)}
+              onPointerDown={(e) => { lastPointer.current = e.pointerType; }}
+              onClick={() => onPinClick(p.id)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goTo(p.id); }
               }}
@@ -81,12 +116,20 @@ export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps
               <path d={shieldPath(pinR)} strokeWidth={pinR * 0.3} strokeLinejoin="round" className="pin-shield" />
             </g>
           ))}
-          {labelOrder.map((p) => (
+          {visible.filter((p) => shownLabels.has(p.id) && p.id !== hoverId).map((p) => (
             <PinLabel
               key={p.id} x={p.x} y={p.y} r={pinR} name={p.name} fontSize={labelFontSize}
-              active={p.id === hoverId} dimmed={hoverId !== null && p.id !== hoverId}
+              active={false} dimmed={hoverId !== null}
             />
           ))}
+          {/* 활성(호버·포커스·탭) 이름표는 숨겨졌던 것이어도 말풍선으로 띄우고, 항상 맨 마지막에
+              그려서 다른 이름표 위에 오게 한다(SVG 는 나중에 그린 게 위로 온다). */}
+          {active && (
+            <PinLabel
+              key={`active-${active.id}`} x={active.x} y={active.y} r={pinR} name={active.name} fontSize={labelFontSize}
+              active dimmed={false}
+            />
+          )}
         </svg>
       </div>
     </Card>

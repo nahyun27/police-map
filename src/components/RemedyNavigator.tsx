@@ -7,7 +7,7 @@ import {
   ArrowRight, Check, ExternalLink, FileText, Landmark, Lightbulb, Megaphone,
   MessageCircleQuestion, ShieldAlert,
 } from 'lucide-react';
-import { AdInline, AdSlots } from '@/components/AdSlots';
+import { AdInline } from '@/components/AdSlots';
 import { Card, EmptyState, TableWrap } from '@/components/ui';
 import { REMEDY } from '@/data/sample';
 
@@ -230,7 +230,6 @@ export default function RemedyNavigator({ contextLabel, stationId }: { contextLa
           <AdInline stationId={stationId} />
         </div>
       </div>
-      <AdSlots stationId={stationId} />
     </>
   );
 }
