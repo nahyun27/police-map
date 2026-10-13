@@ -83,7 +83,7 @@ export default function BoardWritePage() {
       <Crumb items={[{ label: '홈', to: '/' }, { label: '커뮤니티 게시판', to: '/board' }, { label: '글쓰기' }]} />
       <PageHead
         eyebrow="커뮤니티"
-        title="자유 게시판 글쓰기"
+        title="커뮤니티 글쓰기"
         sub="작성 즉시 공개됩니다. 로그인 없이 익명으로도 쓸 수 있고, 사실 적시 비방·욕설은 삭제될 수 있어요."
       />
 

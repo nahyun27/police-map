@@ -95,6 +95,12 @@ export default function AdminReportsPage() {
                     {actioningId?.id === r.id ? (
                       <div>
                         <p className="sub" style={{ marginBottom: 4 }}>{actioningId.action === 'remove' ? '삭제 조치' : '기각(그대로 둠)'}</p>
+                        {actioningId.action === 'dismiss' && r.target_blind_auto && (
+                          <div className="warn" style={{ margin: '4px 0 6px', fontSize: 12.5 }}>
+                            기각하면 같은 게시물의 신고 {r.pending_reporters}건이 함께 종결되고, 신고 누적으로 걸린 블라인드가 풀려 <b>다시 공개</b>됩니다.
+                            개인정보·명예훼손 우려가 남아 있다면 기각하지 말고 블라인드를 유지하거나 삭제해 주세요.
+                          </div>
+                        )}
                         <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="처리 메모(5자 이상)"
                           style={{ minHeight: 60, width: '100%', border: '1px solid var(--line)', borderRadius: 8, padding: 8, fontSize: 13 }} />
                         <div className="btn-row" style={{ marginTop: 6 }}>

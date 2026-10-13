@@ -239,15 +239,16 @@ def revoke_verification(verification_id: int, body: RejectIn, admin: User = Depe
 
 # ---------- 신고 처리 ----------
 def _admin_report(db: Session, r: Report, preview: str) -> AdminReportOut:
-    blinded = None
+    blinded, auto = None, False
     if r.target_type in blinding.BLINDABLE:
         obj = blinding.get(db, r.target_type, r.target_id)
         blinded = blinding.is_blinded(obj) if obj else None
+        auto = bool(blinded and obj.blind_reason == blinding.REASON_AUTO)
     return AdminReportOut(
         id=r.id, reporter_nickname=r.reporter.nickname, target_type=r.target_type.value, target_id=r.target_id,
         target_preview=preview, reason=r.reason, status=r.status.value,
         resolved_by=r.resolved_by, resolution_action=r.resolution_action, resolution_note=r.resolution_note,
-        created_at=iso(r.created_at), target_blinded=blinded,
+        created_at=iso(r.created_at), target_blinded=blinded, target_blind_auto=auto,
         pending_reporters=blinding.pending_reporter_count(db, r.target_type, r.target_id),
     )
 

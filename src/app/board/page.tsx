@@ -63,9 +63,15 @@ export default async function BoardPage({ searchParams }: Props) {
       <Crumb items={[{ label: '홈', to: '/' }, { label: '커뮤니티 게시판' }]} />
       <PageHead
         eyebrow="커뮤니티"
-        title="자유 게시판"
-        sub="지역·경찰서 관련 자유로운 이야기를 나누는 공간입니다. 사실 적시 평가는 경찰서 평가 작성을 이용해 주세요."
-        actions={<Link href={writeHref} className="btn sm pagehead-write-inline">{category === 'suggestion' ? '건의하기' : '글쓰기'}</Link>}
+        title="커뮤니티"
+        sub="지역·경찰서 이야기와 이용자들의 경찰서 평가를 함께 보는 공간입니다. 평가에도 바로 댓글을 달 수 있어요."
+        actions={
+          <div className="btn-row">
+            {/* 평가는 별점·항목이 있는 구조화된 양식이라 게시판 글쓰기와 별개로, 경찰서를 고른 뒤 작성 화면으로 보낸다. */}
+            <Link href="/search?intent=write" className={`btn sm${category === 'review' ? '' : ' line'}`}>평가 작성</Link>
+            {category !== 'review' && <Link href={writeHref} className="btn sm pagehead-write-inline">{category === 'suggestion' ? '건의하기' : '글쓰기'}</Link>}
+          </div>
+        }
       />
 
       <CategoryTabs

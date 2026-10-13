@@ -682,6 +682,7 @@ export interface AdminReportOut {
   resolution_note: string | null;
   created_at: string | null;
   target_blinded: boolean | null;
+  target_blind_auto: boolean;
   pending_reporters: number;
 }
 

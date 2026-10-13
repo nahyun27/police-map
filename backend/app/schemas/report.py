@@ -38,6 +38,8 @@ class AdminReportOut(BaseModel):
     created_at: str | None
     # 평가·게시글·사건만 블라인드 대상(댓글·해명은 None). 관리자가 신고 큐에서 바로 블라인드/해제할 수 있게.
     target_blinded: bool | None = None
+    # True 면 신고 누적 자동 블라인드 — 이 신고를 기각하면 게시물이 다시 공개된다(관리자 화면에서 경고).
+    target_blind_auto: bool = False
     pending_reporters: int = 0
 
 

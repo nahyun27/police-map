@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Eye, Heart, History, PenLine, Search } from 'lucide-react';
 import { CategoryTabs } from '@/components/CategoryTabs';
-import { Card, Crumb, PageHead } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { CASE_CATEGORIES, listCases, type CaseCategory } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
@@ -14,6 +14,29 @@ export const metadata: Metadata = {
 type Props = { searchParams: Promise<{ category?: string; sort?: string; q?: string; page?: string }> };
 type Filters = { category?: string; sort: string; q?: string; page?: number };
 const PAGE_SIZE = 20;
+
+// 사건이 하나도 없을 때(첫 이용자) 무엇을 쓸 수 있고, 공개되면 무엇이 보이고, 그다음 무엇을 할 수
+// 있는지 미리 보여준다. 가상의 예시 사건을 실제 데이터처럼 띄우지는 않는다.
+const GUIDE = [
+  { title: '이런 경험을 기록할 수 있어요', items: [
+    '고소·신고 후 진행 상황을 안내받지 못한 경우',
+    '조사 과정에서 권리 고지·절차 설명이 없었던 경우',
+    '증거 접수·반환 등 처리에 문제가 있었던 경우',
+    '부적절한 응대나 태도를 겪은 경우',
+  ] },
+  { title: '공개되면 이렇게 보여요', items: [
+    '제목, 문제 유형, 사건 경위, 원하는 조치',
+    '관할 경찰서(선택한 경우만)',
+    '작성자 닉네임·연락처 등은 공개되지 않아요',
+    '실명·연락처·사건번호가 보이면 운영진 확인 후 공개돼요',
+  ] },
+  { title: '기록한 뒤에는', items: [
+    '공감과 공유로 관심을 모을 수 있어요',
+    '민원 접수·기관 답변 등 진행 상황을 이어서 기록해요',
+    '권리구제·제보 안내로 공식 절차를 확인할 수 있어요',
+    '마이페이지에서 공개 상태를 확인할 수 있어요',
+  ] },
+];
 
 function buildHref(f: Filters) {
   const p = new URLSearchParams();
@@ -39,13 +62,18 @@ export default async function CasesPage({ searchParams }: Props) {
 
   return (
     <>
-      <Crumb items={[{ label: '홈', to: '/' }, { label: '사건 공론화' }]} />
-      <PageHead
-        eyebrow="사건 공론화"
-        title="혼자 겪은 일을, 함께 살펴볼 수 있도록"
-        sub="수사 과정에서 겪은 의문과 부당함을 기록하고 시민들의 공감을 모아 보세요. 이후의 민원 처리 결과까지 이어서 기록할 수 있습니다."
-        actions={<Link href="/cases/new" className="btn sm pagehead-write-inline">내 사건 기록하기</Link>}
-      />
+      <section className="card hero compact hero-bleed">
+        <div className="eyebrow">사건 공론화</div>
+        <h1>혼자 겪은 일을,<br />함께 살펴볼 수 있도록</h1>
+        <p className="lead">
+          수사 과정에서 겪은 의문과 부당함을 기록하고 시민들의 공감을 모아 보세요. 이후의 민원 처리 결과까지 이어서
+          기록할 수 있고, 맞는 공식 절차도 함께 안내해 드립니다.
+        </p>
+        <div className="quick">
+          <Link href="/cases/new" className="btn gold sm"><PenLine size={14} />내 사건 기록하기</Link>
+          <Link href="/remedy" className="btn ghost sm">권리구제 절차 보기</Link>
+        </div>
+      </section>
 
       <Card className="tint">
         폴리스맵은 사건의 진실이나 위법성을 판정하지 않습니다. 게시된 글은 작성자의 경험과 주장이며, <b>공감은 사실 인정이나
@@ -105,8 +133,24 @@ export default async function CasesPage({ searchParams }: Props) {
           <p className="sub">
             {failed ? '목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
               : q ? '검색 결과가 없습니다.'
-              : <>아직 기록된 사건이 없습니다. <Link href="/cases/new">첫 사건 기록하기</Link></>}
+              : category ? '이 유형으로 기록된 사건이 아직 없습니다.'
+              : '아직 기록된 사건이 없습니다.'}
           </p>
+        )}
+        {!data.items.length && !failed && !q && !category && (
+          <div className="grid3" style={{ marginTop: 18, marginBottom: 0 }}>
+            {GUIDE.map((g) => (
+              <div className="guidebox" key={g.title} style={{ margin: 0 }}>
+                <b>{g.title}</b>
+                <ul style={{ margin: '8px 0 0 16px', fontSize: 13.5 }}>
+                  {g.items.map((t) => <li key={t}>{t}</li>)}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+        {!data.items.length && !failed && !q && (
+          <Link href="/cases/new" className="btn" style={{ marginTop: 18 }}><PenLine size={16} />첫 사건 기록하기</Link>
         )}
         {totalPages > 1 && (
           <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>

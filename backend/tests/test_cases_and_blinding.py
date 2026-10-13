@@ -153,6 +153,7 @@ def test_dismissing_reports_restores_auto_blind(db, client, user_client, admin_c
     _report_n(reporters(db, 5), "post", pid)
     queue = admin_client.get(f"{API}/admin/reports").json()["items"]
     assert queue[0]["target_blinded"] is True and queue[0]["pending_reporters"] == 5
+    assert queue[0]["target_blind_auto"] is True
     r = admin_client.post(f"{API}/admin/reports/{queue[0]['id']}/resolve", json={"action": "dismiss", "note": "문제 없는 글로 판단"})
     assert r.status_code == 200
     assert admin_client.get(f"{API}/admin/reports").json()["total"] == 0  # 같은 대상 신고는 일괄 처리

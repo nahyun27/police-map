@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Search } from 'lucide-react';
 import { PoliceStationIcon } from '@/components/icons/PoliceStationIcon';
+import { SearchPageBox } from '@/components/SearchPageBox';
 import { Card, PageHead, Score } from '@/components/ui';
 import { search as apiSearch } from '@/lib/api';
 import { NOINDEX } from '@/lib/seo';
@@ -36,17 +36,9 @@ export default async function SearchPage({ searchParams }: Props) {
       <Card>
         {/* 이 페이지에 바로 들어왔을 때(홈 카드 등) 입력창이 없어 막다른 화면처럼 보이던 문제를
             고치기 위한 검색창. GET 폼이라 자바스크립트 없이도 동작한다. */}
-        <form action="/search" style={{ display: 'flex', gap: 10, marginBottom: stations.length || failed ? 24 : 0 }}>
-          {forWrite && <input type="hidden" name="intent" value="write" />}
-          <div style={{ position: 'relative', flex: 1 }}>
-            <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-            <input
-              type="text" name="q" defaultValue={q} placeholder="경찰서 이름으로 검색"
-              style={{ width: '100%', border: '1px solid var(--line)', background: '#fff', borderRadius: 12, padding: '12px 14px 12px 40px', fontSize: 15, color: 'var(--ink)' }}
-            />
-          </div>
-          <button type="submit" className="btn">검색</button>
-        </form>
+        <div style={{ marginBottom: stations.length || failed ? 24 : 0 }}>
+          <SearchPageBox initialQ={q} forWrite={forWrite} />
+        </div>
         {(q || failed) && (
           <>
             <h2><PoliceStationIcon size={17} style={{ verticalAlign: -2, marginRight: 8, color: 'var(--brand)' }} />경찰서 ({stations.length})</h2>
