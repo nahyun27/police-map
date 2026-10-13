@@ -130,7 +130,7 @@ def list_posts(
 def board_feed(
     request: Request,
     region_id: str | None = None,
-    category: str | None = Query(None, pattern="^(info|question|chat|other|review)$"),
+    category: str | None = Query(None, pattern="^(info|question|chat|suggestion|other|review)$"),
     q: str | None = Query(None, max_length=50, description="제목·본문 검색어"),
     sort: str = Query("new", pattern="^(new|top)$"),
     period: str = Query("all", pattern="^(today|week|month|all)$", description="sort=top 일 때만 적용되는 베스트 기간"),

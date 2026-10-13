@@ -14,6 +14,7 @@ class PostCategory(str, enum.Enum):
     info = "info"
     question = "question"
     chat = "chat"
+    suggestion = "suggestion"  # 건의(서비스 개선 의견) — 운영진이 확인한다
     other = "other"
 
 
@@ -21,6 +22,7 @@ POST_CATEGORY_LABELS = {
     PostCategory.info: "정보공유",
     PostCategory.question: "질문",
     PostCategory.chat: "잡담",
+    PostCategory.suggestion: "건의",
     PostCategory.other: "기타",
 }
 

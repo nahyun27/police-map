@@ -407,6 +407,7 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 .board-ui .badge.cat-question { background: #f3ecff; color: #7c3aed; }
 .board-ui .badge.cat-chat { background: #e6f8ef; color: #0f9d58; }
 .board-ui .badge.cat-other { background: #f1f2f5; color: #5f6b83; }
+.board-ui .badge.cat-suggestion { background: #ffe9e6; color: #c2410c; }
 .board-ui .badge.cat-review { background: #fff3d6; color: #8a5a00; }  /* 평가는 게시글 카테고리와 다른 색으로(별점 느낌의 골드 톤) */
 
 /* 게시글 목록: 줄로 구분하는 대신 카드 하나하나를 띄워서 호버 시 살짝 떠오르게. */

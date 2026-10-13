@@ -468,7 +468,7 @@ export function getMyReviewScraps(opts?: { page?: number; size?: number }) {
 
 /* ===================== 게시판 ===================== */
 
-export type PostCategory = 'info' | 'question' | 'chat' | 'other';
+export type PostCategory = 'info' | 'question' | 'chat' | 'suggestion' | 'other';
 export type PopularPeriod = 'today' | 'week' | 'month' | 'all';
 
 export interface PostOut {
@@ -523,7 +523,7 @@ export function listPosts(opts?: {
   return apiFetch<Page<PostOut>>(`/posts${suffix}`);
 }
 
-// 게시판 "전체" 카테고리 값('info'|'question'|'chat'|'other') + 평가를 가리키는 가상 카테고리.
+// 게시글 카테고리 + 평가를 가리키는 가상 카테고리('review').
 export type BoardFeedCategory = PostCategory | 'review';
 
 /** 게시판 피드 한 줄 — 자유게시글과 평가를 섞어서 보여주는 공용 모양(2026-10 결정, 의뢰인 요청).

@@ -10,7 +10,7 @@ import {
 } from '@/lib/api';
 
 const CATEGORY_OPTIONS: [PostCategory, string][] = [
-  ['info', '정보공유'], ['question', '질문'], ['chat', '잡담'], ['other', '기타'],
+  ['info', '정보공유'], ['question', '질문'], ['chat', '잡담'], ['suggestion', '건의'], ['other', '기타'],
 ];
 
 function errorMessage(e: unknown): string {
@@ -47,6 +47,12 @@ export default function BoardWritePage() {
   }, []);
 
   useEffect(() => { loadRegions(); }, [loadRegions]);
+
+  // 게시판 "건의" 탭 등에서 ?category=suggestion 으로 들어오면 글머리를 미리 맞춰 둔다.
+  useEffect(() => {
+    const c = new URLSearchParams(window.location.search).get('category');
+    if (c && CATEGORY_OPTIONS.some(([v]) => v === c)) setCategory(c as PostCategory);
+  }, []);
 
   useEffect(() => {
     setStationId('');

@@ -544,3 +544,13 @@ def test_board_feed_top_period_filters_reviews_too(db, user_client, world):
     assert all(x["id"] != rid for x in today["items"])
     all_time = user_client.get(f"{API}/board/feed?category=review&sort=top&period=all").json()
     assert any(x["id"] == rid for x in all_time["items"])
+
+
+def test_suggestion_category_post_and_feed_filter(user_client, world):
+    pid = user_client.post(f"{API}/posts", json=post_payload(category="suggestion", title="지도 확대 기능 건의")).json()["id"]
+    got = user_client.get(f"{API}/posts/{pid}").json()
+    assert got["category"] == "suggestion" and got["category_label"] == "건의"
+
+    feed = user_client.get(f"{API}/board/feed?category=suggestion").json()
+    assert [x["id"] for x in feed["items"]] == [pid]
+    assert all(x["kind"] == "post" for x in feed["items"])

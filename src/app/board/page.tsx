@@ -15,7 +15,7 @@ const PAGE_SIZE = 20;
 // '평가' 는 게시글 카테고리가 아니라 평가를 가리키는 가상 카테고리다(2026-10 결정: 의뢰인 요청으로
 // 커뮤니티 "전체" 피드에 평가도 섞어서 보여주고, 탭으로 평가만 걸러볼 수도 있게 함).
 const CATEGORY_OPTIONS: [BoardFeedCategory, string][] = [
-  ['info', '정보공유'], ['question', '질문'], ['chat', '잡담'], ['other', '기타'], ['review', '평가'],
+  ['info', '정보공유'], ['question', '질문'], ['chat', '잡담'], ['suggestion', '건의'], ['other', '기타'], ['review', '평가'],
 ];
 const PERIOD_OPTIONS: [PopularPeriod, string][] = [
   ['today', '오늘'], ['week', '주간'], ['month', '월간'], ['all', '전체'],
@@ -55,6 +55,9 @@ export default async function BoardPage({ searchParams }: Props) {
   ]);
   const totalPages = Math.max(1, Math.ceil(feed.total / feed.size));
 
+  // 건의 탭에서 글쓰기를 누르면 글머리가 '건의'로 미리 선택되게 한다.
+  const writeHref = category === 'suggestion' ? '/board/write?category=suggestion' : '/board/write';
+
   return (
     <>
       <Crumb items={[{ label: '홈', to: '/' }, { label: '커뮤니티 게시판' }]} />
@@ -62,7 +65,7 @@ export default async function BoardPage({ searchParams }: Props) {
         eyebrow="커뮤니티"
         title="자유 게시판"
         sub="지역·경찰서 관련 자유로운 이야기를 나누는 공간입니다. 사실 적시 평가는 경찰서 평가 작성을 이용해 주세요."
-        actions={<Link href="/board/write" className="btn sm pagehead-write-inline">글쓰기</Link>}
+        actions={<Link href={writeHref} className="btn sm pagehead-write-inline">{category === 'suggestion' ? '건의하기' : '글쓰기'}</Link>}
       />
 
       <CategoryTabs
@@ -99,6 +102,13 @@ export default async function BoardPage({ searchParams }: Props) {
           </div>
         </div>
       </Card>
+
+      {category === 'suggestion' && (
+        <Card className="tint">
+          <b>폴리스맵에 바라는 점을 남겨 주세요.</b> 불편했던 점, 추가됐으면 하는 기능, 잘못된 정보 등 무엇이든 좋습니다.
+          운영진이 확인하고 서비스 개선에 참고합니다.
+        </Card>
+      )}
 
       <Card>
         {feed.items.length ? (
@@ -139,6 +149,7 @@ export default async function BoardPage({ searchParams }: Props) {
             {failed ? '목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
               : q ? '검색 결과가 없습니다.'
               : category === 'review' ? <>아직 등록된 평가가 없습니다. <Link href="/search?intent=write">평가 작성하기</Link></>
+              : category === 'suggestion' ? <>아직 등록된 건의가 없습니다. <Link href={writeHref}>첫 건의 남기기</Link></>
               : '등록된 글이 없습니다. 첫 글을 남겨 보세요.'}
           </p>
         )}
@@ -151,7 +162,7 @@ export default async function BoardPage({ searchParams }: Props) {
         )}
       </Card>
 
-      <Link href="/board/write" className="fab-write" aria-label="글쓰기">
+      <Link href={writeHref} className="fab-write" aria-label="글쓰기">
         <PenLine size={22} /><span>글쓰기</span>
       </Link>
     </>
