@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Eye, MessageSquare, PenLine, Search, Star, ThumbsDown, ThumbsUp } from 'lucide-react';
-import { Card, Crumb, PageHead } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { CategoryTabs } from '@/components/CategoryTabs';
 import { RegionFilterSelect } from '@/components/RegionFilterSelect';
 import { getRegions, listBoardFeed, type BoardFeedCategory, type PopularPeriod } from '@/lib/api';
@@ -60,19 +60,21 @@ export default async function BoardPage({ searchParams }: Props) {
 
   return (
     <>
-      <Crumb items={[{ label: '홈', to: '/' }, { label: '커뮤니티 게시판' }]} />
-      <PageHead
-        eyebrow="커뮤니티"
-        title="커뮤니티"
-        sub="지역·경찰서 이야기와 이용자들의 경찰서 평가를 함께 보는 공간입니다. 평가에도 바로 댓글을 달 수 있어요."
-        actions={
-          <div className="btn-row">
-            {/* 평가는 별점·항목이 있는 구조화된 양식이라 게시판 글쓰기와 별개로, 경찰서를 고른 뒤 작성 화면으로 보낸다. */}
-            <Link href="/search?intent=write" className={`btn sm${category === 'review' ? '' : ' line'}`}>평가 작성</Link>
-            {category !== 'review' && <Link href={writeHref} className="btn sm pagehead-write-inline">{category === 'suggestion' ? '건의하기' : '글쓰기'}</Link>}
-          </div>
-        }
-      />
+      <section className="card hero compact hero-bleed">
+        <div className="eyebrow">커뮤니티</div>
+        <h1>경찰서 이야기와 평가를<br />한곳에서</h1>
+        <p className="lead">
+          지역·경찰서 이야기와 이용자들의 경찰서 평가를 함께 보는 공간입니다. 궁금한 점은 묻고, 겪은 일은 나누고,
+          평가에도 바로 댓글을 달 수 있어요.
+        </p>
+        <div className="quick">
+          {/* 평가는 별점·항목이 있는 구조화된 양식이라 게시판 글쓰기와 별개로, 경찰서를 고른 뒤 작성 화면으로 보낸다. */}
+          <Link href="/search?intent=write" className="btn gold sm">평가 작성</Link>
+          {category !== 'review' && (
+            <Link href={writeHref} className="btn ghost sm">{category === 'suggestion' ? '건의하기' : '글쓰기'}</Link>
+          )}
+        </div>
+      </section>
 
       <CategoryTabs
         active={category ?? ''}

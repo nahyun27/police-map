@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BarChart3, FileCheck2, Percent, Scale, Star, TrendingUp, Trophy } from 'lucide-react';
 import ClickableRow from '@/components/ClickableRow';
-import { Bars, Card, EmptyState, PageHead, Score } from '@/components/ui';
+import { Bars, Card, EmptyState, Score } from '@/components/ui';
 import { getStats, getTransparencyReport, type StatsOverview, type TransparencyQuarter } from '@/lib/api';
 
 // getStats() 가 이미 60초 캐시돼 있어(src/lib/api.ts), force-dynamic 없이도 신선도는
@@ -14,6 +14,20 @@ export const metadata: Metadata = {
   description: '이용자 평가 통계와 정보공개청구로 확보한 수사관 기피신청·수용률 공개통계.',
 };
 
+// 다른 주요 메뉴(커뮤니티·사건 공론화·권리구제·제보)와 같은 풀블리드 히어로.
+function StatsHero() {
+  return (
+    <section className="card hero compact hero-bleed">
+      <div className="eyebrow">통계</div>
+      <h1>전국 통계 대시보드</h1>
+      <p className="lead">
+        이용자 평가 통계와 정보공개청구로 확보한 공식 통계를 함께 제공합니다. 항목별 전국 평균, 관서별 순위,
+        기피신청 추이와 운영 투명성 보고서를 한눈에 볼 수 있어요.
+      </p>
+    </section>
+  );
+}
+
 export default async function StatsPage() {
   let stats: StatsOverview;
   try {
@@ -21,7 +35,7 @@ export default async function StatsPage() {
   } catch {
     return (
       <>
-        <PageHead eyebrow="통계" title="전국 통계 대시보드" sub="이용자 평가 통계와 정보공개청구로 확보한 공식 통계를 함께 제공합니다." />
+        <StatsHero />
         <Card><p className="sub">통계를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p></Card>
       </>
     );
@@ -33,11 +47,7 @@ export default async function StatsPage() {
 
   return (
     <>
-      <PageHead
-        eyebrow="통계"
-        title="전국 통계 대시보드"
-        sub="이용자 평가 통계와 정보공개청구로 확보한 공식 통계를 함께 제공합니다."
-      />
+      <StatsHero />
 
       <div className="grid3">
         <Card className="kpi stat">
