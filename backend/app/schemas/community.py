@@ -104,6 +104,35 @@ class PostReceipt(BaseModel):
     message: str
 
 
+class BoardFeedItem(BaseModel):
+    """게시판 '전체' 피드 한 줄 — 자유게시글과 평가를 섞어서 보여주기 위한 공용 모양.
+    평가는 역할 라벨만 표시하고 작성자 닉네임은 보여주지 않는다(평가는 원래부터 익명 원칙).
+    kind 로 글 종류를 구분해서 프런트가 카드 UI를 다르게 그린다(2026-10 결정: 의뢰인 요청으로
+    평가도 게시판 전체 탭에서 보이고, 클릭하면 게시글처럼 그 자리에서 댓글을 달 수 있어야 함)."""
+    kind: str  # 'post' | 'review'
+    id: int
+    region_name: str | None = None
+    station_id: int | None = None
+    station_name: str | None = None
+    category: str
+    category_label: str
+    title: str | None = None  # post 전용
+    body: str
+    author_nickname: str | None = None  # post 전용
+    is_mine: bool = False
+    role_label: str | None = None  # review 전용
+    overall: float | None = None  # review 전용(별점)
+    evidence_verified: bool | None = None  # review 전용
+    view_count: int | None = None  # post 전용
+    comment_count: int = 0
+    up: int = 0
+    down: int = 0
+    score: int = 0
+    my_vote: int = 0
+    is_scrapped: bool = False
+    created_at: str | None = None
+
+
 class FeedReviewOut(BaseModel):
     """로그인 회원의 관심 지역에 새로 게시된 평가 알림용 — 공개 리뷰 카드에 지역·경찰서 정보를 더한 것."""
     id: int

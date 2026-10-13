@@ -1,6 +1,6 @@
 """ORM 객체 → 응답 스키마 변환. 공개 응답에는 사건번호·요청자 연락처를 절대 넣지 않는다."""
 from app.models import Review, ReviewReply, User
-from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
+from app.models.review import case_type_label, role_label
 from app.schemas.community import VoteSummary
 from app.schemas.public import ReviewPublic
 from app.schemas.verification import ReplyOut
@@ -42,8 +42,8 @@ def review_public(
     is_scrapped: bool = False,
 ) -> ReviewPublic:
     return ReviewPublic(
-        id=r.id, role=r.role.value, role_label=ROLE_LABELS[r.role], case_type=r.case_type.value,
-        case_type_label=CASE_TYPE_LABELS[r.case_type], ratings=ratings_dict(r), overall=review_overall(r),
+        id=r.id, role=r.role.value, role_label=role_label(r), case_type=r.case_type.value,
+        case_type_label=case_type_label(r), ratings=ratings_dict(r), overall=review_overall(r),
         body=r.body, published_at=iso(r.published_at),
         comment_count=comment_count, up=vote.up, down=vote.down, score=vote.score, my_vote=vote.my_vote,
         evidence_verified=r.evidence_verified,

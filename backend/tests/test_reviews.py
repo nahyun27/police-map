@@ -63,6 +63,42 @@ def test_submit_is_published_immediately_and_public(client, world):
     assert client.get(f"{API}/stats/overview").json()["totals"]["reviews"] == 3
 
 
+def test_role_other_free_text_shown_as_label(client, world):
+    """role='other' 로 제출하면 role_other 에 적은 직접입력 텍스트가 role_label 로 노출된다."""
+    r = client.post(f"{API}/reviews", json=review_payload(
+        world["station"].id, role="other", role_other="민원인", case_type="other", case_type_other="상속 분쟁",
+    ))
+    assert r.status_code == 201
+    pub = client.get(f"{API}/stations/{world['station'].id}").json()
+    item = next(x for x in pub["reviews"]["items"] if x["id"] == r.json()["id"])
+    assert item["role_label"] == "민원인"
+    assert item["case_type_label"] == "상속 분쟁"
+
+
+def test_role_other_blank_falls_back_to_기타(client, world):
+    """직접입력 칸을 비워 두고 '기타'만 고르면 그냥 '기타'로 표시된다(기존 동작과 동일)."""
+    r = client.post(f"{API}/reviews", json=review_payload(world["station"].id, role="other", case_type="other"))
+    assert r.status_code == 201
+    pub = client.get(f"{API}/stations/{world['station'].id}").json()
+    item = next(x for x in pub["reviews"]["items"] if x["id"] == r.json()["id"])
+    assert item["role_label"] == "기타" and item["case_type_label"] == "기타"
+
+
+def test_role_other_ignored_when_role_is_not_other(client, world):
+    """role 이 'other' 가 아닌데 role_other 를 같이 보내면 서버가 그냥 무시한다(혼란 방지)."""
+    r = client.post(f"{API}/reviews", json=review_payload(world["station"].id, role_other="이상한 값"))
+    assert r.status_code == 201
+    pub = client.get(f"{API}/stations/{world['station'].id}").json()
+    item = next(x for x in pub["reviews"]["items"] if x["id"] == r.json()["id"])
+    assert item["role_label"] == "고소인"  # review_payload 기본값(complainant)의 라벨
+
+
+def test_role_other_banned_expression_rejected(client, world):
+    r = client.post(f"{API}/reviews", json=review_payload(world["station"].id, role="other", role_other="무능한 사람"))
+    assert r.status_code == 422
+    assert "무능" in r.json()["detail"]["banned"]
+
+
 def test_banned_expression_rejected_with_list(client, world):
     r = client.post(f"{API}/reviews", json=review_payload(world["station"].id, body="이 사람은 정말 무능하고 쓰레기 같았다"))
     assert r.status_code == 422
@@ -140,3 +176,17 @@ def test_station_evidence_only_filter(user_client, admin_client, world):
     filtered = user_client.get(f"{API}/stations/{sid}", params={"evidence_only": "true"}).json()["reviews"]
     ids = {x["id"] for x in filtered["items"]}
     assert rid1 in ids and rid2 not in ids
+
+
+def test_get_single_review(client, world):
+    rid = client.post(f"{API}/reviews", json=review_payload(world["station"].id)).json()["id"]
+    r = client.get(f"{API}/reviews/{rid}")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["id"] == rid and body["station_id"] == world["station"].id
+    assert body["station_name"] == "테스트경찰서"
+    assert "case_number" not in body
+
+
+def test_get_single_review_404_for_unpublished_or_missing(client):
+    assert client.get(f"{API}/reviews/999999").status_code == 404

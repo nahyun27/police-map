@@ -16,6 +16,7 @@ class ReviewRole(str, enum.Enum):
     suspect = "suspect"
     witness = "witness"
     lawyer = "lawyer"
+    other = "other"  # 직접입력 — role_other 에 실제 입력값을 담는다.
 
 
 class CaseType(str, enum.Enum):
@@ -33,6 +34,7 @@ ROLE_LABELS = {
     ReviewRole.suspect: "피의자",
     ReviewRole.witness: "참고인",
     ReviewRole.lawyer: "변호인",
+    ReviewRole.other: "기타",
 }
 CASE_TYPE_LABELS = {
     CaseType.fraud: "사기(경제)",
@@ -42,6 +44,16 @@ CASE_TYPE_LABELS = {
     CaseType.traffic: "교통",
     CaseType.other: "기타",
 }
+
+
+def role_label(r: "Review") -> str:
+    """역할 라벨. '직접입력'으로 role_other 를 채워 넣은 경우 그 값을 우선 쓰고,
+    비워 뒀으면 '기타'로 폴백한다."""
+    return r.role_other if r.role == ReviewRole.other and r.role_other else ROLE_LABELS[r.role]
+
+
+def case_type_label(r: "Review") -> str:
+    return r.case_type_other if r.case_type == CaseType.other and r.case_type_other else CASE_TYPE_LABELS[r.case_type]
 
 
 class ReviewStatus(str, enum.Enum):
@@ -98,6 +110,10 @@ class Review(Base):
 
     role: Mapped[ReviewRole] = mapped_column(Enum(ReviewRole, native_enum=False, length=20))
     case_type: Mapped[CaseType] = mapped_column(Enum(CaseType, native_enum=False, length=20))
+    # role/case_type 이 '기타(직접입력)'일 때만 채워지는 자유 입력 라벨. 공개 화면에 그대로
+    # 노출되므로(위 role_label/case_type_label 참고) 다른 서술형 필드와 동일하게 금칙어 필터를 거친다.
+    role_other: Mapped[str | None] = mapped_column(String(40))
+    case_type_other: Mapped[str | None] = mapped_column(String(40))
 
     # 사건번호는 선택 입력이며 게시하지 않고 '경험 검증·중복 제출 방지'에만 쓴다.
     # 공개 응답 스키마에 절대 포함하지 말 것.

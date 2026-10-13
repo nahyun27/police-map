@@ -9,18 +9,22 @@ from app.core.database import get_db
 from app.core.deps import get_client_ip_hash, get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
 from app.core.rate_limit import comment_limiter, post_limiter, view_limiter, vote_limiter
+from app.api.v1._present import review_overall
 from app.models import (
-    Post, PostCategory, PostComment, PostCommentVote, PostScrap, PostVote, Region, RegionFollow, Station, User,
-    UserRole,
+    Post, PostCategory, PostComment, PostCommentVote, PostScrap, PostVote, Region, RegionFollow, Review,
+    ReviewComment, ReviewScrap, ReviewVote, Station, User, UserRole,
 )
 from app.models.community import POST_CATEGORY_LABELS
+from app.models.review import case_type_label as review_case_type_label, role_label as review_role_label
 from app.schemas.community import (
-    CommentCreate, CommentOut, PostCreate, PostOut, PostReceipt, RegionFollowOut, ScrapStatus, VoteIn, VoteSummary,
+    BoardFeedItem, CommentCreate, CommentOut, PostCreate, PostOut, PostReceipt, RegionFollowOut, ScrapStatus, VoteIn,
+    VoteSummary,
 )
 from app.schemas.public import Page
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
 from app.services.engagement import ANON_LABEL, cast_vote, comment_counts, comment_tree, scrapped_set, vote_summaries
+from app.services.ratings import visible_reviews
 
 router = APIRouter(tags=["community"])
 
@@ -120,6 +124,113 @@ def list_posts(
     nicknames = _nicknames(db, posts)
     items = [_post_out(db, p, votes[p.id], counts[p.id], nicknames.get(p.author_id, ANON_LABEL), uid, p.id in scrapped) for p in posts]
     return Page(items=items, total=total, page=page, size=size)
+
+
+@router.get("/board/feed", response_model=Page[BoardFeedItem])
+def board_feed(
+    request: Request,
+    region_id: str | None = None,
+    category: str | None = Query(None, pattern="^(info|question|chat|other|review)$"),
+    q: str | None = Query(None, max_length=50, description="제목·본문 검색어"),
+    sort: str = Query("new", pattern="^(new|top)$"),
+    period: str = Query("all", pattern="^(today|week|month|all)$", description="sort=top 일 때만 적용되는 베스트 기간"),
+    page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
+):
+    """게시판 '전체' 피드 — 자유게시글과 평가를 한 화면에 섞어 보여준다(2026-10 결정, 의뢰인 요청:
+    "커뮤니티에 평가도 같이 올라오고 거기에 댓글도 달 수 있게, 전체에서도 볼 수 있게"). 평가 자체의
+    댓글·투표·스크랩은 기존 /reviews 엔드포인트를 그대로 쓴다 — 이 피드는 "어디서 보이는지"만
+    새로 만든 것이고, 실제 댓글 데이터는 경찰서 상세 페이지의 평가와 완전히 같은 글(review_id
+    기준)이라 어느 쪽에서 댓글을 달아도 서로 바로 보인다.
+    category='review' 면 평가만, info/question/chat/other 면 해당 카테고리 게시글만, 둘 다
+    비우면(전체) 게시글 전 카테고리 + 평가를 섞어서 보여준다.
+    두 테이블은 컬럼 구조가 달라 SQL UNION 대신, 각각 필요한 만큼 가져와 애플리케이션에서
+    병합 정렬한다 — 이 서비스 규모(페이지당 최대 50건)에서는 비용이 무시할 만하다."""
+    want_posts = category != "review"
+    want_reviews = category is None or category == "review"
+    uid = user.id if user else None
+    ip_hash = None if uid else get_client_ip_hash(request)
+    qq = q.strip() if q else None
+    since = datetime.now(timezone.utc) - timedelta(days=_PERIOD_DAYS[period]) if (sort == "top" and period != "all") else None
+    # 병합 정렬 후 뒤에서 잘라내야 하므로, 각 소스에서 "현재 페이지 끝까지"에 해당하는 만큼
+    # 넉넉히 앞부분을 끌어온다.
+    fetch_n = page * size
+
+    total_posts = 0
+    post_items: list[BoardFeedItem] = []
+    if want_posts:
+        base = select(Post).where(Post.is_removed.is_(False))
+        if region_id:
+            base = base.where(Post.region_id == region_id)
+        if category:
+            base = base.where(Post.category == category)
+        if qq:
+            base = base.where((Post.title.contains(qq, autoescape=True)) | (Post.body.contains(qq, autoescape=True)))
+        if since:
+            base = base.where(Post.created_at >= since)
+        total_posts = db.scalar(select(func.count()).select_from(base.subquery())) or 0
+        order = (Post.score.desc(), Post.created_at.desc(), Post.id.desc()) if sort == "top" else (Post.created_at.desc(), Post.id.desc())
+        rows = base.options(joinedload(Post.region), joinedload(Post.station))
+        posts = db.scalars(rows.order_by(*order).limit(fetch_n)).all()
+        ids = [p.id for p in posts]
+        votes = vote_summaries(db, PostVote, PostVote.post_id, ids, uid, ip_hash)
+        counts = comment_counts(db, PostComment, PostComment.post_id, ids)
+        scrapped = scrapped_set(db, PostScrap, PostScrap.post_id, ids, uid) if uid else set()
+        nicknames = _nicknames(db, posts)
+        for p in posts:
+            v = votes[p.id]
+            post_items.append(BoardFeedItem(
+                kind="post", id=p.id, region_name=p.region.name if p.region else None,
+                station_id=p.station_id, station_name=p.station.name if p.station else None,
+                category=p.category.value, category_label=POST_CATEGORY_LABELS[p.category],
+                title=p.title, body=p.body, author_nickname=nicknames.get(p.author_id, ANON_LABEL),
+                is_mine=(uid is not None and p.author_id == uid),
+                view_count=p.view_count, comment_count=counts[p.id],
+                up=v.up, down=v.down, score=v.score, my_vote=v.my_vote, is_scrapped=p.id in scrapped,
+                created_at=p.created_at.isoformat() if p.created_at else None,
+            ))
+
+    total_reviews = 0
+    review_items: list[BoardFeedItem] = []
+    if want_reviews:
+        rbase = visible_reviews(Review).join(Station, Station.id == Review.station_id)
+        if region_id:
+            rbase = rbase.where(Station.region_id == region_id)
+        if qq:
+            rbase = rbase.where(Review.body.contains(qq, autoescape=True))
+        total_reviews = db.scalar(select(func.count()).select_from(rbase.subquery())) or 0
+        rrows = rbase.options(joinedload(Review.station).joinedload(Station.region))
+        order = (Review.published_at.desc(), Review.id.desc())  # 평가는 추천순 정렬까지는 아직 지원 안 함(아래 참고)
+        reviews = db.scalars(rrows.order_by(*order).limit(fetch_n)).all()
+        ids = [r.id for r in reviews]
+        votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, uid, ip_hash)
+        counts = comment_counts(db, ReviewComment, ReviewComment.review_id, ids)
+        scrapped = scrapped_set(db, ReviewScrap, ReviewScrap.review_id, ids, uid) if uid else set()
+        for r in reviews:
+            v = votes[r.id]
+            review_items.append(BoardFeedItem(
+                kind="review", id=r.id,
+                region_name=r.station.region.name if r.station and r.station.region else None,
+                station_id=r.station_id, station_name=r.station.name if r.station else None,
+                category="review", category_label="평가", title=None, body=r.body or "",
+                role_label=review_role_label(r), overall=review_overall(r), evidence_verified=r.evidence_verified,
+                comment_count=counts[r.id], up=v.up, down=v.down, score=v.score, my_vote=v.my_vote,
+                is_scrapped=r.id in scrapped,
+                created_at=r.published_at.isoformat() if r.published_at else None,
+            ))
+        # sort=top 일 때 평가도 추천순으로 섞이게 끌어온 뒤 다시 정렬(위에서는 최신순으로만 가져왔으므로).
+        if sort == "top":
+            review_items.sort(key=lambda x: (x.score, x.created_at or ""), reverse=True)
+
+    merged = post_items + review_items
+    if sort == "top":
+        merged.sort(key=lambda x: (x.score, x.created_at or ""), reverse=True)
+    else:
+        merged.sort(key=lambda x: x.created_at or "", reverse=True)
+
+    start = (page - 1) * size
+    items = merged[start:start + size]
+    return Page(items=items, total=total_posts + total_reviews, page=page, size=size)
 
 
 @router.get("/posts/popular", response_model=list[PostOut])

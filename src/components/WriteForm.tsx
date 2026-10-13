@@ -16,9 +16,10 @@ const CRITERIA: [keyof ReviewRatingsIn, string][] = [
 
 const ROLE_OPTIONS: [string, string][] = [
   ['complainant', '고소인'], ['victim', '피해자'], ['suspect', '피의자'], ['witness', '참고인'], ['lawyer', '변호인'],
+  ['other', '기타(직접입력)'],
 ];
 const CASE_TYPE_OPTIONS: [string, string][] = [
-  ['fraud', '사기(경제)'], ['assault', '폭행·상해'], ['cyber', '사이버 범죄'], ['sexual', '성범죄'], ['traffic', '교통'], ['other', '기타'],
+  ['fraud', '사기(경제)'], ['assault', '폭행·상해'], ['cyber', '사이버 범죄'], ['sexual', '성범죄'], ['traffic', '교통'], ['other', '기타(직접입력)'],
 ];
 
 function StarPick({ value, onChange }: { value: number; onChange: (v: number) => void }) {
@@ -46,7 +47,9 @@ function errorMessage(e: unknown): string {
 export default function WriteForm({ stationId }: { stationId: number }) {
   const router = useRouter();
   const [role, setRole] = useState(ROLE_OPTIONS[0][0]);
+  const [roleOther, setRoleOther] = useState('');
   const [caseType, setCaseType] = useState(CASE_TYPE_OPTIONS[0][0]);
+  const [caseTypeOther, setCaseTypeOther] = useState('');
   const [caseNo, setCaseNo] = useState('');
   const [pick, setPick] = useState<Record<keyof ReviewRatingsIn, number>>({ fair: 0, proc: 0, att: 0, comm: 0, speed: 0 });
   const [text, setText] = useState('');
@@ -55,7 +58,7 @@ export default function WriteForm({ stationId }: { stationId: number }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const hit = BANNED.filter((b) => text.includes(b));
+  const hit = BANNED.filter((b) => text.includes(b) || roleOther.includes(b) || caseTypeOther.includes(b));
 
   const submit = async () => {
     if (hit.length) return;
@@ -70,6 +73,8 @@ export default function WriteForm({ stationId }: { stationId: number }) {
         station_id: stationId,
         role,
         case_type: caseType,
+        role_other: role === 'other' ? roleOther.trim() || null : null,
+        case_type_other: caseType === 'other' ? caseTypeOther.trim() || null : null,
         case_number: caseNo.trim() || null,
         ratings: Object.fromEntries(Object.entries(pick).map(([k, v]) => [k, v || null])),
         body: text,
@@ -92,12 +97,24 @@ export default function WriteForm({ stationId }: { stationId: number }) {
           <select value={role} onChange={(e) => setRole(e.target.value)}>
             {ROLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
+          {role === 'other' && (
+            <input
+              type="text" value={roleOther} onChange={(e) => setRoleOther(e.target.value)} maxLength={40}
+              placeholder="예: 민원인, 유족 등 (비워 두면 '기타'로 표시됩니다)" style={{ marginTop: 8 }}
+            />
+          )}
         </div>
         <div className="field">
           <label>사건 유형</label>
           <select value={caseType} onChange={(e) => setCaseType(e.target.value)}>
             {CASE_TYPE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
+          {caseType === 'other' && (
+            <input
+              type="text" value={caseTypeOther} onChange={(e) => setCaseTypeOther(e.target.value)} maxLength={40}
+              placeholder="예: 상속 분쟁 (비워 두면 '기타'로 표시됩니다)" style={{ marginTop: 8 }}
+            />
+          )}
         </div>
       </div>
       <div className="field">

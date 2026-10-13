@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Eye, MessageSquare, PenLine, Search, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { Eye, MessageSquare, PenLine, Search, Star, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { Card, Crumb, PageHead } from '@/components/ui';
 import { CategoryTabs } from '@/components/CategoryTabs';
 import { RegionFilterSelect } from '@/components/RegionFilterSelect';
-import { getRegions, listPosts, type PopularPeriod, type PostCategory } from '@/lib/api';
+import { getRegions, listBoardFeed, type BoardFeedCategory, type PopularPeriod } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
 type Props = {
@@ -12,8 +12,10 @@ type Props = {
 };
 
 const PAGE_SIZE = 20;
-const CATEGORY_OPTIONS: [PostCategory, string][] = [
-  ['info', '정보공유'], ['question', '질문'], ['chat', '잡담'], ['other', '기타'],
+// '평가' 는 게시글 카테고리가 아니라 평가를 가리키는 가상 카테고리다(2026-10 결정: 의뢰인 요청으로
+// 커뮤니티 "전체" 피드에 평가도 섞어서 보여주고, 탭으로 평가만 걸러볼 수도 있게 함).
+const CATEGORY_OPTIONS: [BoardFeedCategory, string][] = [
+  ['info', '정보공유'], ['question', '질문'], ['chat', '잡담'], ['other', '기타'], ['review', '평가'],
 ];
 const PERIOD_OPTIONS: [PopularPeriod, string][] = [
   ['today', '오늘'], ['week', '주간'], ['month', '월간'], ['all', '전체'],
@@ -46,12 +48,12 @@ export default async function BoardPage({ searchParams }: Props) {
   const f: Filters = { region, category, sort, period, q };
 
   let failed = false;
-  const [regions, posts] = await Promise.all([
+  const [regions, feed] = await Promise.all([
     getRegions().catch(() => []),
-    listPosts({ regionId: region, category: category as PostCategory | undefined, q, sort, page, size: PAGE_SIZE })
+    listBoardFeed({ regionId: region, category: category as BoardFeedCategory | undefined, q, sort, period, page, size: PAGE_SIZE })
       .catch(() => { failed = true; return { items: [], total: 0, page: 1, size: PAGE_SIZE }; }),
   ]);
-  const totalPages = Math.max(1, Math.ceil(posts.total / posts.size));
+  const totalPages = Math.max(1, Math.ceil(feed.total / feed.size));
 
   return (
     <>
@@ -99,24 +101,34 @@ export default async function BoardPage({ searchParams }: Props) {
       </Card>
 
       <Card>
-        {posts.items.length ? (
+        {feed.items.length ? (
           <>
-            <div className="post-list-head sub">전체 {posts.total}건</div>
+            <div className="post-list-head sub">전체 {feed.total}건</div>
             <div className="post-list">
-              {posts.items.map((p) => (
-                <Link href={`/board/${p.id}`} key={p.id} className="post-row">
+              {feed.items.map((it) => (
+                <Link
+                  href={it.kind === 'review' ? `/board/review/${it.id}` : `/board/${it.id}`}
+                  key={`${it.kind}-${it.id}`} className="post-row"
+                >
                   <div className="post-row-top">
-                    <span className={`badge cat-${p.category}`}>{p.category_label}</span>
-                    <span className="sub">{p.region_name ?? '전체'}{p.station_name ? ` · ${p.station_name}` : ''}</span>
+                    <span className={`badge cat-${it.category}`}>{it.category_label}</span>
+                    <span className="sub">{it.region_name ?? '전체'}{it.station_name ? ` · ${it.station_name}` : ''}</span>
                   </div>
-                  <div className="post-row-title">{p.title}</div>
+                  {it.kind === 'review' ? (
+                    <div className="post-row-title">
+                      <Star size={13} style={{ verticalAlign: -2, marginRight: 4, color: 'var(--star)' }} fill="var(--star)" />
+                      {it.overall?.toFixed(1) ?? '-'} · {it.role_label} · {it.body ? it.body.slice(0, 60) + (it.body.length > 60 ? '…' : '') : '(서술 없음, 별점만 등록)'}
+                    </div>
+                  ) : (
+                    <div className="post-row-title">{it.title}</div>
+                  )}
                   <div className="post-row-meta">
-                    <span className="who">{p.author_nickname}</span>
-                    <span className="sub">{formatDate(p.created_at)}</span>
-                    <span className="stat"><Eye size={12} />{p.view_count}</span>
-                    <span className="stat"><ThumbsUp size={12} />{p.up}</span>
-                    <span className="stat"><ThumbsDown size={12} />{p.down}</span>
-                    <span className="stat"><MessageSquare size={12} />{p.comment_count}</span>
+                    <span className="who">{it.kind === 'review' ? it.role_label : it.author_nickname}</span>
+                    <span className="sub">{formatDate(it.created_at)}</span>
+                    {it.kind === 'post' && <span className="stat"><Eye size={12} />{it.view_count}</span>}
+                    <span className="stat"><ThumbsUp size={12} />{it.up}</span>
+                    <span className="stat"><ThumbsDown size={12} />{it.down}</span>
+                    <span className="stat"><MessageSquare size={12} />{it.comment_count}</span>
                   </div>
                 </Link>
               ))}

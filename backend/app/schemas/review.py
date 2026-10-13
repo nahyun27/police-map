@@ -16,6 +16,10 @@ class ReviewCreate(BaseModel):
     station_id: int
     role: ReviewRole
     case_type: CaseType
+    # role/case_type 이 '기타(직접입력)'일 때만 쓰는 자유 입력 라벨. 선택 입력 — 비워 두면
+    # 화면엔 그냥 "기타"로 표시된다.
+    role_other: str | None = Field(default=None, max_length=40)
+    case_type_other: str | None = Field(default=None, max_length=40)
     # 선택 입력. 게시되지 않고 경험 검증·중복 제출 방지에만 쓴다.
     case_number: str | None = Field(default=None, max_length=100)
     ratings: RatingsIn
@@ -34,6 +38,13 @@ class ReviewCreate(BaseModel):
         self.body = self.body.strip()
         if self.evidence_note is not None:
             self.evidence_note = self.evidence_note.strip() or None
+        # role/case_type 이 other 가 아니면 직접입력 값은 의미가 없으니 그냥 비워 저장한다.
+        self.role_other = (self.role_other or "").strip() or None
+        if self.role != ReviewRole.other:
+            self.role_other = None
+        self.case_type_other = (self.case_type_other or "").strip() or None
+        if self.case_type != CaseType.other:
+            self.case_type_other = None
         return self
 
 

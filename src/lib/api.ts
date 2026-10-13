@@ -247,6 +247,9 @@ export interface ReviewCreatePayload {
   station_id: number;
   role: string;
   case_type: string;
+  // role/case_type 이 'other' 일 때만 쓰는 직접입력 라벨. 비우면 '기타'로 표시된다.
+  role_other?: string | null;
+  case_type_other?: string | null;
   case_number?: string | null;
   ratings: ReviewRatingsIn;
   body?: string;
@@ -445,6 +448,7 @@ export const createReport = (targetType: ReportTargetType, targetId: number, rea
     method: 'POST', body: JSON.stringify({ target_type: targetType, target_id: targetId, reason }),
   });
 
+export const getReview = (reviewId: number) => apiFetch<RecentReview>(`/reviews/${reviewId}`);
 export const voteReview = (reviewId: number, value: 1 | -1 | 0) => vote(`/reviews/${reviewId}/vote`, value);
 export const getReviewComments = (reviewId: number, sort: 'new' | 'top' = 'new') =>
   apiFetch<CommentOut[]>(`/reviews/${reviewId}/comments?sort=${sort}`);
@@ -517,6 +521,53 @@ export function listPosts(opts?: {
   if (opts?.size) qs.set('size', String(opts.size));
   const suffix = qs.toString() ? `?${qs}` : '';
   return apiFetch<Page<PostOut>>(`/posts${suffix}`);
+}
+
+// 게시판 "전체" 카테고리 값('info'|'question'|'chat'|'other') + 평가를 가리키는 가상 카테고리.
+export type BoardFeedCategory = PostCategory | 'review';
+
+/** 게시판 피드 한 줄 — 자유게시글과 평가를 섞어서 보여주는 공용 모양(2026-10 결정, 의뢰인 요청).
+ * kind 로 글 종류를 구분해서 카드 UI를 다르게 그린다. title 은 게시글에만, role_label·overall 은
+ * 평가에만 있다. */
+export interface BoardFeedItem {
+  kind: 'post' | 'review';
+  id: number;
+  region_name: string | null;
+  station_id: number | null;
+  station_name: string | null;
+  category: string;
+  category_label: string;
+  title: string | null;
+  body: string;
+  author_nickname: string | null;
+  is_mine: boolean;
+  role_label: string | null;
+  overall: number | null;
+  evidence_verified: boolean | null;
+  view_count: number | null;
+  comment_count: number;
+  up: number;
+  down: number;
+  score: number;
+  my_vote: number;
+  is_scrapped: boolean;
+  created_at: string | null;
+}
+
+export function listBoardFeed(opts?: {
+  regionId?: string; category?: BoardFeedCategory; q?: string; sort?: 'new' | 'top'; period?: PopularPeriod;
+  page?: number; size?: number;
+}) {
+  const qs = new URLSearchParams();
+  if (opts?.regionId) qs.set('region_id', opts.regionId);
+  if (opts?.category) qs.set('category', opts.category);
+  if (opts?.q) qs.set('q', opts.q);
+  if (opts?.sort) qs.set('sort', opts.sort);
+  if (opts?.period) qs.set('period', opts.period);
+  if (opts?.page) qs.set('page', String(opts.page));
+  if (opts?.size) qs.set('size', String(opts.size));
+  const suffix = qs.toString() ? `?${qs}` : '';
+  return apiFetch<Page<BoardFeedItem>>(`/board/feed${suffix}`);
 }
 
 export function getPopularPosts(opts?: { regionId?: string; period?: PopularPeriod; limit?: number }) {

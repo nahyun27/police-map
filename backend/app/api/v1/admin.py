@@ -16,7 +16,7 @@ from app.models import (
     ReviewReply, ReviewStatus, Station, TakedownRequest, TakedownStatus, User, VerificationStatus,
 )
 from app.models.officer import SOURCE_LABELS
-from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
+from app.models.review import case_type_label, role_label
 from app.schemas.admin import EvidenceVerifyIn, OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate, UserStatsOut
 from app.schemas.public import Page
 from app.schemas.report import AdminReportOut, ResolveReportIn
@@ -75,7 +75,7 @@ class AdminReview(BaseModel):
 def _admin_review(r: Review) -> AdminReview:
     return AdminReview(
         id=r.id, station_id=r.station_id, station_name=r.station.name,
-        role=r.role.value, role_label=ROLE_LABELS[r.role], case_type=r.case_type.value, case_type_label=CASE_TYPE_LABELS[r.case_type],
+        role=r.role.value, role_label=role_label(r), case_type=r.case_type.value, case_type_label=case_type_label(r),
         case_number=r.case_number, ratings=ratings_dict(r), body=r.body, status=r.status.value, reject_reason=r.reject_reason,
         created_at=iso(r.created_at), evidence_note=r.evidence_note, evidence_verified=r.evidence_verified,
     )

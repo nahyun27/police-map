@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
-from conftest import login, make_user
+from conftest import login, make_user, review_payload
 
 API = "/api/v1"
 
@@ -476,3 +476,56 @@ def test_popular_posts_period_filter(db, user_client, world):
     assert all(x["id"] != pid for x in list_today["items"])
     list_all = user_client.get(f"{API}/posts?region_id=seoul&sort=top&period=all").json()
     assert any(x["id"] == pid for x in list_all["items"])
+
+
+# ---------- 게시판 '전체' 피드(게시글 + 평가 혼합, 2026-10 결정) ----------
+def test_board_feed_mixes_posts_and_reviews(user_client, world):
+    """카테고리 없이 부르면(전체) 게시글과 평가가 한 피드에 같이 담긴다."""
+    client = user_client
+    post_id = client.post(f"{API}/posts", json=post_payload()).json()["id"]
+    review_id = client.post(f"{API}/reviews", json=review_payload(world["station"].id)).json()["id"]
+
+    feed = client.get(f"{API}/board/feed?region_id=seoul").json()
+    kinds_by_id = {(it["kind"], it["id"]) for it in feed["items"]}
+    assert ("post", post_id) in kinds_by_id
+    assert ("review", review_id) in kinds_by_id
+
+
+def test_board_feed_category_review_only(user_client, world):
+    client = user_client
+    post_id = client.post(f"{API}/posts", json=post_payload()).json()["id"]
+    review_id = client.post(f"{API}/reviews", json=review_payload(world["station"].id)).json()["id"]
+
+    feed = client.get(f"{API}/board/feed?category=review").json()
+    assert all(it["kind"] == "review" for it in feed["items"])
+    assert any(it["id"] == review_id for it in feed["items"])
+    assert all(it["id"] != post_id for it in feed["items"] if it["kind"] == "post")
+
+
+def test_board_feed_review_item_shape_has_role_and_rating(user_client, world):
+    client = user_client
+    client.post(f"{API}/reviews", json=review_payload(world["station"].id))
+
+    feed = client.get(f"{API}/board/feed?category=review").json()
+    item = feed["items"][0]
+    assert item["title"] is None
+    assert item["role_label"] == "고소인"
+    assert item["station_name"] == "테스트경찰서"
+    assert item["overall"] is not None
+
+
+def test_board_feed_comment_posted_on_review_visible_on_station_page(user_client, world):
+    """게시판 피드에 뜬 평가에 댓글을 달면, 그건 경찰서 상세 페이지의 같은 평가 댓글과
+    동일한 글(review_id 기준)이라 양쪽에서 똑같이 보인다."""
+    client = user_client
+    review_id = client.post(f"{API}/reviews", json=review_payload(world["station"].id)).json()["id"]
+
+    c = client.post(f"{API}/reviews/{review_id}/comments", json={"body": "저도 비슷한 경험 있어요"})
+    assert c.status_code == 201
+
+    comments = client.get(f"{API}/reviews/{review_id}/comments").json()
+    assert any(x["body"] == "저도 비슷한 경험 있어요" for x in comments)
+
+    feed = client.get(f"{API}/board/feed?category=review").json()
+    item = next(x for x in feed["items"] if x["id"] == review_id)
+    assert item["comment_count"] == 1

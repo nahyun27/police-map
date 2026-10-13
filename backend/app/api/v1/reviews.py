@@ -13,7 +13,7 @@ from app.models import (
     Review, ReviewComment, ReviewCommentVote, ReviewReply, ReviewScrap, ReviewStatus, ReviewVote, Station, User,
     UserRole,
 )
-from app.models.review import CASE_TYPE_LABELS, ROLE_LABELS
+from app.models.review import case_type_label, role_label
 from app.schemas.community import CommentCreate, CommentOut, ScrapStatus, VoteIn, VoteSummary
 from app.schemas.public import Page, RecentReview
 from app.schemas.review import MyReviewOut, ReviewCreate, ReviewReceipt
@@ -62,7 +62,7 @@ def list_my_reviews(
     items = [
         MyReviewOut(
             id=r.id, station_id=r.station_id, station_name=r.station.name,
-            role=r.role.value, role_label=ROLE_LABELS[r.role], case_type=r.case_type.value, case_type_label=CASE_TYPE_LABELS[r.case_type],
+            role=r.role.value, role_label=role_label(r), case_type=r.case_type.value, case_type_label=case_type_label(r),
             ratings=_ratings_dict(r), overall=_overall(r), body=r.body, status=r.status.value, reject_reason=r.reject_reason,
             created_at=_iso(r.created_at), published_at=_iso(r.published_at),
             comment_count=counts[r.id], up=votes[r.id].up, down=votes[r.id].down, score=votes[r.id].score,
@@ -147,7 +147,9 @@ def create_review(body: ReviewCreate, db: Session = Depends(get_db), user: User 
     if not station:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "경찰서를 찾을 수 없습니다.")
 
-    banned = find_banned(body.body)
+    # role_other/case_type_other 도 공개 화면에 그대로 노출되는 서술형 텍스트라 body 와
+    # 동일하게 금칙어 필터를 거친다.
+    banned = find_banned(" ".join(filter(None, [body.body, body.role_other, body.case_type_other])))
     if banned:
         raise HTTPException(
             422,
@@ -164,6 +166,7 @@ def create_review(body: ReviewCreate, db: Session = Depends(get_db), user: User 
     now = takedown_svc.utcnow()
     review = Review(
         station_id=station.id, author_id=user.id if user else None, role=body.role, case_type=body.case_type,
+        role_other=body.role_other, case_type_other=body.case_type_other,
         case_number=body.case_number, case_number_hash=case_hash, body=body.body,
         evidence_note=body.evidence_note, status=ReviewStatus.published, published_at=now,
         **body.ratings.model_dump(),
@@ -182,6 +185,28 @@ def _published_or_404(db: Session, review_id: int) -> Review:
     if not r or r.status != ReviewStatus.published:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "평가를 찾을 수 없습니다.")
     return r
+
+
+@router.get("/{review_id}", response_model=RecentReview)
+def get_review(
+    review_id: int, request: Request, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
+):
+    """평가 단건 조회. 게시판 '전체' 피드(board_feed, community.py)에서 평가 항목을 눌렀을 때
+    게시글처럼 그 자리에서 상세를 보여주고 댓글을 달 수 있게 하려고 추가했다(2026-10 결정).
+    경찰서 상세 페이지는 이 엔드포인트 없이도 이미 목록으로 평가를 받아오므로 영향 없음."""
+    r = _published_or_404(db, review_id)
+    uid = user.id if user else None
+    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, [r.id], uid, None if uid else get_client_ip_hash(request))
+    counts = comment_counts(db, ReviewComment, ReviewComment.review_id, [r.id])
+    replies = reply_rows(db, [r.id])
+    scrapped = scrapped_set(db, ReviewScrap, ReviewScrap.review_id, [r.id], uid)
+    return RecentReview(
+        **review_public(
+            r, votes[r.id], counts[r.id], reply_out(*replies[r.id], uid) if r.id in replies else None,
+            r.id in scrapped,
+        ).model_dump(),
+        station_id=r.station_id, station_name=r.station.name,
+    )
 
 
 @router.get("/{review_id}/comments", response_model=list[CommentOut])
