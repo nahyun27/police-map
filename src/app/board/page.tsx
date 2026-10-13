@@ -62,7 +62,7 @@ export default async function BoardPage({ searchParams }: Props) {
     <>
       <section className="card hero compact hero-bleed">
         <div className="eyebrow">커뮤니티</div>
-        <h1>경찰서 이야기와 평가를<br />한곳에서</h1>
+        <h1>경찰서 이야기와 평가를 한곳에서</h1>
         <p className="lead">
           지역·경찰서 이야기와 이용자들의 경찰서 평가를 함께 보는 공간입니다. 궁금한 점은 묻고, 겪은 일은 나누고,
           평가에도 바로 댓글을 달 수 있어요.
