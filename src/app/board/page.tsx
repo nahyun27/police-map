@@ -136,7 +136,10 @@ export default async function BoardPage({ searchParams }: Props) {
           </>
         ) : (
           <p className="sub">
-            {failed ? '목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.' : q ? '검색 결과가 없습니다.' : '등록된 글이 없습니다. 첫 글을 남겨 보세요.'}
+            {failed ? '목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+              : q ? '검색 결과가 없습니다.'
+              : category === 'review' ? <>아직 등록된 평가가 없습니다. <Link href="/search?intent=write">평가 작성하기</Link></>
+              : '등록된 글이 없습니다. 첫 글을 남겨 보세요.'}
           </p>
         )}
         {totalPages > 1 && (
