@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import type { ComponentType, ReactNode } from 'react';
 import Link from 'next/link';
 import {
-  AlertTriangle, FileWarning, Gavel, Landmark, Link2, Map, PhoneOff,
+  AlertTriangle, FileWarning, Gavel, Link2, Map, PhoneOff,
   Scale, Search, ShieldAlert, ShieldCheck, Star, TrendingUp, Users2,
 } from 'lucide-react';
 import { Card } from '@/components/ui';
@@ -86,35 +86,15 @@ export default async function WhyPage() {
         </p>
       </section>
 
-      {/* latestAppeal 은 운영진이 통계를 입력해야 채워지는 선택 항목이라, 아직 값이
-          없을 땐 grid2 에 카드 하나만 들어가 절반만 채워진 채 나머지 절반이 텅 비어
-          보이는 문제가 있었다 — 그럴 땐 2단 그리드 대신 단일 카드를 가운데 두는 걸로 전환. */}
-      {latestAppeal ? (
-        <div className="grid2">
-          <Card className="kpi why">
-            <div className="ico"><TrendingUp size={22} /></div>
-            <div>
-              <div className="num">{latestAppeal.value.toLocaleString()}건</div>
-              <div className="lbl">연간 수사관 기피신청({latestAppeal.year}), 5년 새 2배</div>
-              <p className="sub" style={{ marginTop: 4 }}>2018년 2,425건 대비 · 언론 보도 종합</p>
-            </div>
-          </Card>
-          <Card className="kpi why">
-            <div className="ico"><Landmark size={22} /></div>
-            <div>
-              <div className="num">3억 5천만 원</div>
-              <div className="lbl">층간소음 흉기난동 부실대응 국가배상 판결</div>
-              <p className="sub" style={{ marginTop: 4 }}>법원 판결 보도</p>
-            </div>
-          </Card>
-        </div>
-      ) : (
+      {/* 3억 5천만 원(층간소음 국가배상) 카드는 바로 아래 Chapter 01 사례 카드와 내용이 겹쳐서 뺐다(2026-10).
+          기피신청 통계는 운영진이 입력해야 채워지는 값이라, 있을 때만 한 장으로 보여준다. */}
+      {latestAppeal && (
         <Card className="kpi why why-solo">
-          <div className="ico"><Landmark size={22} /></div>
+          <div className="ico"><TrendingUp size={22} /></div>
           <div>
-            <div className="num">3억 5천만 원</div>
-            <div className="lbl">층간소음 흉기난동 부실대응 국가배상 판결</div>
-            <p className="sub" style={{ marginTop: 4 }}>법원 판결 보도</p>
+            <div className="num">{latestAppeal.value.toLocaleString()}건</div>
+            <div className="lbl">연간 수사관 기피신청({latestAppeal.year}), 5년 새 2배</div>
+            <p className="sub" style={{ marginTop: 4 }}>2018년 2,425건 대비 · 언론 보도 종합</p>
           </div>
         </Card>
       )}
