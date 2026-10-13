@@ -15,9 +15,9 @@ const NAV = [
     to: '/why', label: '폴리스맵 소개',
     children: [{ to: '/why', label: '소개' }, { to: '/policy', label: '운영원칙' }],
   },
-  { to: '/stats', label: '통계' },
   { to: '/remedy', label: '권리구제' },
   { to: '/report', label: '제보' },
+  { to: '/stats', label: '통계' },
 ];
 
 export default function Header() {
