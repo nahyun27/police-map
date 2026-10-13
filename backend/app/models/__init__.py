@@ -5,6 +5,9 @@ from app.models.community import (
 )
 from app.models.geo import Department, Region, Station
 from app.models.officer import Officer, OfficerAssignment, OfficerSource
+from app.models.public_case import (
+    CASE_CATEGORY_LABELS, CaseCategory, CaseStatus, PublicCase, PublicCaseEmpathy, PublicCaseUpdate,
+)
 from app.models.report import Report, ReportStatus, ReportTarget
 from app.models.review import CaseType, Review, ReviewRole, ReviewStatus
 from app.models.statistic import PublicStatistic
@@ -13,7 +16,8 @@ from app.models.user import User, UserRole
 from app.models.verification import OfficerVerification, ReviewReply, VerificationStatus
 
 __all__ = [
-    "AuditLog", "CaseType", "Department", "Officer", "OfficerAssignment", "OfficerSource", "OfficerVerification",
+    "AuditLog", "CASE_CATEGORY_LABELS", "CaseCategory", "CaseStatus", "CaseType", "PublicCase",
+    "PublicCaseEmpathy", "PublicCaseUpdate", "Department", "Officer", "OfficerAssignment", "OfficerSource", "OfficerVerification",
     "Post", "PostCategory", "PostComment", "PostCommentVote", "PostScrap", "PostVote", "PublicStatistic", "Region",
     "RegionFollow", "Report", "ReportStatus", "ReportTarget", "Review", "ReviewComment", "ReviewCommentVote",
     "ReviewReply", "ReviewRole", "ReviewScrap", "ReviewStatus", "ReviewVote", "Station", "TakedownRequest",

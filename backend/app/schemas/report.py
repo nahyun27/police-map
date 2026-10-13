@@ -36,3 +36,21 @@ class AdminReportOut(BaseModel):
     resolution_action: str | None
     resolution_note: str | None
     created_at: str | None
+    # 평가·게시글·사건만 블라인드 대상(댓글·해명은 None). 관리자가 신고 큐에서 바로 블라인드/해제할 수 있게.
+    target_blinded: bool | None = None
+    pending_reporters: int = 0
+
+
+class BlindIn(BaseModel):
+    target_type: ReportTarget
+    target_id: int
+    reason: str | None = Field(default=None, max_length=200)
+
+
+class BlindedItemOut(BaseModel):
+    target_type: str
+    target_id: int
+    title: str
+    blind_reason: str | None
+    is_auto: bool
+    pending_reporters: int

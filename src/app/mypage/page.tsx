@@ -4,23 +4,95 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Bookmark, Eye, FileText, Info, LogOut, MapPin, MessageSquare, ShieldCheck, ThumbsDown, ThumbsUp, UserX, X,
+  Bookmark, Eye, EyeOff, FileText, Heart, Info, LogOut, MapPin, Megaphone, MessageSquare, PenLine, ShieldCheck, ThumbsDown,
+  ThumbsUp, UserX, X,
 } from 'lucide-react';
 import { Card, PageHead, Score } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import {
-  ApiError, deleteAccount, followRegion, getMe, getMyRegions, getMyReviews, getMyReviewScraps, getMyPostScraps,
-  getRegions, logout, unfollowRegion,
-  type MyReviewOut, type Page, type PostOut, type RecentReview, type RegionFollowOut, type RegionOut, type UserOut,
+  ApiError, deleteAccount, followRegion, getMe, getMyCases, getMyPosts, getMyRegions, getMyReviews, getMyReviewScraps,
+  getMyPostScraps, getRegions, logout, unfollowRegion,
+  type MyCaseOut, type MyReviewOut, type Page, type PostOut, type RecentReview, type RegionFollowOut, type RegionOut, type UserOut,
 } from '@/lib/api';
 
 const STATUS_LABEL: Record<MyReviewOut['status'], { label: string; tone: string }> = {
   pending: { label: '검수 대기', tone: 'mid' },
   published: { label: '게시됨', tone: 'good' },
   rejected: { label: '반려됨', tone: 'low' },
-  blinded: { label: '임시조치', tone: 'mid' },
+  blinded: { label: '블라인드', tone: 'low' },
   removed: { label: '삭제됨', tone: 'low' },
 };
+
+const CASE_STATUS: Record<MyCaseOut['status'], { label: string; tone: string }> = {
+  published: { label: '공개 중', tone: 'good' },
+  held: { label: '운영진 확인 대기', tone: 'mid' },
+  blinded: { label: '블라인드', tone: 'low' },
+  removed: { label: '삭제됨', tone: 'low' },
+};
+
+/** 운영진이 직접 적은 사유 뒤에 안내 문장을 이어 붙일 때 마침표가 빠지지 않게 한다. */
+const sentence = (t: string | null | undefined) => (t ? (/[.!?。]$/.test(t.trim()) ? t.trim() : `${t.trim()}.`) : '');
+
+/** 블라인드·보류·삭제 사유 안내 박스(평가·게시글·사건 공통). */
+function ReasonBox({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="guidebox" style={{ marginTop: 10, marginBottom: 0 }}>
+      <b>{title}</b>
+      <p className="sub" style={{ marginTop: 4 }}>{text}</p>
+    </div>
+  );
+}
+
+/** 내가 쓴 게시판 글 — 블라인드된 글도 여기서 상태·사유를 확인할 수 있다(2026-10 결정). */
+function MyPosts() {
+  const [data, setData] = useState<PostOut[] | null>(null);
+  useEffect(() => { getMyPosts({ size: 50 }).then((p) => setData(p.items)).catch(() => setData([])); }, []);
+  return (
+    <Card>
+      <h2><PenLine size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />내가 쓴 게시글</h2>
+      {data === null ? <p className="sub">불러오는 중…</p> : data.length ? data.map((p) => (
+        <div className="review" key={p.id}>
+          <div className="meta"><span className="badge">{p.category_label}</span>{formatDate(p.created_at)}</div>
+          <p><Link href={`/board/${p.id}`}>{p.title}</Link></p>
+          <div className="post-row-meta sub" style={{ marginTop: 6 }}>
+            {p.is_blinded ? <span className="badge low"><EyeOff size={11} />블라인드</span> : <span className="badge good">게시됨</span>}
+            <span className="stat"><ThumbsUp size={12} />{p.up}</span>
+            <span>댓글 {p.comment_count}</span>
+          </div>
+          {p.is_blinded && <ReasonBox title="블라인드 사유" text={`${sentence(p.blind_reason)} 다른 이용자에게는 보이지 않습니다. 이의가 있으면 게시판 건의로 알려 주세요.`} />}
+        </div>
+      )) : <p className="sub">아직 작성한 게시글이 없습니다.</p>}
+    </Card>
+  );
+}
+
+/** 내가 기록한 사건 공론화 글 — 공개·보류·블라인드·삭제 상태와 사유. */
+function MyCases() {
+  const [data, setData] = useState<MyCaseOut[] | null>(null);
+  useEffect(() => { getMyCases().then(setData).catch(() => setData([])); }, []);
+  if (data !== null && data.length === 0) return null;
+  return (
+    <Card>
+      <h2><Megaphone size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />내가 기록한 사건</h2>
+      {data === null ? <p className="sub">불러오는 중…</p> : data.map((c) => {
+        const st = CASE_STATUS[c.status];
+        return (
+          <div className="review" key={c.id}>
+            <div className="meta"><span className="badge">{c.category_label}</span>{formatDate(c.created_at)}</div>
+            <p>{c.status === 'removed' ? c.title : <Link href={`/cases/${c.id}`}>{c.title}</Link>}</p>
+            <div className="post-row-meta sub" style={{ marginTop: 6 }}>
+              <span className={`badge ${st.tone}`}>{st.label}</span>
+              <span className="stat"><Heart size={12} />공감 {c.empathy_count}</span>
+            </div>
+            {c.status === 'held' && c.hold_reason && <ReasonBox title="공개 보류 사유" text={`${c.hold_reason}. 운영진 확인 후 공개됩니다.`} />}
+            {c.status === 'blinded' && c.blind_reason && <ReasonBox title="블라인드 사유" text={c.blind_reason} />}
+            {c.status === 'removed' && c.removed_reason && <ReasonBox title="삭제 사유" text={c.removed_reason} />}
+          </div>
+        );
+      })}
+    </Card>
+  );
+}
 
 const SIZE = 20;
 
@@ -192,7 +264,7 @@ function WithdrawAccount() {
       <div className="ico danger"><UserX size={18} /></div>
       {!open ? (
         <>
-          <p className="sub">더 이상 이용하지 않으신다면 탈퇴할 수 있습니다. 작성한 평가·게시글은 삭제되지 않고 &quot;익명&quot;으로 남습니다.</p>
+          <p className="sub">더 이상 이용하지 않으신다면 탈퇴할 수 있습니다. 작성한 평가·게시글·사건 기록은 삭제되지 않고 &quot;익명&quot;으로 남으니, 남기고 싶지 않은 글은 탈퇴 전에 직접 삭제해 주세요.</p>
           <button type="button" className="btn line sm danger" onClick={() => setOpen(true)}>회원 탈퇴</button>
         </>
       ) : (
@@ -325,11 +397,9 @@ export default function MyPage() {
                   <span className="stat"><ThumbsDown size={12} />{r.down}</span>
                   <span>댓글 {r.comment_count}</span>
                 </div>
-                {r.status === 'rejected' && r.reject_reason && (
-                  <div className="guidebox" style={{ marginTop: 10, marginBottom: 0 }}>
-                    <b>반려 사유</b>
-                    <p className="sub" style={{ marginTop: 4 }}>{r.reject_reason}</p>
-                  </div>
+                {r.status === 'rejected' && r.reject_reason && <ReasonBox title="반려 사유" text={r.reject_reason} />}
+                {r.status === 'blinded' && (
+                  <ReasonBox title="블라인드 사유" text={`${sentence(r.blind_reason) || '운영진 조치로 블라인드되었습니다.'} 다른 이용자에게는 보이지 않습니다.`} />
                 )}
               </div>
             );
@@ -345,6 +415,9 @@ export default function MyPage() {
           </div>
         )}
       </Card>
+
+      <MyPosts />
+      <MyCases />
 
       <WithdrawAccount />
     </>

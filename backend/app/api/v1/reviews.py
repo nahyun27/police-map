@@ -64,6 +64,7 @@ def list_my_reviews(
             id=r.id, station_id=r.station_id, station_name=r.station.name,
             role=r.role.value, role_label=role_label(r), case_type=r.case_type.value, case_type_label=case_type_label(r),
             ratings=_ratings_dict(r), overall=_overall(r), body=r.body, status=r.status.value, reject_reason=r.reject_reason,
+            blind_reason=r.blind_reason if r.status == ReviewStatus.blinded else None,
             created_at=_iso(r.created_at), published_at=_iso(r.published_at),
             comment_count=counts[r.id], up=votes[r.id].up, down=votes[r.id].down, score=votes[r.id].score,
             evidence_note=r.evidence_note, evidence_verified=r.evidence_verified,

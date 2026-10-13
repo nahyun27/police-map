@@ -7,8 +7,10 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models import (
-    Officer, Review, ReviewStatus, TakedownRequest, TakedownStatus, TakedownTarget, User,
+    CaseStatus, Officer, PublicCase, Review, ReviewStatus, TakedownRequest, TakedownStatus, TakedownTarget, User,
 )
+
+TAKEDOWN_BLIND_REASON = "당사자의 삭제·정정 요청이 접수되어 임시조치(블라인드)되었습니다. 운영진이 재검토합니다."
 from app.services.audit import log_action
 
 
@@ -20,9 +22,11 @@ def new_public_code() -> str:
     return secrets.token_urlsafe(16)
 
 
-def _target(db: Session, req: TakedownRequest) -> Review | Officer | None:
+def _target(db: Session, req: TakedownRequest) -> Review | Officer | PublicCase | None:
     if req.target_type == TakedownTarget.review:
         return db.get(Review, req.review_id)
+    if req.target_type == TakedownTarget.public_case:
+        return db.get(PublicCase, req.case_id)
     return db.get(Officer, req.officer_id)
 
 
@@ -32,6 +36,10 @@ def blind(db: Session, req: TakedownRequest) -> None:
     if isinstance(target, Review) and target.status == ReviewStatus.published:
         target.blinded_from_status = target.status
         target.status = ReviewStatus.blinded
+        target.blind_reason = TAKEDOWN_BLIND_REASON
+    elif isinstance(target, PublicCase) and target.status in (CaseStatus.published, CaseStatus.held):
+        target.blinded_from_status, target.status = target.status, CaseStatus.blinded
+        target.blind_reason, target.blinded_at = TAKEDOWN_BLIND_REASON, utcnow()
     elif isinstance(target, Officer):
         target.is_blinded = True
 
@@ -47,7 +55,7 @@ def create_request(db: Session, **fields) -> TakedownRequest:
     db.flush()
     blind(db, req)
     log_action(db, None, "takedown_received", "takedown_request", req.id, {
-        "target_type": req.target_type.value, "review_id": req.review_id, "officer_id": req.officer_id,
+        "target_type": req.target_type.value, "review_id": req.review_id, "officer_id": req.officer_id, "case_id": req.case_id,
         "request_type": req.request_type.value,
     })
     return req
@@ -57,6 +65,8 @@ def _same_target_pending(db: Session, req: TakedownRequest) -> list[TakedownRequ
     q = select(TakedownRequest).where(TakedownRequest.status == TakedownStatus.pending, TakedownRequest.id != req.id)
     if req.target_type == TakedownTarget.review:
         q = q.where(TakedownRequest.review_id == req.review_id)
+    elif req.target_type == TakedownTarget.public_case:
+        q = q.where(TakedownRequest.case_id == req.case_id)
     else:
         q = q.where(TakedownRequest.officer_id == req.officer_id)
     return list(db.scalars(q))
@@ -79,6 +89,10 @@ def resolve_keep(db: Session, req: TakedownRequest, admin: User, note: str) -> N
     if isinstance(target, Review) and target.status == ReviewStatus.blinded:
         target.status = target.blinded_from_status or ReviewStatus.published
         target.blinded_from_status = None
+        target.blind_reason = None
+    elif isinstance(target, PublicCase) and target.status == CaseStatus.blinded:
+        target.status = target.blinded_from_status or CaseStatus.published
+        target.blinded_from_status, target.blind_reason, target.blinded_at = None, None, None
     elif isinstance(target, Officer):
         target.is_blinded = False
 
@@ -93,6 +107,9 @@ def resolve_remove(db: Session, req: TakedownRequest, admin: User, note: str) ->
     if isinstance(target, Review):
         target.status = ReviewStatus.removed
         target.blinded_from_status = None
+    elif isinstance(target, PublicCase):
+        target.status, target.blinded_from_status = CaseStatus.removed, None
+        target.removed_reason = "삭제·정정 요청에 따른 삭제"
     elif isinstance(target, Officer):
         target.is_published = False
         target.is_blinded = False

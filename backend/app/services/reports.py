@@ -8,7 +8,9 @@ from collections import defaultdict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Post, PostComment, Report, ReportTarget, Review, ReviewComment, ReviewReply, ReviewStatus
+from app.models import (
+    CaseStatus, Post, PostComment, PublicCase, Report, ReportTarget, Review, ReviewComment, ReviewReply, ReviewStatus,
+)
 from app.services import takedown as takedown_svc
 
 TARGET_MODEL = {
@@ -17,6 +19,7 @@ TARGET_MODEL = {
     ReportTarget.review_comment: ReviewComment,
     ReportTarget.post_comment: PostComment,
     ReportTarget.review_reply: ReviewReply,
+    ReportTarget.public_case: PublicCase,
 }
 
 _REMOVABLE_REVIEW_STATUSES = (ReviewStatus.published, ReviewStatus.blinded)
@@ -29,7 +32,7 @@ def get_target(db: Session, target_type: ReportTarget, target_id: int):
 def _preview_of(target_type: ReportTarget, obj) -> str:
     if not obj:
         return "(대상이 이미 삭제됨)"
-    if target_type == ReportTarget.post:
+    if target_type in (ReportTarget.post, ReportTarget.public_case):
         return obj.title
     return (obj.body or "")[:80]
 
@@ -79,4 +82,8 @@ def remove_target(db: Session, target_type: ReportTarget, target_id: int, admin_
         obj.is_removed = True
     elif target_type == ReportTarget.review_reply:
         db.delete(obj)
+    elif target_type == ReportTarget.public_case:
+        if obj.status == CaseStatus.removed:
+            return False
+        obj.status, obj.removed_reason = CaseStatus.removed, "이용자 신고에 따른 조치"
     return True

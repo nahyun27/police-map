@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.api.v1._present import iso
 from app.core.database import get_db
 from app.core.rate_limit import takedown_limiter
-from app.models import Officer, Review, ReviewStatus, TakedownRequest, TakedownTarget
+from app.models import CaseStatus, Officer, PublicCase, Review, ReviewStatus, TakedownRequest, TakedownTarget
 from app.schemas.takedown import TakedownCreate, TakedownReceipt, TakedownStatusOut
 from app.services import takedown as svc
 
@@ -21,6 +21,11 @@ def create_takedown(body: TakedownCreate, db: Session = Depends(get_db)):
         if not target or target.status not in (ReviewStatus.published, ReviewStatus.blinded):
             raise HTTPException(404, "대상을 찾을 수 없습니다.")
         ids = {"review_id": target.id}
+    elif body.target_type == TakedownTarget.public_case:
+        target = db.get(PublicCase, body.target_id)
+        if not target or target.status not in (CaseStatus.published, CaseStatus.blinded):
+            raise HTTPException(404, "대상을 찾을 수 없습니다.")
+        ids = {"case_id": target.id}
     else:
         target = db.get(Officer, body.target_id)
         if not target or not target.is_published:

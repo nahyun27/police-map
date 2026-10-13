@@ -6,13 +6,13 @@ User 행은 하드 삭제하지 않고 비활성화(soft delete)한다 — users
 쓴 글과 동일하게 author_id 를 비워 "익명"으로 전환해 공개 기록은 보존한다."""
 import secrets
 
-from sqlalchemy import delete, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
 from app.models import (
-    Post, PostComment, PostCommentVote, PostScrap, PostVote, RegionFollow, Review, ReviewComment,
-    ReviewCommentVote, ReviewScrap, ReviewVote, User,
+    Post, PostComment, PostCommentVote, PostScrap, PostVote, PublicCase, PublicCaseEmpathy, RegionFollow, Review,
+    ReviewComment, ReviewCommentVote, ReviewScrap, ReviewVote, User,
 )
 
 
@@ -37,6 +37,12 @@ def delete_account(db: Session, user: User) -> None:
     db.execute(delete(ReviewScrap).where(ReviewScrap.user_id == uid))
     db.execute(delete(PostScrap).where(PostScrap.user_id == uid))
     db.execute(delete(RegionFollow).where(RegionFollow.user_id == uid))
+    # 사건 공론화 공감도 투표와 같이 지운다(공감 수 캐시도 함께 줄임). 작성한 사건 자체는 users 행이
+    # 비활성화로 남으므로 그대로 두되, 탈퇴 후에도 남는 걸 원치 않으면 탈퇴 전에 직접 삭제하도록 안내한다.
+    for case_id in db.scalars(select(PublicCaseEmpathy.case_id).where(PublicCaseEmpathy.user_id == uid)).all():
+        db.execute(update(PublicCase).where(PublicCase.id == case_id, PublicCase.empathy_count > 0)
+                   .values(empathy_count=PublicCase.empathy_count - 1))
+    db.execute(delete(PublicCaseEmpathy).where(PublicCaseEmpathy.user_id == uid))
 
     # 제보(Report)·경찰관 인증 이력(OfficerVerification)·해명(ReviewReply)·감사 로그는 건드리지
     # 않는다 — 전부 "누가 했는지"가 기록 자체의 의미인 데이터라서, 탈퇴로 지워지면 악용

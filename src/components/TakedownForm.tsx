@@ -17,7 +17,7 @@ function errorMessage(e: unknown): string {
   return '접수에 실패했습니다. 잠시 후 다시 시도해 주세요.';
 }
 
-export default function TakedownForm({ targetType, targetId }: { targetType: 'review' | 'officer'; targetId: number }) {
+export default function TakedownForm({ targetType, targetId }: { targetType: 'review' | 'officer' | 'public_case'; targetId: number }) {
   const [requestType, setRequestType] = useState<TakedownCreatePayload['request_type']>('delete');
   const [relation, setRelation] = useState<TakedownCreatePayload['relation']>('본인');
   const [name, setName] = useState('');

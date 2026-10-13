@@ -69,6 +69,7 @@ class MyReviewOut(BaseModel):
     body: str
     status: str
     reject_reason: str | None
+    blind_reason: str | None = None
     created_at: str | None
     published_at: str | None
     comment_count: int = 0

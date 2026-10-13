@@ -1,14 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Check, Trash2, X } from 'lucide-react';
+import { Check, EyeOff, Eye, Trash2, X } from 'lucide-react';
 import { Card, TableWrap } from '@/components/ui';
 import { formatDate } from '@/lib/format';
-import { listAdminReports, resolveReport, type AdminReportOut, type Page } from '@/lib/api';
+import { adminBlind, adminUnblind, listAdminReports, resolveReport, type AdminReportOut, type BlindableType, type Page } from '@/lib/api';
 
 const STATUS_TABS: [string, string][] = [['pending', '처리 대기'], ['resolved', '처리 완료']];
 const TARGET_LABEL: Record<AdminReportOut['target_type'], string> = {
   review: '평가', post: '게시글', review_comment: '평가 댓글', post_comment: '게시글 댓글', review_reply: '경찰관 해명',
+  public_case: '사건 공론화',
 };
 const SIZE = 20;
 
@@ -40,6 +41,22 @@ export default function AdminReportsPage() {
     } catch { setError('처리에 실패했습니다.'); } finally { setBusyId(null); }
   };
 
+  // 심각한 경우 신고 수와 상관없이 즉시 블라인드(평가·게시글·사건만 해당). 5명 이상 신고되면 자동으로 이미 블라인드돼 있다.
+  const toggleBlind = async (r: AdminReportOut) => {
+    const type = r.target_type as BlindableType;
+    setBusyId(r.id);
+    setError(null);
+    try {
+      if (r.target_blinded) await adminUnblind(type, r.target_id);
+      else {
+        const reason = prompt('블라인드 사유(작성자 마이페이지에 표시됩니다). 비우면 기본 문구가 들어갑니다.', '');
+        if (reason === null) return;
+        await adminBlind(type, r.target_id, reason.trim());
+      }
+      await load();
+    } catch { setError('블라인드 처리에 실패했습니다.'); } finally { setBusyId(null); }
+  };
+
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.size)) : 1;
 
   return (
@@ -64,7 +81,11 @@ export default function AdminReportsPage() {
           <tbody>
             {data?.items.length ? data.items.map((r) => (
               <tr key={r.id}>
-                <td>{TARGET_LABEL[r.target_type] ?? r.target_type} #{r.target_id}</td>
+                <td>
+                  {TARGET_LABEL[r.target_type] ?? r.target_type} #{r.target_id}
+                  <div className="sub" style={{ marginTop: 4 }}>신고자 {r.pending_reporters}명</div>
+                  {r.target_blinded && <span className="badge low" style={{ marginTop: 4 }}><EyeOff size={11} />블라인드됨</span>}
+                </td>
                 <td style={{ maxWidth: 240, whiteSpace: 'pre-wrap' }}>{r.target_preview}</td>
                 <td className="sub">{r.reporter_nickname}</td>
                 <td style={{ maxWidth: 220, whiteSpace: 'pre-wrap' }}>{r.reason}</td>
@@ -85,6 +106,11 @@ export default function AdminReportsPage() {
                       <div className="btn-row">
                         <button className="btn sm" disabled={busyId === r.id} onClick={() => { setActioningId({ id: r.id, action: 'remove' }); setNote(''); }}><Trash2 size={14} />삭제</button>
                         <button className="btn line sm" disabled={busyId === r.id} onClick={() => { setActioningId({ id: r.id, action: 'dismiss' }); setNote(''); }}><X size={14} />기각</button>
+                        {r.target_blinded !== null && (
+                          <button className="btn line sm danger" disabled={busyId === r.id} onClick={() => toggleBlind(r)}>
+                            {r.target_blinded ? <><Eye size={14} />블라인드 해제</> : <><EyeOff size={14} />즉시 블라인드</>}
+                          </button>
+                        )}
                       </div>
                     )}
                   </td>

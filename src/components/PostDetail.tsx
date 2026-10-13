@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, Trash2 } from 'lucide-react';
+import { AdminBlindButton } from '@/components/AdminBlindButton';
 import { Engagement } from '@/components/Engagement';
 import { deletePost, getPost, incrementPostView, type PostOut } from '@/lib/api';
 import { formatDate } from '@/lib/format';
@@ -37,6 +38,9 @@ export function PostDetail({ initial }: { initial: PostOut }) {
 
   return (
     <>
+      {post.is_blinded && (
+        <div className="warn" style={{ marginTop: 0 }}><b>블라인드된 글입니다.</b> 다른 이용자에게는 보이지 않습니다. {post.blind_reason}</div>
+      )}
       <div className="flex" style={{ gap: 8, marginBottom: 12 }}>
         <span className="eyebrow" style={{ marginBottom: 0 }}>{post.region_name ?? '전체'}{post.station_name ? ` · ${post.station_name}` : ''}</span>
         <span className={`badge cat-${post.category}`}>{post.category_label}</span>
@@ -52,6 +56,9 @@ export function PostDetail({ initial }: { initial: PostOut }) {
         </button>
       )}
       {error && <div className="warn">{error}</div>}
+      {!post.is_blinded && (
+        <div style={{ marginTop: 10 }}><AdminBlindButton targetType="post" targetId={post.id} onDone={() => setPost({ ...post, is_blinded: true })} /></div>
+      )}
       <Engagement
         key={`post-${post.id}-${post.my_vote}-${post.is_scrapped}`}
         kind="post" targetId={post.id}

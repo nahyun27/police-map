@@ -862,3 +862,13 @@ table.channel-table .pill {
 .purpose-card .sub { font-size: 13px; }
 @media (max-width: 860px) { .purpose-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 480px) { .purpose-card { padding: 16px; } }
+
+/* ---------- 사건 공론화 ---------- */
+.board-ui .badge.cat-case { background: #fde8ee; color: #be185d; }
+.case-timeline { list-style: none; margin: 10px 0 8px; padding: 0 0 0 18px; border-left: 2px solid var(--line); }
+.case-timeline li { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 0 0 14px 4px; font-size: 14.5px; }
+.case-timeline li::before {
+  content: ''; position: absolute; left: -25px; top: 6px; width: 10px; height: 10px; border-radius: 50%;
+  background: #fff; border: 2px solid var(--brand);
+}
+.case-timeline li:first-child::before { background: var(--brand); }

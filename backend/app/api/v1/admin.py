@@ -12,17 +12,20 @@ from app.api.v1._present import iso, ratings_dict
 from app.core.database import get_db
 from app.core.deps import require_admin
 from app.models import (
-    AuditLog, Department, Officer, OfficerAssignment, OfficerVerification, Region, Report, ReportStatus, Review,
-    ReviewReply, ReviewStatus, Station, TakedownRequest, TakedownStatus, User, VerificationStatus,
+    CASE_CATEGORY_LABELS, AuditLog, CaseStatus, Department, Officer, OfficerAssignment, OfficerVerification, Post,
+    PublicCase, Region, Report, ReportStatus, ReportTarget, Review, ReviewReply, ReviewStatus, Station, TakedownRequest,
+    TakedownStatus, User, VerificationStatus,
 )
 from app.models.officer import SOURCE_LABELS
 from app.models.review import case_type_label, role_label
 from app.schemas.admin import EvidenceVerifyIn, OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate, UserStatsOut
 from app.schemas.public import Page
-from app.schemas.report import AdminReportOut, ResolveReportIn
+from app.schemas.public_case import AdminCaseOut
+from app.schemas.report import AdminReportOut, BlindedItemOut, BlindIn, ResolveReportIn
 from app.schemas.verification import AdminVerifyOut
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
+from app.services import blinding
 from app.services.reports import batch_target_previews, remove_target, target_preview
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
@@ -235,12 +238,17 @@ def revoke_verification(verification_id: int, body: RejectIn, admin: User = Depe
 
 
 # ---------- 신고 처리 ----------
-def _admin_report(r: Report, preview: str) -> AdminReportOut:
+def _admin_report(db: Session, r: Report, preview: str) -> AdminReportOut:
+    blinded = None
+    if r.target_type in blinding.BLINDABLE:
+        obj = blinding.get(db, r.target_type, r.target_id)
+        blinded = blinding.is_blinded(obj) if obj else None
     return AdminReportOut(
         id=r.id, reporter_nickname=r.reporter.nickname, target_type=r.target_type.value, target_id=r.target_id,
         target_preview=preview, reason=r.reason, status=r.status.value,
         resolved_by=r.resolved_by, resolution_action=r.resolution_action, resolution_note=r.resolution_note,
-        created_at=iso(r.created_at),
+        created_at=iso(r.created_at), target_blinded=blinded,
+        pending_reporters=blinding.pending_reporter_count(db, r.target_type, r.target_id),
     )
 
 
@@ -257,14 +265,16 @@ def list_reports(
     ).all()
     previews = batch_target_previews(db, rows)
     return Page(
-        items=[_admin_report(r, previews[(r.target_type, r.target_id)]) for r in rows], total=total, page=page, size=size,
+        items=[_admin_report(db, r, previews[(r.target_type, r.target_id)]) for r in rows], total=total, page=page, size=size,
     )
 
 
 @router.post("/reports/{report_id}/resolve", response_model=AdminReportOut)
 def resolve_report(report_id: int, body: ResolveReportIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """action=remove 면 신고 대상을 실제로 지우고(콘텐츠 타입별 기존 삭제 방식 그대로),
-    action=dismiss 면 내용은 그대로 두고 신고만 처리 완료로 닫는다."""
+    action=dismiss 면 내용은 그대로 두고 신고만 처리 완료로 닫는다.
+    판단은 "그 게시물"에 대한 것이므로 같은 대상의 다른 미처리 신고도 함께 닫는다. 기각으로
+    남은 신고가 없어지면 신고 누적 자동 블라인드는 풀린다(관리자 수동 블라인드는 유지)."""
     r = db.get(Report, report_id)
     if not r:
         raise HTTPException(404, "신고를 찾을 수 없습니다.")
@@ -275,12 +285,71 @@ def resolve_report(report_id: int, body: ResolveReportIn, admin: User = Depends(
     r.resolved_by, r.resolved_at = admin.id, takedown_svc.utcnow()
     r.resolution_action = "removed" if removed else "dismissed"
     r.resolution_note = body.note
+    siblings = db.scalars(select(Report).where(
+        Report.target_type == r.target_type, Report.target_id == r.target_id,
+        Report.status == ReportStatus.pending, Report.id != r.id,
+    )).all()
+    for s in siblings:
+        s.status, s.resolved_by, s.resolved_at = ReportStatus.resolved, admin.id, r.resolved_at
+        s.resolution_action, s.resolution_note = r.resolution_action, f"동일 대상 일괄 처리 (신고 #{r.id})"
+    db.flush()
+    if r.resolution_action == "dismissed":
+        blinding.maybe_restore_after_dismiss(db, r.target_type, r.target_id)
     log_action(
         db, admin.id, "report_resolved", "report", r.id,
-        {"action": r.resolution_action, "target_type": r.target_type.value, "target_id": r.target_id},
+        {"action": r.resolution_action, "target_type": r.target_type.value, "target_id": r.target_id,
+         "siblings": [s.id for s in siblings]},
     )
     db.commit()
-    return _admin_report(r, target_preview(db, r.target_type, r.target_id))
+    return _admin_report(db, r, target_preview(db, r.target_type, r.target_id))
+
+
+# ---------- 블라인드(평가·게시글·사건 공통) ----------
+def _blindable_or_404(db: Session, target_type: ReportTarget, target_id: int):
+    if target_type not in blinding.BLINDABLE:
+        raise HTTPException(422, "평가·게시글·사건만 블라인드할 수 있습니다.")
+    obj = blinding.get(db, target_type, target_id)
+    if not obj:
+        raise HTTPException(404, "대상을 찾을 수 없습니다.")
+    return obj
+
+
+@router.post("/blind", status_code=status.HTTP_204_NO_CONTENT)
+def admin_blind(body: BlindIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """심각한 경우 신고 수와 상관없이 즉시 블라인드(2026-10 결정)."""
+    obj = _blindable_or_404(db, body.target_type, body.target_id)
+    if not blinding.blind(db, obj, (body.reason or "").strip() or blinding.REASON_ADMIN_DEFAULT, admin.id):
+        raise HTTPException(409, "이미 블라인드됐거나 공개 상태가 아닌 게시물입니다.")
+    db.commit()
+
+
+@router.post("/unblind", status_code=status.HTTP_204_NO_CONTENT)
+def admin_unblind(body: BlindIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    obj = _blindable_or_404(db, body.target_type, body.target_id)
+    if not blinding.unblind(db, obj, admin.id):
+        raise HTTPException(409, "블라인드 상태가 아닌 게시물입니다.")
+    db.commit()
+
+
+@router.get("/blinded", response_model=list[BlindedItemOut])
+def list_blinded(db: Session = Depends(get_db)):
+    """현재 블라인드된 평가·게시글·사건 전체(최근 것부터, 종류별 최대 200건)."""
+    items: list[BlindedItemOut] = []
+
+    def add(tt: ReportTarget, obj, title: str):
+        items.append(BlindedItemOut(
+            target_type=tt.value, target_id=obj.id, title=title, blind_reason=obj.blind_reason,
+            is_auto=obj.blind_reason == blinding.REASON_AUTO,
+            pending_reporters=blinding.pending_reporter_count(db, tt, obj.id),
+        ))
+
+    for rv in db.scalars(select(Review).where(Review.status == ReviewStatus.blinded).order_by(Review.id.desc()).limit(200)):
+        add(ReportTarget.review, rv, (rv.body or "(서술 없음)")[:80])
+    for p in db.scalars(select(Post).where(Post.is_blinded.is_(True), Post.is_removed.is_(False)).order_by(Post.id.desc()).limit(200)):
+        add(ReportTarget.post, p, p.title)
+    for c in db.scalars(select(PublicCase).where(PublicCase.status == CaseStatus.blinded).order_by(PublicCase.id.desc()).limit(200)):
+        add(ReportTarget.public_case, c, c.title)
+    return items
 
 
 # ---------- 삭제·정정 요청 ----------
@@ -290,6 +359,7 @@ class AdminTakedown(BaseModel):
     target_type: str
     review_id: int | None
     officer_id: int | None
+    case_id: int | None = None
     request_type: str
     requester_name: str
     requester_contact: str  # 처리 결과 통지용 — 관리자에게만 노출
@@ -307,7 +377,7 @@ def _admin_takedown(t: TakedownRequest) -> AdminTakedown:
     due = t.due_at if t.due_at.tzinfo else t.due_at.replace(tzinfo=timezone.utc)  # SQLite 는 tz 를 잃는다
     overdue = t.status == TakedownStatus.pending and due < takedown_svc.utcnow()
     return AdminTakedown(
-        id=t.id, public_code=t.public_code, target_type=t.target_type.value, review_id=t.review_id, officer_id=t.officer_id,
+        id=t.id, public_code=t.public_code, target_type=t.target_type.value, review_id=t.review_id, officer_id=t.officer_id, case_id=t.case_id,
         request_type=t.request_type.value, requester_name=t.requester_name, requester_contact=t.requester_contact,
         relation=t.relation, reason=t.reason, status=t.status.value, created_at=iso(t.created_at), due_at=iso(t.due_at),
         overdue=overdue, resolved_at=iso(t.resolved_at), resolution_note=t.resolution_note,
@@ -459,3 +529,48 @@ def audit_logs(
         ],
         total=db.scalar(cq) or 0, page=page, size=size,
     )
+
+
+
+# ---------- 사건 공론화 ----------
+@router.get("/cases", response_model=Page[AdminCaseOut])
+def admin_list_cases(
+    status_: CaseStatus = Query(CaseStatus.held, alias="status"),
+    page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100), db: Session = Depends(get_db),
+):
+    """기본은 보류(held) 큐 — 개인정보·실명 노출 위험이 자동 탐지돼 공개 전 확인이 필요한 사건."""
+    base = select(PublicCase).where(PublicCase.status == status_)
+    total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
+    order = PublicCase.created_at.asc() if status_ == CaseStatus.held else PublicCase.created_at.desc()
+    rows = db.scalars(base.options(joinedload(PublicCase.station)).order_by(order, PublicCase.id).offset((page - 1) * size).limit(size)).all()
+    nick = dict(db.execute(select(User.id, User.nickname).where(User.id.in_({c.author_id for c in rows}))).all()) if rows else {}
+    return Page(items=[
+        AdminCaseOut(
+            id=c.id, author_nickname=nick.get(c.author_id), title=c.title, body=c.body, desired_action=c.desired_action,
+            category_label=CASE_CATEGORY_LABELS[c.category], station_name=c.station.name if c.station else None,
+            status=c.status.value, hold_reason=c.hold_reason, blind_reason=c.blind_reason, empathy_count=c.empathy_count,
+            pending_reporters=blinding.pending_reporter_count(db, ReportTarget.public_case, c.id),
+            created_at=iso(c.created_at),
+        ) for c in rows
+    ], total=total, page=page, size=size)
+
+
+@router.post("/cases/{case_id}/approve", status_code=status.HTTP_204_NO_CONTENT)
+def admin_approve_case(case_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """보류된 사건을 확인 후 공개."""
+    c = db.get(PublicCase, case_id)
+    if not c or c.status != CaseStatus.held:
+        raise HTTPException(409, "보류 상태인 사건만 승인할 수 있습니다.")
+    c.status, c.hold_reason = CaseStatus.published, None
+    log_action(db, admin.id, "case.approve", "public_case", c.id, {})
+    db.commit()
+
+
+@router.post("/cases/{case_id}/remove", status_code=status.HTTP_204_NO_CONTENT)
+def admin_remove_case(case_id: int, body: RejectIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    c = db.get(PublicCase, case_id)
+    if not c or c.status == CaseStatus.removed:
+        raise HTTPException(404, "사건을 찾을 수 없습니다.")
+    c.status, c.removed_reason = CaseStatus.removed, body.reason[:300]
+    log_action(db, admin.id, "case.remove", "public_case", c.id, {"reason": body.reason})
+    db.commit()

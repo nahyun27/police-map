@@ -14,6 +14,7 @@ class ReportTarget(str, enum.Enum):
     review_comment = "review_comment"
     post_comment = "post_comment"
     review_reply = "review_reply"
+    public_case = "public_case"
 
 
 class ReportStatus(str, enum.Enum):

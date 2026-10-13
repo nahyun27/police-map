@@ -10,6 +10,7 @@ from app.core.database import Base
 class TakedownTarget(str, enum.Enum):
     review = "review"
     officer = "officer"
+    public_case = "public_case"
 
 
 class TakedownType(str, enum.Enum):
@@ -29,7 +30,8 @@ class TakedownRequest(Base):
     __tablename__ = "takedown_requests"
     __table_args__ = (
         CheckConstraint(
-            "(review_id IS NOT NULL AND officer_id IS NULL) OR (review_id IS NULL AND officer_id IS NOT NULL)",
+            "(CASE WHEN review_id IS NULL THEN 0 ELSE 1 END) + (CASE WHEN officer_id IS NULL THEN 0 ELSE 1 END)"
+            " + (CASE WHEN case_id IS NULL THEN 0 ELSE 1 END) = 1",
             name="exactly_one_target",
         ),
     )
@@ -41,6 +43,7 @@ class TakedownRequest(Base):
     target_type: Mapped[TakedownTarget] = mapped_column(Enum(TakedownTarget, native_enum=False, length=20))
     review_id: Mapped[int | None] = mapped_column(ForeignKey("reviews.id"), index=True)
     officer_id: Mapped[int | None] = mapped_column(ForeignKey("officers.id"), index=True)
+    case_id: Mapped[int | None] = mapped_column(ForeignKey("public_cases.id"), index=True)
 
     request_type: Mapped[TakedownType] = mapped_column(Enum(TakedownType, native_enum=False, length=20))
     requester_name: Mapped[str] = mapped_column(String(50))

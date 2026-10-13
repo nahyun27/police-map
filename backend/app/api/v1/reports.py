@@ -7,6 +7,7 @@ from app.core.deps import get_current_user
 from app.core.rate_limit import report_limiter
 from app.models import Report, ReportStatus, User
 from app.schemas.report import ReportCreate, ReportReceipt
+from app.services.blinding import maybe_auto_blind
 from app.services.reports import get_target
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -28,5 +29,8 @@ def create_report(body: ReportCreate, db: Session = Depends(get_db), user: User 
         raise HTTPException(status.HTTP_409_CONFLICT, "이미 신고 접수된 항목입니다.")
     report = Report(reporter_id=user.id, target_type=body.target_type, target_id=body.target_id, reason=body.reason)
     db.add(report)
+    db.flush()
+    # 평가·게시글·사건은 서로 다른 회원의 미처리 신고가 기준(5건) 이상이면 자동 블라인드(2026-10 결정).
+    maybe_auto_blind(db, body.target_type, body.target_id)
     db.commit()
     return ReportReceipt(id=report.id, message="신고가 접수되었습니다. 운영진이 검토합니다.")

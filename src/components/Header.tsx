@@ -10,6 +10,7 @@ import { useSearchSuggestions } from '@/lib/useSearchSuggestions';
 
 const NAV = [
   { to: '/board', label: '커뮤니티' },
+  { to: '/cases', label: '사건 공론화' },
   {
     to: '/why', label: '폴리스맵 소개',
     children: [{ to: '/why', label: '소개' }, { to: '/policy', label: '운영원칙' }],

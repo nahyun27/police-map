@@ -97,6 +97,9 @@ class PostOut(BaseModel):
     is_scrapped: bool
     created_at: str | None
     updated_at: str | None
+    # 블라인드된 글은 작성자 본인·관리자에게만 응답되므로 공개 목록에서는 항상 False/None.
+    is_blinded: bool = False
+    blind_reason: str | None = None
 
 
 class PostReceipt(BaseModel):

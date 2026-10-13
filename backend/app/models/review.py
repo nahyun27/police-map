@@ -138,6 +138,8 @@ class Review(Base):
     reject_reason: Mapped[str | None] = mapped_column(String(500))  # 레거시 반려 사유 + 관리자 사후삭제 사유 공용
     # 임시조치(blinded) 직전 상태 — 재검토 후 게시 유지 결정 시 복원한다.
     blinded_from_status: Mapped[ReviewStatus | None] = mapped_column(Enum(ReviewStatus, native_enum=False, length=20))
+    # 블라인드 사유(신고 누적 자동 / 관리자 수동 / 삭제·정정 요청 임시조치) — 작성자 마이페이지에 표시.
+    blind_reason: Mapped[str | None] = mapped_column(String(200))
     reviewed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)

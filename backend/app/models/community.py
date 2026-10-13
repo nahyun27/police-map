@@ -145,6 +145,11 @@ class Post(Base):
     # (이 컬럼은 오직 정렬용) — 둘이 같은 투표 테이블을 보고 계산하므로 항상 일치한다.
     score: Mapped[int] = mapped_column(default=0, server_default="0", index=True)
     is_removed: Mapped[bool] = mapped_column(default=False, index=True)
+    # 블라인드(임시 비공개) — 신고 누적 자동 처리 또는 관리자 수동 처리. 삭제와 달리 되돌릴 수 있고,
+    # 작성자 본인에게는 마이페이지에서 사유와 함께 보인다(app/services/blinding.py 참고).
+    is_blinded: Mapped[bool] = mapped_column(default=False, server_default="false", index=True)
+    blind_reason: Mapped[str | None] = mapped_column(String(200))
+    blinded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

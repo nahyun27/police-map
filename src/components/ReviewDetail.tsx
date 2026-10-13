@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
+import { AdminBlindButton } from '@/components/AdminBlindButton';
 import { Engagement } from '@/components/Engagement';
 import { ReplyBox } from '@/components/ReplyBox';
 import { Score } from '@/components/ui';
@@ -45,9 +46,12 @@ export function ReviewDetail({ initial }: { initial: RecentReview }) {
         initialUp={rv.up} initialDown={rv.down} initialMyVote={rv.my_vote} initialCommentCount={rv.comment_count}
         initialScrapped={rv.is_scrapped}
       />
-      <Link href={`/takedown/review/${rv.id}?station=${encodeURIComponent(rv.station_name)}`} className="sub" style={{ display: 'inline-block', marginTop: 8 }}>
-        이 게시물 삭제·정정 요청
-      </Link>
+      <div className="btn-row" style={{ marginTop: 8, alignItems: 'center', justifyContent: 'space-between' }}>
+        <Link href={`/takedown/review/${rv.id}?station=${encodeURIComponent(rv.station_name)}`} className="sub">
+          이 게시물 삭제·정정 요청
+        </Link>
+        <AdminBlindButton targetType="review" targetId={rv.id} />
+      </div>
     </>
   );
 }

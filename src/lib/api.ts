@@ -266,7 +266,7 @@ export const submitReview = (payload: ReviewCreatePayload) =>
   apiFetch<ReviewReceipt>('/reviews', { method: 'POST', body: JSON.stringify(payload) });
 
 export interface TakedownCreatePayload {
-  target_type: 'review' | 'officer';
+  target_type: 'review' | 'officer' | 'public_case';
   target_id: number;
   request_type: 'delete' | 'correct';
   requester_name: string;
@@ -333,6 +333,7 @@ export interface MyReviewOut {
   body: string;
   status: 'pending' | 'published' | 'rejected' | 'blinded' | 'removed';
   reject_reason: string | null;
+  blind_reason?: string | null;
   created_at: string | null;
   published_at: string | null;
   comment_count: number;
@@ -436,7 +437,9 @@ export interface ScrapStatus {
 
 /* ===================== 신고 ===================== */
 
-export type ReportTargetType = 'review' | 'post' | 'review_comment' | 'post_comment' | 'review_reply';
+export type ReportTargetType = 'review' | 'post' | 'review_comment' | 'post_comment' | 'review_reply' | 'public_case';
+// 블라인드 대상이 되는 "게시물" 3종(댓글·해명은 신고만 가능, 블라인드 대상 아님).
+export type BlindableType = 'review' | 'post' | 'public_case';
 
 export interface ReportReceipt {
   id: number;
@@ -492,6 +495,9 @@ export interface PostOut {
   is_scrapped: boolean;
   created_at: string | null;
   updated_at: string | null;
+  // 블라인드된 글은 작성자 본인·관리자에게만 응답된다.
+  is_blinded?: boolean;
+  blind_reason?: string | null;
 }
 
 export interface PostCreatePayload {
@@ -675,6 +681,8 @@ export interface AdminReportOut {
   resolution_action: 'removed' | 'dismissed' | null;
   resolution_note: string | null;
   created_at: string | null;
+  target_blinded: boolean | null;
+  pending_reporters: number;
 }
 
 export const listAdminReports = (opts: { status: string; page?: number; size?: number }) => {
@@ -708,9 +716,10 @@ export const listAuditLogs = (opts?: { action?: string; page?: number; size?: nu
 export interface AdminTakedown {
   id: number;
   public_code: string;
-  target_type: 'review' | 'officer';
+  target_type: 'review' | 'officer' | 'public_case';
   review_id: number | null;
   officer_id: number | null;
+  case_id: number | null;
   request_type: 'delete' | 'correct';
   requester_name: string;
   requester_contact: string;
@@ -732,3 +741,128 @@ export const listAdminTakedowns = (opts: { status: string; page?: number; size?:
 };
 export const resolveTakedown = (id: number, decision: 'keep' | 'remove', note: string) =>
   apiFetch<AdminTakedown>(`/admin/takedown-requests/${id}/resolve`, { method: 'POST', body: JSON.stringify({ decision, note }) });
+
+
+/* ===================== 블라인드(관리자) ===================== */
+
+export const adminBlind = (targetType: BlindableType, targetId: number, reason?: string) =>
+  apiFetch<void>('/admin/blind', { method: 'POST', body: JSON.stringify({ target_type: targetType, target_id: targetId, reason: reason || null }) });
+export const adminUnblind = (targetType: BlindableType, targetId: number) =>
+  apiFetch<void>('/admin/unblind', { method: 'POST', body: JSON.stringify({ target_type: targetType, target_id: targetId }) });
+
+export interface BlindedItem {
+  target_type: BlindableType;
+  target_id: number;
+  title: string;
+  blind_reason: string | null;
+  is_auto: boolean;
+  pending_reporters: number;
+}
+export const listAdminBlinded = () => apiFetch<BlindedItem[]>('/admin/blinded');
+
+export function getMyPosts(opts?: { page?: number; size?: number }) {
+  const qs = new URLSearchParams();
+  if (opts?.page) qs.set('page', String(opts.page));
+  if (opts?.size) qs.set('size', String(opts.size));
+  return apiFetch<Page<PostOut>>(`/posts/mine${qs.toString() ? `?${qs}` : ''}`);
+}
+
+/* ===================== 사건 공론화 ===================== */
+
+export type CaseCategory = 'delay' | 'procedure' | 'evidence' | 'attitude' | 'other';
+export const CASE_CATEGORIES: [CaseCategory, string][] = [
+  ['delay', '수사 지연'], ['procedure', '조사 절차'], ['evidence', '증거 처리'], ['attitude', '응대 문제'], ['other', '기타'],
+];
+
+export interface CaseCard {
+  id: number;
+  category: CaseCategory;
+  category_label: string;
+  title: string;
+  excerpt: string;
+  station_id: number | null;
+  station_name: string | null;
+  empathy_count: number;
+  view_count: number;
+  update_count: number;
+  created_at: string | null;
+  my_empathy: boolean;
+}
+
+export interface CaseUpdateOut {
+  id: number;
+  body: string;
+  created_at: string | null;
+}
+
+export interface CaseDetail extends CaseCard {
+  body: string;
+  desired_action: string | null;
+  updates: CaseUpdateOut[];
+  is_mine: boolean;
+  status: 'published' | 'held' | 'blinded' | 'removed';
+  hold_reason: string | null;
+  blind_reason: string | null;
+}
+
+export interface CaseCreatePayload {
+  category: CaseCategory;
+  title: string;
+  body: string;
+  desired_action?: string | null;
+  station_id?: number | null;
+  agreed: boolean;
+}
+
+export interface MyCaseOut {
+  id: number;
+  title: string;
+  category_label: string;
+  status: 'published' | 'held' | 'blinded' | 'removed';
+  hold_reason: string | null;
+  blind_reason: string | null;
+  removed_reason: string | null;
+  empathy_count: number;
+  created_at: string | null;
+}
+
+export function listCases(opts?: { category?: CaseCategory; q?: string; sort?: 'new' | 'empathy'; page?: number; size?: number }) {
+  const qs = new URLSearchParams();
+  if (opts?.category) qs.set('category', opts.category);
+  if (opts?.q) qs.set('q', opts.q);
+  if (opts?.sort) qs.set('sort', opts.sort);
+  if (opts?.page) qs.set('page', String(opts.page));
+  if (opts?.size) qs.set('size', String(opts.size));
+  return apiFetch<Page<CaseCard>>(`/cases${qs.toString() ? `?${qs}` : ''}`);
+}
+export const getCase = (id: number) => apiFetch<CaseDetail>(`/cases/${id}`);
+export const incrementCaseView = (id: number) => apiFetch<void>(`/cases/${id}/view`, { method: 'POST' });
+export const createCase = (payload: CaseCreatePayload) =>
+  apiFetch<{ id: number; status: string; message: string }>('/cases', { method: 'POST', body: JSON.stringify(payload) });
+export const deleteCase = (id: number) => apiFetch<void>(`/cases/${id}`, { method: 'DELETE' });
+export const addEmpathy = (id: number) => apiFetch<{ empathized: boolean; empathy_count: number }>(`/cases/${id}/empathy`, { method: 'POST' });
+export const removeEmpathy = (id: number) => apiFetch<{ empathized: boolean; empathy_count: number }>(`/cases/${id}/empathy`, { method: 'DELETE' });
+export const addCaseUpdate = (id: number, body: string) =>
+  apiFetch<CaseUpdateOut>(`/cases/${id}/updates`, { method: 'POST', body: JSON.stringify({ body }) });
+export const getMyCases = () => apiFetch<MyCaseOut[]>('/cases/mine');
+
+export interface AdminCaseOut {
+  id: number;
+  author_nickname: string | null;
+  title: string;
+  body: string;
+  desired_action: string | null;
+  category_label: string;
+  station_name: string | null;
+  status: 'published' | 'held' | 'blinded' | 'removed';
+  hold_reason: string | null;
+  blind_reason: string | null;
+  empathy_count: number;
+  pending_reporters: number;
+  created_at: string | null;
+}
+export const listAdminCases = (status: string, page = 1) =>
+  apiFetch<Page<AdminCaseOut>>(`/admin/cases?status=${status}&page=${page}`);
+export const approveCase = (id: number) => apiFetch<void>(`/admin/cases/${id}/approve`, { method: 'POST' });
+export const removeCaseAdmin = (id: number, reason: string) =>
+  apiFetch<void>(`/admin/cases/${id}/remove`, { method: 'POST', body: JSON.stringify({ reason }) });

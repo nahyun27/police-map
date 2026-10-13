@@ -82,6 +82,7 @@ def _post_out(
         up=vote.up, down=vote.down, score=vote.score, my_vote=vote.my_vote, is_scrapped=is_scrapped,
         created_at=p.created_at.isoformat() if p.created_at else None,
         updated_at=p.updated_at.isoformat() if p.updated_at else None,
+        is_blinded=p.is_blinded, blind_reason=p.blind_reason if p.is_blinded else None,
     )
 
 
@@ -98,7 +99,7 @@ def list_posts(
     page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=50),
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
 ):
-    base = select(Post).where(Post.is_removed.is_(False))
+    base = select(Post).where(Post.is_removed.is_(False), Post.is_blinded.is_(False))
     if region_id:
         base = base.where(Post.region_id == region_id)
     if station_id:
@@ -159,7 +160,7 @@ def board_feed(
     total_posts = 0
     post_items: list[BoardFeedItem] = []
     if want_posts:
-        base = select(Post).where(Post.is_removed.is_(False))
+        base = select(Post).where(Post.is_removed.is_(False), Post.is_blinded.is_(False))
         if region_id:
             base = base.where(Post.region_id == region_id)
         if category:
@@ -235,6 +236,26 @@ def board_feed(
     return Page(items=items, total=total_posts + total_reviews, page=page, size=size)
 
 
+@router.get("/posts/mine", response_model=Page[PostOut])
+def list_my_posts(
+    page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=50),
+    user: User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    """로그인한 본인이 쓴 글 — 블라인드된 글도 포함해서 상태와 사유를 보여준다(삭제된 글은 제외)."""
+    base = select(Post).where(Post.author_id == user.id, Post.is_removed.is_(False))
+    total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
+    posts = db.scalars(
+        base.options(joinedload(Post.region), joinedload(Post.station))
+        .order_by(Post.created_at.desc(), Post.id.desc()).offset((page - 1) * size).limit(size)
+    ).all()
+    ids = [p.id for p in posts]
+    votes = vote_summaries(db, PostVote, PostVote.post_id, ids, user.id)
+    counts = comment_counts(db, PostComment, PostComment.post_id, ids)
+    scrapped = scrapped_set(db, PostScrap, PostScrap.post_id, ids, user.id)
+    items = [_post_out(db, p, votes[p.id], counts[p.id], user.nickname, user.id, p.id in scrapped) for p in posts]
+    return Page(items=items, total=total, page=page, size=size)
+
+
 @router.get("/posts/popular", response_model=list[PostOut])
 def popular_posts(
     request: Request,
@@ -243,7 +264,7 @@ def popular_posts(
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
 ):
     """기간별(오늘/주간/월간/전체) 추천 점수 상위 — 홈 "인기글" 위젯 + 게시판 베스트용."""
-    base = select(Post).where(Post.is_removed.is_(False))
+    base = select(Post).where(Post.is_removed.is_(False), Post.is_blinded.is_(False))
     if period != "all":
         since = datetime.now(timezone.utc) - timedelta(days=_PERIOD_DAYS[period])
         base = base.where(Post.created_at >= since)
@@ -298,7 +319,9 @@ def get_post(
     user: User | None = Depends(get_current_user_optional),
 ):
     p = db.get(Post, post_id)
-    if not p or p.is_removed:
+    # 블라인드된 글은 작성자 본인과 관리자에게만 보인다(본인은 사유를 확인할 수 있게).
+    can_see_blinded = user is not None and (p is not None and p.author_id == user.id or user.role == UserRole.admin)
+    if not p or p.is_removed or (p.is_blinded and not can_see_blinded):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
     uid = user.id if user else None
     votes = vote_summaries(db, PostVote, PostVote.post_id, [post_id], uid, None if uid else get_client_ip_hash(request))
@@ -313,7 +336,7 @@ def increment_post_view(post_id: int, db: Session = Depends(get_db)):
     """조회수 증가 전용 — GET /posts/{id} 와 분리한 이유는, 그 글 상세 페이지 하나를 보는 동안에도
     (메타데이터 생성 + 서버 렌더 + 클라이언트 쪽 로그인 상태 보정) 여러 번 호출되기 때문이다.
     이 엔드포인트는 프론트에서 실제 화면이 한 번 그려질 때 딱 한 번만 호출한다."""
-    if db.scalar(select(Post.id).where(Post.id == post_id, Post.is_removed.is_(False))):
+    if db.scalar(select(Post.id).where(Post.id == post_id, Post.is_removed.is_(False), Post.is_blinded.is_(False))):
         db.execute(update(Post).where(Post.id == post_id).values(view_count=Post.view_count + 1))
         db.commit()
 
@@ -321,7 +344,7 @@ def increment_post_view(post_id: int, db: Session = Depends(get_db)):
 @router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(post_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     p = db.get(Post, post_id)
-    if not p or p.is_removed:
+    if not p or p.is_removed:  # 블라인드된 본인 글도 삭제는 가능
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
     if p.author_id != user.id and user.role != UserRole.admin:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "본인 글만 삭제할 수 있습니다.")
@@ -337,7 +360,7 @@ def list_post_comments(
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
 ):
     p = db.get(Post, post_id)
-    if not p or p.is_removed:
+    if not p or p.is_removed or p.is_blinded:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
     rows = [
         (c, nickname or ANON_LABEL)
@@ -363,7 +386,7 @@ def create_post_comment(
     """게시글과 마찬가지로 로그인 없이도 익명으로 댓글을 달 수 있다(2026-10 결정) —
     추천/투표와 달리 댓글은 신뢰도 핵심 지표가 아니라서 글 작성과 같은 기준으로 맞췄다."""
     p = db.get(Post, post_id)
-    if not p or p.is_removed:
+    if not p or p.is_removed or p.is_blinded:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
     banned = find_banned(body.body)
     if banned:
@@ -416,7 +439,7 @@ def vote_post(
     # 글 행을 잠그고 시작한다 — 같은 글에 동시에 들어오는 투표 요청들이 서로 Post.score 증분을
     # 덮어써서(lost update) 캐시 컬럼이 실제 투표 합계와 어긋나는 걸 막는다(정렬 조작 방지).
     p = db.scalar(select(Post).where(Post.id == post_id).with_for_update())
-    if not p or p.is_removed:
+    if not p or p.is_removed or p.is_blinded:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
     uid = user.id if user else None
     ip_hash = None if uid else get_client_ip_hash(request)
@@ -454,7 +477,7 @@ def list_my_post_scraps(
     posts = {
         p.id: p for p in db.scalars(
             select(Post).options(joinedload(Post.region), joinedload(Post.station))
-            .where(Post.id.in_(page_ids), Post.is_removed.is_(False))
+            .where(Post.id.in_(page_ids), Post.is_removed.is_(False), Post.is_blinded.is_(False))
         ).all()
     }
     votes = vote_summaries(db, PostVote, PostVote.post_id, page_ids, user.id)
@@ -470,7 +493,7 @@ def list_my_post_scraps(
 @router.post("/posts/{post_id}/scrap", response_model=ScrapStatus, dependencies=[Depends(vote_limiter)])
 def scrap_post(post_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     p = db.get(Post, post_id)
-    if not p or p.is_removed:
+    if not p or p.is_removed or p.is_blinded:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
     if not db.scalar(select(PostScrap.id).where(PostScrap.post_id == post_id, PostScrap.user_id == user.id)):
         db.add(PostScrap(post_id=post_id, user_id=user.id))
