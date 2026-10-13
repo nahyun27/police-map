@@ -3,7 +3,7 @@ import type { ComponentType, ReactNode } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle, FileWarning, Gavel, Landmark, Link2, Map, PhoneOff,
-  Scale, ShieldAlert, ShieldCheck, Siren, Star, TrendingUp, Users2,
+  Scale, Search, ShieldAlert, ShieldCheck, Star, TrendingUp, Users2,
 } from 'lucide-react';
 import { Card } from '@/components/ui';
 import { getStats } from '@/lib/api';
@@ -135,11 +135,12 @@ export default async function WhyPage() {
           여성 대신 <b>그 가족이 보복 살해</b>당했으며(송파), 스토킹 피해를 고소했던 역무원은 신변보호가 연장되지 않은 채
           근무지에서 살해됐습니다(신당역, 2022). 세 사건 모두 "신고 이후"에 일어났습니다.
         </WhyCase>
-        <WhyCase icon={Siren} tone="danger" tag="2022 · 서울" title="이태원 참사, 묵살된 11건의 112 신고"
-          after="서울경찰청장 등 지휘부 기소, 용산경찰서장 유죄 판결. 국정조사·특별수사로 대응 체계 전반 개편."
-          refs="출처: 국정조사 결과·언론 보도 종합">
-          참사 당일 저녁, 압사 위험을 알리는 <b>112 신고 11건이 접수됐지만 실질적 조치는 이뤄지지 않았습니다.</b> 159명이
-          희생됐고, 경찰 지휘부의 사전 대비·당일 대응 실패가 수사와 재판의 대상이 됐습니다.
+        <WhyCase icon={Search} tone="danger" tag="2026 · 제주" title="장미란 실종사건, 허위 종결로 놓친 100일"
+          after="담당 경찰관 긴급체포(직무유기·공전자기록 위작 등 혐의), 서부경찰서장 등 지휘라인 4명 대기발령. 같은 수법의 다른 실종신고 허위 종결도 추가로 드러났습니다."
+          refs="출처: 헤드라인제주 2026.8.22·8.26, MBC 2026.8.24 보도 종합">
+          실종 신고를 받은 당일 밤, 담당 경찰관이 <b>"본인과 연락됐다, 위치를 알리지 말아 달라고 했다"</b>며 사건을 허위로
+          종결 처리했습니다. 가족의 재신고로 거짓 종결이 드러났을 땐 신고 후 100여 일이 지나 있었고, 장 씨는 이미 숨진
+          채 발견됐습니다.
         </WhyCase>
         <WhyCase icon={PhoneOff} tone="danger" tag="2012 · 수원" title="오원춘 사건, 골든타임을 놓친 112"
           after="112 통합 시스템 개편, 위치추적 권한 확대 입법의 계기. 부실 대응 경찰관 다수 징계."
@@ -200,9 +201,11 @@ export default async function WhyPage() {
       </section>
 
       <p className="sub" style={{ fontSize: 12, textAlign: 'center' }}>
-        본 페이지의 사건 서술은 법원 판결(재심 무죄·국가배상)과 국정조사 등 공개된 자료에 근거한 사실의 기록이며, 각 항목에
-        출처를 표시했습니다. 특정 개인에 대한 비방 목적이 아닌, 공공기관 직무수행의 투명성 제고라는 공익 목적으로
-        작성되었습니다(형법 제310조). 피해자와 유족의 명예를 존중하며, 당사자의 요청이 있는 경우 지체 없이 검토·조치합니다.
+        본 페이지의 사건 서술은 법원 판결(재심 무죄·국가배상), 국정조사, 수사기관의 공식 조치(체포·기소·징계 등) 등
+        공개된 자료에 근거한 사실의 기록이며, 각 항목에 출처를 표시했습니다. 수사·재판이 진행 중인 사건은 혐의 사실로,
+        확정되지 않은 부분은 확정되지 않은 것으로 서술합니다. 특정 개인에 대한 비방 목적이 아닌, 공공기관 직무수행의
+        투명성 제고라는 공익 목적으로 작성되었습니다(형법 제310조). 피해자와 유족의 명예를 존중하며, 당사자의 요청이
+        있는 경우 지체 없이 검토·조치합니다.
       </p>
     </>
   );
