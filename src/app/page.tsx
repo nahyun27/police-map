@@ -109,6 +109,18 @@ export default async function Home() {
           <RegionMapSwitcher regions={regions} />
         </Card>
 
+        {/* 오른쪽 칸: 공지 + 최근 평가. 평가가 아직 없을 땐 평가 카드가 내용만큼만 차지해서,
+            왼쪽 지도 카드 높이를 빈 카드 하나로 억지로 채우지 않는다(2026-10). */}
+        <div className="home-side">
+          <Card className="home-notice">
+            <h3>공지</h3>
+            <div className="notice">
+              <div><em>새 기능</em><span><Link href="/cases">사건 공론화</Link>가 열렸습니다. 수사 과정에서 겪은 일을 기록하고 공감을 모아 보세요.</span></div>
+              <div><em>안내</em>평가는 사건관계인·변호인만 작성할 수 있습니다.</div>
+              <div><em>안내</em>당사자 삭제·정정 요청 창구를 운영합니다. 접수 즉시 임시조치됩니다.</div>
+              <div><em>안내</em>경찰서 정보는 경찰청 전국경찰관서안내 공개자료를 기준으로 합니다.</div>
+            </div>
+          </Card>
         <Card>
           <div className="sec-head">
             <div>
@@ -128,8 +140,14 @@ export default async function Home() {
                 <Link href={`/station/${rv.station_id}`}>더보기</Link>
               </p>
             </div>
-          )) : <p className="sub">아직 등록된 평가가 없습니다. 첫 평가의 주인공이 되어 주세요.</p>}
+          )) : (
+            <>
+              <p className="sub">아직 등록된 평가가 없습니다. 첫 평가의 주인공이 되어 주세요.</p>
+              <Link href="/search?intent=write" className="btn sm" style={{ marginTop: 12 }}>첫 평가 작성하기</Link>
+            </>
+          )}
         </Card>
+        </div>
       </div>
 
       <Card>
@@ -194,14 +212,6 @@ export default async function Home() {
         </Link>
       </Card>
 
-      <Card className="flat">
-        <h3>공지</h3>
-        <div className="notice">
-          <div><em>안내</em>평가는 사건관계인·변호인만 작성할 수 있습니다.</div>
-          <div><em>안내</em>당사자 삭제·정정 요청 창구를 운영합니다. 접수 즉시 임시조치됩니다.</div>
-          <div><em>안내</em>경찰서 정보는 경찰청 전국경찰관서안내 공개자료를 기준으로 합니다.</div>
-        </div>
-      </Card>
     </>
   );
 }

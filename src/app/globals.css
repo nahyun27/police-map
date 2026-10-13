@@ -872,3 +872,10 @@ table.channel-table .pill {
   background: #fff; border: 2px solid var(--brand);
 }
 .case-timeline li:first-child::before { background: var(--brand); }
+
+/* 홈 지도 옆 오른쪽 칸: 공지 + 최근 평가를 세로로 쌓는다. */
+.home-side { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.home-side > .card { margin-bottom: 0; }
+.home-side > .card:last-child { flex: 1; }
+.home-notice h3 { margin-bottom: 10px; }
+@media (max-width: 860px) { .home-side { gap: 16px; } }
