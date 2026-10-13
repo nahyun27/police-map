@@ -198,6 +198,8 @@ def board_feed(
             rbase = rbase.where(Station.region_id == region_id)
         if qq:
             rbase = rbase.where(Review.body.contains(qq, autoescape=True))
+        if since:
+            rbase = rbase.where(Review.published_at >= since)
         total_reviews = db.scalar(select(func.count()).select_from(rbase.subquery())) or 0
         rrows = rbase.options(joinedload(Review.station).joinedload(Station.region))
         order = (Review.published_at.desc(), Review.id.desc())  # 평가는 추천순 정렬까지는 아직 지원 안 함(아래 참고)

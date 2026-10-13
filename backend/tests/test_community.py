@@ -529,3 +529,18 @@ def test_board_feed_comment_posted_on_review_visible_on_station_page(user_client
     feed = client.get(f"{API}/board/feed?category=review").json()
     item = next(x for x in feed["items"] if x["id"] == review_id)
     assert item["comment_count"] == 1
+
+
+def test_board_feed_top_period_filters_reviews_too(db, user_client, world):
+    from datetime import datetime, timedelta, timezone
+    from app.models import Review
+
+    rid = user_client.post(f"{API}/reviews", json=review_payload(world["station"].id)).json()["id"]
+    r = db.get(Review, rid)
+    r.published_at = datetime.now(timezone.utc) - timedelta(days=10)
+    db.commit()
+
+    today = user_client.get(f"{API}/board/feed?category=review&sort=top&period=today").json()
+    assert all(x["id"] != rid for x in today["items"])
+    all_time = user_client.get(f"{API}/board/feed?category=review&sort=top&period=all").json()
+    assert any(x["id"] == rid for x in all_time["items"])
