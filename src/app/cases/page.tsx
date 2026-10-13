@@ -5,6 +5,7 @@ import { CategoryTabs } from '@/components/CategoryTabs';
 import { Card } from '@/components/ui';
 import { CASE_CATEGORIES, listCases, type CaseCategory } from '@/lib/api';
 import { formatDate } from '@/lib/format';
+import { AdSlots } from '@/components/AdSlots';
 
 export const metadata: Metadata = {
   title: '사건 공론화',
@@ -166,6 +167,7 @@ export default async function CasesPage({ searchParams }: Props) {
       <Link href="/cases/new" className="fab-write" aria-label="사건 기록하기">
         <PenLine size={22} /><span>기록하기</span>
       </Link>
+      <AdSlots />
     </>
   );
 }

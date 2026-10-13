@@ -44,7 +44,9 @@ report_limiter = RateLimiter(20, 3600, "report")
 view_limiter = RateLimiter(120, 3600, "view")
 delete_account_limiter = RateLimiter(5, 3600, "delete_account")
 case_limiter = RateLimiter(5, 86400, "public_case")  # 사건 공론화 등록: 하루 5건
+ad_limiter = RateLimiter(600, 3600, "ads")  # 광고 조회(페이지마다 1~2회) — 조회수 제한과 분리
 ALL_LIMITERS = [
     login_limiter, register_limiter, takedown_limiter, review_limiter, post_limiter, comment_limiter, vote_limiter,
     verify_limiter, reply_limiter, report_limiter, view_limiter, delete_account_limiter, case_limiter,
+    ad_limiter,
 ]

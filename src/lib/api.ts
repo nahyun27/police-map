@@ -867,3 +867,87 @@ export const listAdminCases = (status: string, page = 1) =>
 export const approveCase = (id: number) => apiFetch<void>(`/admin/cases/${id}/approve`, { method: 'POST' });
 export const removeCaseAdmin = (id: number, reason: string) =>
   apiFetch<void>(`/admin/cases/${id}/remove`, { method: 'POST', body: JSON.stringify({ reason }) });
+
+/* ===================== 광고·제휴 ===================== */
+
+// 업로드된 광고 이미지·클릭 리다이렉트는 API 서버 경로라, 브라우저에서 쓸 땐 공개 API 주소를 붙인다
+// (운영에선 같은 도메인이라 상관없지만 로컬 개발은 프론트 3000 / API 8001 로 갈라져 있다).
+export const apiAsset = (path: string) =>
+  `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8001'}${path}`;
+
+export interface AdOut {
+  id: number;
+  title: string;
+  advertiser: string;
+  image_wide_url: string;
+  image_side_url: string | null;
+  click_url: string;
+  region_name: string | null;
+}
+
+export function listAds(opts: { regionId?: string; stationId?: number; slot?: 'wide' | 'side'; limit?: number }) {
+  const qs = new URLSearchParams();
+  if (opts.regionId) qs.set('region_id', opts.regionId);
+  if (opts.stationId) qs.set('station_id', String(opts.stationId));
+  if (opts.slot) qs.set('slot', opts.slot);
+  if (opts.limit) qs.set('limit', String(opts.limit));
+  return apiFetch<AdOut[]>(`/ads?${qs}`);
+}
+
+export type InquiryType = 'ad' | 'partnership' | 'other';
+export interface InquiryPayload {
+  inquiry_type: InquiryType;
+  company: string;
+  name: string;
+  contact: string;
+  region_interest?: string | null;
+  message: string;
+  agreed: boolean;
+}
+export const createInquiry = (p: InquiryPayload) =>
+  apiFetch<{ id: number; message: string }>('/ad-inquiries', { method: 'POST', body: JSON.stringify(p) });
+
+export interface AdminAd {
+  id: number;
+  title: string;
+  advertiser: string;
+  link_url: string;
+  region_id: string | null;
+  region_name: string | null;
+  image_wide_url: string;
+  image_side_url: string | null;
+  starts_on: string | null;
+  ends_on: string | null;
+  is_active: boolean;
+  is_live: boolean;
+  impressions: number;
+  clicks: number;
+}
+export const listAdminAds = () => apiFetch<AdminAd[]>('/admin/ads');
+// 파일 업로드라 JSON 이 아닌 FormData 로 보낸다(apiFetch 는 JSON 전용이라 직접 fetch).
+export async function createAdminAd(form: FormData): Promise<AdminAd> {
+  const res = await fetch(apiAsset('/api/v1/admin/ads'), { method: 'POST', body: form, credentials: 'include' });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new ApiError(res.status, body);
+  return body as AdminAd;
+}
+export const updateAdminAd = (id: number, patch: Partial<Pick<AdminAd, 'title' | 'advertiser' | 'link_url' | 'starts_on' | 'ends_on' | 'is_active'>>) =>
+  apiFetch<AdminAd>(`/admin/ads/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+export const deleteAdminAd = (id: number) => apiFetch<void>(`/admin/ads/${id}`, { method: 'DELETE' });
+
+export interface AdminInquiry {
+  id: number;
+  inquiry_type: InquiryType;
+  inquiry_type_label: string;
+  company: string;
+  name: string;
+  contact: string;
+  region_interest: string | null;
+  message: string;
+  status: 'new' | 'done';
+  admin_note: string | null;
+  created_at: string | null;
+}
+export const listAdminInquiries = (status: 'new' | 'done') => apiFetch<Page<AdminInquiry>>(`/admin/inquiries?status=${status}`);
+export const markInquiryDone = (id: number, note: string) =>
+  apiFetch<void>(`/admin/inquiries/${id}/done`, { method: 'POST', body: JSON.stringify({ note }) });

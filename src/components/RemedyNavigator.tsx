@@ -7,6 +7,7 @@ import {
   ArrowRight, Check, ExternalLink, FileText, Landmark, Lightbulb, Megaphone,
   MessageCircleQuestion, ShieldAlert,
 } from 'lucide-react';
+import { AdInline, AdSlots } from '@/components/AdSlots';
 import { Card, EmptyState, TableWrap } from '@/components/ui';
 import { REMEDY } from '@/data/sample';
 
@@ -226,9 +227,10 @@ export default function RemedyNavigator({ contextLabel, stationId }: { contextLa
         <h3 style={{ marginBottom: 4 }}>변호사의 도움이 필요하신가요? <span className="tag ad">광고</span></h3>
         <p className="sub">아래 영역은 광고입니다. 폴리스맵은 특정 변호사를 알선·소개하지 않으며, 정액 광고료 외 어떠한 대가도 받지 않습니다.</p>
         <div style={{ marginTop: 14 }}>
-          <EmptyState icon={<Megaphone size={20} />}>현재 집행 중인 광고가 없습니다.</EmptyState>
+          <AdInline stationId={stationId} />
         </div>
       </div>
+      <AdSlots stationId={stationId} />
     </>
   );
 }

@@ -34,6 +34,18 @@ class Settings(BaseSettings):
     # 삭제·정정 요청 접수 후 재검토 기한(일). 운영원칙: "접수 즉시 임시조치 후 10일 내 재검토".
     TAKEDOWN_REVIEW_DAYS: int = 10
 
+    # 관리자가 올린 광고 배너 이미지 저장 위치(/api/v1/uploads/... 로 서빙).
+    UPLOAD_DIR: str = "uploads"
+
+    # 광고·제휴 문의 이메일 알림. SMTP_HOST 와 INQUIRY_NOTIFY_TO 가 비어 있으면 메일은 보내지 않고
+    # 관리자 콘솔에만 쌓인다(문의 접수 자체는 항상 성공).
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+    INQUIRY_NOTIFY_TO: str = ""  # 쉼표로 여러 주소 가능
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

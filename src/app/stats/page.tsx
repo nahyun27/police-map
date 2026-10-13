@@ -4,6 +4,7 @@ import { BarChart3, FileCheck2, Percent, Scale, Star, TrendingUp, Trophy } from 
 import ClickableRow from '@/components/ClickableRow';
 import { Bars, Card, EmptyState, Score } from '@/components/ui';
 import { getStats, getTransparencyReport, type StatsOverview, type TransparencyQuarter } from '@/lib/api';
+import { AdSlots } from '@/components/AdSlots';
 
 // getStats() 가 이미 60초 캐시돼 있어(src/lib/api.ts), force-dynamic 없이도 신선도는
 // 동일하게 유지된다 — ISR 로 바꿔 매 요청 재렌더링 비용만 없앤다.
@@ -159,6 +160,7 @@ export default async function StatsPage() {
           <EmptyState icon={<FileCheck2 size={20} />}>아직 집계할 처리 건이 없습니다. 분기가 마감되면 자동으로 집계됩니다.</EmptyState>
         )}
       </Card>
+      <AdSlots />
     </>
   );
 }

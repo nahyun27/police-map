@@ -6,6 +6,7 @@ import { ReviewList } from '@/components/ReviewList';
 import { ExternalLink, ShieldCheck } from 'lucide-react';
 import { ApiError, getStation } from '@/lib/api';
 import stationJurisdiction from '@/data/stationJurisdiction.json';
+import { AdSlots } from '@/components/AdSlots';
 
 type JurisdictionEntry = {
   text: string;
@@ -195,6 +196,7 @@ export default async function StationPage({ params, searchParams }: Props) {
           </div>
         )}
       </Card>
+      <AdSlots stationId={s.id} />
     </>
   );
 }

@@ -879,3 +879,25 @@ table.channel-table .pill {
 .home-side > .card:last-child { flex: 1; }
 .home-notice h3 { margin-bottom: 10px; }
 @media (max-width: 860px) { .home-side { gap: 16px; } }
+
+/* ---------- 광고(지역 타겟) ---------- */
+/* 넓은 PC 화면: 본문(1120px) 양옆 고정 배너. 1500px 미만에서는 숨기고 본문 하단 가로 배너로 대신한다
+   (AdSlots.tsx 의 WIDE_QUERY 와 같은 기준). */
+.ad-rail { display: none; }
+@media (min-width: 1500px) {
+  .ad-rail { display: flex; flex-direction: column; gap: 6px; position: fixed; top: 96px; width: 160px; z-index: 5; }
+  .ad-rail.left { left: calc(50% - 560px - 24px - 160px); }
+  .ad-rail.right { right: calc(50% - 560px - 24px - 160px); }
+}
+.ad-rail img { display: block; width: 160px; height: auto; border-radius: 12px; box-shadow: var(--shadow); }
+.ad-label { font-size: 11.5px; color: var(--muted); }
+.ad-rail-empty {
+  display: flex; flex-direction: column; gap: 8px; justify-content: center; align-items: center; text-align: center;
+  height: 300px; border: 1.5px dashed #cdd3e0; border-radius: 12px; background: #fbfbfd; color: var(--muted); font-size: 12.5px;
+}
+.ad-rail-empty b { color: var(--ink2); font-size: 14px; }
+.ad-rail-empty:hover { border-color: var(--brand); color: var(--brand); }
+.ad-bottom { margin: 8px 0 20px; display: flex; flex-direction: column; gap: 6px; }
+.ad-bottom img, .ad-inline img { display: block; width: 100%; height: auto; max-height: 220px; object-fit: contain; border-radius: 14px; background: #fff; }
+.ad-inline { display: grid; gap: 14px; }
+.ad-inline > div { display: flex; flex-direction: column; gap: 6px; }

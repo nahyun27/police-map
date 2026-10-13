@@ -16,6 +16,7 @@ next-env.d.ts
 
 # Backend (Python)
 backend/venv/
+backend/uploads/
 __pycache__/
 *.pyc
 .pytest_cache/

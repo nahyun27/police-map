@@ -3,6 +3,10 @@ import os
 # 앱 모듈을 import 하기 전에 반드시 설정한다 — 테스트가 개발용 Postgres 를 건드리면 안 된다.
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["ENVIRONMENT"] = "development"
+# 광고 배너 업로드가 저장소의 backend/uploads 를 더럽히지 않게 임시 폴더로.
+import tempfile  # noqa: E402
+os.environ["UPLOAD_DIR"] = tempfile.mkdtemp(prefix="policemap-test-uploads-")
+os.environ["SMTP_HOST"] = ""
 
 from datetime import datetime, timezone  # noqa: E402
 

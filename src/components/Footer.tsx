@@ -18,6 +18,7 @@ export default function Footer() {
           <Link href="/policy">개인정보처리방침</Link>
           <Link href="/takedown/status">삭제·정정 요청</Link>
           <Link href="/board?category=suggestion">건의하기</Link>
+          <Link href="/advertise">광고·제휴 문의</Link>
         </div>
         <p>
           폴리스맵 · 국민 참여형 수사기관 평가 플랫폼<br />

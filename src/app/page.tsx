@@ -9,6 +9,7 @@ import RegionMapSwitcher from '@/components/RegionMapSwitcher';
 import { Bars, Card, Score, Stars } from '@/components/ui';
 import { getPopularPosts, getRecentReviews, getRegions, getStats, type StatsOverview } from '@/lib/api';
 import { formatDate } from '@/lib/format';
+import { AdSlots } from '@/components/AdSlots';
 
 // 여기서 쓰는 모든 fetch 가 이미 30~60초로 캐시돼 있으므로(src/lib/api.ts 의
 // revalidateSeconds), force-dynamic 으로 매 요청마다 새로 렌더링해도 데이터 신선도는
@@ -212,6 +213,7 @@ export default async function Home() {
         </Link>
       </Card>
 
+      <AdSlots />
     </>
   );
 }
