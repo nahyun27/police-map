@@ -161,8 +161,14 @@ def admin_update_ad(ad_id: int, body: AdUpdate, admin: User = Depends(require_ad
     if not a:
         raise HTTPException(404, "광고를 찾을 수 없습니다.")
     data = body.model_dump(exclude_unset=True)
-    if "link_url" in data and data["link_url"] is not None:
+    for k in ("title", "advertiser", "link_url", "is_active"):
+        if k in data and data[k] is None:
+            raise HTTPException(422, f"{k} 는 비울 수 없습니다.")
+    if "link_url" in data:
         data["link_url"] = _check_link(data["link_url"])
+    starts, ends = data.get("starts_on", a.starts_on), data.get("ends_on", a.ends_on)
+    if starts and ends and ends < starts:
+        raise HTTPException(422, "종료일이 시작일보다 빠릅니다.")
     for k, v in data.items():
         setattr(a, k, v)
     log_action(db, admin.id, "ad.update", "ad", a.id, {k: str(v) for k, v in data.items()})

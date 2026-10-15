@@ -173,7 +173,8 @@ def station_targets(station_id: int, db: Session = Depends(get_db)):
     offs = db.scalars(
         select(Officer).options(joinedload(Officer.department))
         .where(Officer.station_id == s.id, Officer.is_published.is_(True), Officer.is_blinded.is_(False))
-        .order_by(Officer.name)
+        # 이름순으로 정렬하면 가린 가운데 글자의 순서가 드러나므로 등록 순으로.
+        .order_by(Officer.id)
     ).all()
     return StationTargets(
         departments=[TargetOption(id=d.id, label=d.name) for d in depts],

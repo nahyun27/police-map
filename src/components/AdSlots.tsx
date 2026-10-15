@@ -28,6 +28,7 @@ export function AdSlots({ regionId, stationId }: { regionId?: string; stationId?
 
   useEffect(() => {
     if (!mode) return;
+    setAds([]); // 슬롯 종류가 바뀌면 이전 슬롯 광고(세로 이미지 없을 수 있음)를 먼저 비운다
     let cancelled = false;
     listAds({ regionId, stationId, slot: mode, limit: mode === 'side' ? 2 : 1 })
       .then((r) => { if (!cancelled) setAds(r); })

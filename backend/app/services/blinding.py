@@ -80,6 +80,18 @@ def unblind(db: Session, obj, actor_id: int | None) -> bool:
     return True
 
 
+def has_pending_takedown(db: Session, obj) -> bool:
+    """삭제·정정 요청이 처리 대기 중이면 블라인드는 그 요청 처리(유지/삭제)로만 풀어야 한다."""
+    from app.models import TakedownRequest, TakedownStatus  # 순환 import 회피
+    if isinstance(obj, Review):
+        cond = TakedownRequest.review_id == obj.id
+    elif isinstance(obj, PublicCase):
+        cond = TakedownRequest.case_id == obj.id
+    else:
+        return False
+    return bool(db.scalar(select(TakedownRequest.id).where(cond, TakedownRequest.status == TakedownStatus.pending).limit(1)))
+
+
 def pending_reporter_count(db: Session, target_type: ReportTarget, target_id: int) -> int:
     return db.scalar(
         select(func.count(func.distinct(Report.reporter_id))).where(
@@ -104,6 +116,6 @@ def maybe_restore_after_dismiss(db: Session, target_type: ReportTarget, target_i
     if target_type not in BLINDABLE or pending_reporter_count(db, target_type, target_id) > 0:
         return False
     obj = get(db, target_type, target_id)
-    if obj and is_blinded(obj) and obj.blind_reason == REASON_AUTO:
+    if obj and is_blinded(obj) and obj.blind_reason == REASON_AUTO and not has_pending_takedown(db, obj):
         return unblind(db, obj, None)
     return False

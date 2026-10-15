@@ -14,7 +14,9 @@ def mask_name(name: str) -> str:
 
 def mask_in_text(text: str, name: str) -> str:
     """본문에 같은 실명을 적었으면 그 부분도 가린다 — 이름 칸만 가리고 본문에 실명이 남으면 소용없다."""
-    n = name.strip()
+    n = re.sub(r"\s+", "", name)
     if len(n) < 2 or not text:
         return text
-    return re.sub(re.escape(n), mask_name(n), text)
+    # "김철수", "김 철수", "김  철 수"처럼 글자 사이에 공백이 섞인 형태도 같은 이름으로 본다.
+    pattern = r"\s*".join(re.escape(ch) for ch in n)
+    return re.sub(pattern, mask_name(n), text)

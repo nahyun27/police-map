@@ -113,3 +113,11 @@ def test_inquiry_anonymous_then_admin_handles(client, admin_client, monkeypatch)
 def test_mail_skipped_when_not_configured():
     from app.services.mailer import send_notification
     assert send_notification("s", "b") is False
+
+
+# ---------- 회귀 테스트(버그 점검 2026-10-15) ----------
+def test_patch_rejects_nulls_and_bad_dates(admin_client, world):
+    ad = create_ad(admin_client, starts_on=str(date.today())).json()["id"]
+    for field in ("title", "advertiser", "link_url", "is_active"):
+        assert admin_client.patch(f"{API}/admin/ads/{ad}", json={field: None}).status_code == 422
+    assert admin_client.patch(f"{API}/admin/ads/{ad}", json={"ends_on": str(date.today() - timedelta(days=1))}).status_code == 422

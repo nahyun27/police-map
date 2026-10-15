@@ -195,3 +195,28 @@ def test_account_deletion_removes_case_empathy(db, user_client):
     other.post(f"{API}/cases/{cid}/empathy")
     assert other.request("DELETE", f"{API}/auth/me", json={"password": "password123"}).status_code in (200, 204)
     assert user_client.get(f"{API}/cases/{cid}").json()["empathy_count"] == 0
+
+
+# ---------- 회귀 테스트(버그 점검 2026-10-15) ----------
+def test_dismiss_does_not_restore_while_takedown_pending(db, client, user_client, admin_client, world):
+    """신고 누적으로 이미 블라인드된 평가에 삭제·정정 요청이 들어온 뒤 신고를 기각해도 다시 공개되면 안 된다."""
+    rid = user_client.post(f"{API}/reviews", json=review_payload(world["station"].id)).json()["id"]
+    _report_n(reporters(db, 5), "review", rid)
+    assert client.post(f"{API}/takedown-requests", json={
+        "target_type": "review", "target_id": rid, "request_type": "delete", "requester_name": "홍길동",
+        "requester_contact": "h@example.com", "relation": "본인", "reason": "사실과 다른 내용이 게시되어 있습니다.",
+    }).status_code == 201
+    rep = admin_client.get(f"{API}/admin/reports").json()["items"][0]
+    admin_client.post(f"{API}/admin/reports/{rep['id']}/resolve", json={"action": "dismiss", "note": "신고 사유 부족"})
+    assert client.get(f"{API}/reviews/{rid}").status_code == 404  # 요청 처리 전까지 비공개 유지
+    assert admin_client.post(f"{API}/admin/unblind", json={"target_type": "review", "target_id": rid}).status_code == 409
+
+
+def test_empathy_toggle_counts_stay_consistent(db, user_client):
+    cid = user_client.post(f"{API}/cases", json=case_payload()).json()["id"]
+    others = reporters(db, 3, "emc")
+    for c in others:
+        c.post(f"{API}/cases/{cid}/empathy")
+    others[0].delete(f"{API}/cases/{cid}/empathy")
+    others[0].delete(f"{API}/cases/{cid}/empathy")  # 두 번 취소해도 한 번만 깎인다
+    assert user_client.get(f"{API}/cases/{cid}").json()["empathy_count"] == 2

@@ -135,7 +135,7 @@ def board_feed(
     q: str | None = Query(None, max_length=50, description="제목·본문 검색어"),
     sort: str = Query("new", pattern="^(new|top)$"),
     period: str = Query("all", pattern="^(today|week|month|all)$", description="sort=top 일 때만 적용되는 베스트 기간"),
-    page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=50),
+    page: int = Query(1, ge=1, le=200), size: int = Query(20, ge=1, le=50),
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
 ):
     """게시판 '전체' 피드 — 자유게시글과 평가를 한 화면에 섞어 보여준다(2026-10 결정, 의뢰인 요청:
@@ -203,7 +203,17 @@ def board_feed(
             rbase = rbase.where(Review.published_at >= since)
         total_reviews = db.scalar(select(func.count()).select_from(rbase.subquery())) or 0
         rrows = rbase.options(joinedload(Review.station).joinedload(Station.region))
-        order = (Review.published_at.desc(), Review.id.desc())  # 평가는 추천순 정렬까지는 아직 지원 안 함(아래 참고)
+        if sort == "top":
+            # 평가엔 게시글 같은 점수 캐시 컬럼이 없어서 추천-비추천 합을 서브쿼리로 붙여 DB 에서 정렬한다
+            # (최신순으로 앞부분만 끌어온 뒤 파이썬에서 다시 정렬하면 오래된 인기 평가가 빠진다).
+            score_sq = (
+                select(ReviewVote.review_id.label("rid"), func.sum(ReviewVote.value).label("score"))
+                .group_by(ReviewVote.review_id).subquery()
+            )
+            rrows = rrows.outerjoin(score_sq, score_sq.c.rid == Review.id)
+            order = (func.coalesce(score_sq.c.score, 0).desc(), Review.published_at.desc(), Review.id.desc())
+        else:
+            order = (Review.published_at.desc(), Review.id.desc())
         reviews = db.scalars(rrows.order_by(*order).limit(fetch_n)).all()
         ids = [r.id for r in reviews]
         votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, ids, uid, ip_hash)
@@ -223,8 +233,6 @@ def board_feed(
                 created_at=r.published_at.isoformat() if r.published_at else None,
             ))
         # sort=top 일 때 평가도 추천순으로 섞이게 끌어온 뒤 다시 정렬(위에서는 최신순으로만 가져왔으므로).
-        if sort == "top":
-            review_items.sort(key=lambda x: (x.score, x.created_at or ""), reverse=True)
 
     merged = post_items + review_items
     if sort == "top":

@@ -37,9 +37,15 @@ def blind(db: Session, req: TakedownRequest) -> None:
         target.blinded_from_status = target.status
         target.status = ReviewStatus.blinded
         target.blind_reason = TAKEDOWN_BLIND_REASON
+    elif isinstance(target, Review) and target.status == ReviewStatus.blinded:
+        # 이미 (신고 누적 등으로) 블라인드돼 있어도 사유를 삭제·정정 요청으로 바꿔 둔다 — 그래야 신고가
+        # 기각돼도 "신고 누적 자동 블라인드"로 오인해 요청 처리 전에 다시 공개되는 일이 없다.
+        target.blind_reason = TAKEDOWN_BLIND_REASON
     elif isinstance(target, PublicCase) and target.status in (CaseStatus.published, CaseStatus.held):
         target.blinded_from_status, target.status = target.status, CaseStatus.blinded
         target.blind_reason, target.blinded_at = TAKEDOWN_BLIND_REASON, utcnow()
+    elif isinstance(target, PublicCase) and target.status == CaseStatus.blinded:
+        target.blind_reason = TAKEDOWN_BLIND_REASON
     elif isinstance(target, Officer):
         target.is_blinded = True
 

@@ -99,4 +99,41 @@ def test_blinded_officer_hidden_and_not_selectable(client, db, world):
     assert item["target_label"] == "비공개 처리된 수사관"
     assert all(x["id"] != o.id for x in st["officer_ratings"])
     assert all(x["id"] != o.id for x in client.get(f"{API}/stations/{sid}/targets").json()["officers"])
-    assert client.post(f"{API}/reviews", json=review_payload(sid, officer_name="최지훈", case_number=None)).status_code == 422
+    # 같은 이름을 다시 입력해도 "비공개 처리됨"을 드러내지 않고, 수사관 지정 없이 저장된다(실명 확인 수단 차단)
+    again = client.post(f"{API}/reviews", json=review_payload(sid, officer_name="최지훈", case_number=None))
+    assert again.status_code == 201 and client.get(f"{API}/reviews/{again.json()['id']}").json()["officer_id"] is None
+
+
+# ---------- 회귀 테스트(버그 점검 2026-10-15) ----------
+def test_hidden_officer_name_gives_no_oracle(client, db, world):
+    """비공개 처리된 수사관의 실명을 맞혀도 틀린 이름과 같은 응답(201)이어야 한다 — 실명 확인 수단 차단."""
+    sid = world["station"].id
+    client.post(f"{API}/reviews", json=review_payload(sid, officer_name="정하늘"))
+    o = db.query(Officer).filter_by(name="정하늘").one()
+    client.post(f"{API}/takedown-requests", json={
+        "target_type": "officer", "target_id": o.id, "request_type": "delete", "requester_name": "정하늘",
+        "requester_contact": "j@example.com", "relation": "본인", "reason": "본인 동의 없이 이름이 게시되었습니다.",
+    })
+    right = client.post(f"{API}/reviews", json=review_payload(sid, officer_name="정하늘", case_number=None))
+    wrong = client.post(f"{API}/reviews", json=review_payload(sid, officer_name="정바다", case_number=None))
+    assert right.status_code == wrong.status_code == 201
+    got = client.get(f"{API}/reviews/{right.json()['id']}").json()
+    assert got["officer_id"] is None and got["target_type"] != "officer"
+    assert db.query(Officer).filter_by(name="정하늘").count() == 1  # 다시 만들지 않는다
+
+
+def test_officer_department_wins_over_mismatched_pick(client, db, world):
+    sid = world["station"].id
+    dept_a = db.query(Department).filter_by(station_id=sid, name="수사과").one()
+    dept_b = db.query(Department).filter_by(station_id=sid, name="사이버수사팀").one()
+    client.post(f"{API}/reviews", json=review_payload(sid, officer_name="오세훈", department_id=dept_a.id))
+    oid = db.query(Officer).filter_by(name="오세훈").one().id
+    r = client.post(f"{API}/reviews", json=review_payload(sid, officer_id=oid, department_id=dept_b.id, case_number=None))
+    assert client.get(f"{API}/reviews/{r.json()['id']}").json()["target_label"].endswith("· 수사과")
+
+
+def test_spaced_name_in_body_is_masked(client, world):
+    r = client.post(f"{API}/reviews", json=review_payload(
+        world["station"].id, officer_name="한가람", body="한 가람 경위가 설명을 잘 해 주었습니다.", case_number=None))
+    body = client.get(f"{API}/reviews/{r.json()['id']}").json()["body"]
+    assert "가람" not in body and "한*람" in body

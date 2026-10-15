@@ -332,6 +332,8 @@ def admin_blind(body: BlindIn, admin: User = Depends(require_admin), db: Session
 @router.post("/unblind", status_code=status.HTTP_204_NO_CONTENT)
 def admin_unblind(body: BlindIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     obj = _blindable_or_404(db, body.target_type, body.target_id)
+    if blinding.has_pending_takedown(db, obj):
+        raise HTTPException(409, "처리 대기 중인 삭제·정정 요청이 있습니다. 삭제·정정 요청 메뉴에서 유지/삭제로 처리해 주세요.")
     if not blinding.unblind(db, obj, admin.id):
         raise HTTPException(409, "블라인드 상태가 아닌 게시물입니다.")
     db.commit()
@@ -412,6 +414,13 @@ def resolve_takedown(request_id: int, body: ResolveIn, admin: User = Depends(req
     if t.status != TakedownStatus.pending:
         raise HTTPException(409, "이미 처리된 요청입니다.")
     (takedown_svc.resolve_keep if body.decision == "keep" else takedown_svc.resolve_remove)(db, t, admin, body.note)
+    db.flush()
+    # 요청은 "게시 유지"로 끝났어도, 그 사이 쌓인 신고가 여전히 기준 이상이면 다시 자동 블라인드한다.
+    if body.decision == "keep":
+        if t.review_id:
+            blinding.maybe_auto_blind(db, ReportTarget.review, t.review_id)
+        elif t.case_id:
+            blinding.maybe_auto_blind(db, ReportTarget.public_case, t.case_id)
     db.commit()
     return _admin_takedown(t)
 

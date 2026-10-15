@@ -554,3 +554,22 @@ def test_suggestion_category_post_and_feed_filter(user_client, world):
     feed = user_client.get(f"{API}/board/feed?category=suggestion").json()
     assert [x["id"] for x in feed["items"]] == [pid]
     assert all(x["kind"] == "post" for x in feed["items"])
+
+
+def test_board_feed_top_includes_older_high_score_review(db, user_client, world):
+    """인기순은 DB 에서 추천 점수로 정렬해야 한다(최신순 앞부분만 가져와 다시 정렬하면 오래된 인기 평가가 빠짐)."""
+    from datetime import datetime, timedelta, timezone
+    from app.models import Review
+    from conftest import login, make_user
+
+    old = user_client.post(f"{API}/reviews", json=review_payload(world["station"].id)).json()["id"]
+    r = db.get(Review, old)
+    r.published_at = datetime.now(timezone.utc) - timedelta(days=3)
+    db.commit()
+    for i in range(3):
+        make_user(db, f"v{i}@example.com")
+        login(TestClient(app), f"v{i}@example.com").post(f"{API}/reviews/{old}/vote", json={"value": 1})
+    for i in range(5):
+        user_client.post(f"{API}/reviews", json=review_payload(world["station"].id, case_number=f"NEW-{i}"))
+    top = user_client.get(f"{API}/board/feed?category=review&sort=top&size=2").json()["items"]
+    assert top[0]["id"] == old and top[0]["score"] == 3

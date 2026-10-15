@@ -1,6 +1,6 @@
 """사건 공론화 API — 운영 규칙은 app/models/public_case.py docstring 참고."""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -175,13 +175,14 @@ def add_empathy(case_id: int, db: Session = Depends(get_db), user: User = Depend
     exists = db.scalar(select(PublicCaseEmpathy.id).where(PublicCaseEmpathy.case_id == case_id, PublicCaseEmpathy.user_id == user.id))
     if not exists:
         db.add(PublicCaseEmpathy(case_id=case_id, user_id=user.id))
-        c.empathy_count += 1
+        # 카운터는 DB 에서 원자적으로 올린다(파이썬에서 읽고 더해 쓰면 동시 공감이 서로 덮어써 숫자가 샌다).
+        db.execute(update(PublicCase).where(PublicCase.id == case_id).values(empathy_count=PublicCase.empathy_count + 1))
         try:
             db.commit()
-        except IntegrityError:  # 동시 클릭
+        except IntegrityError:  # 같은 사람이 동시에 두 번 누른 경우 — 유니크 제약이 막고 카운터도 함께 롤백된다
             db.rollback()
-            c = db.get(PublicCase, case_id)
-    return EmpathyOut(empathized=True, empathy_count=c.empathy_count)
+    count = db.scalar(select(PublicCase.empathy_count).where(PublicCase.id == case_id))
+    return EmpathyOut(empathized=True, empathy_count=count or 0)
 
 
 @router.delete("/{case_id}/empathy", response_model=EmpathyOut, dependencies=[Depends(vote_limiter)])
@@ -189,12 +190,16 @@ def remove_empathy(case_id: int, db: Session = Depends(get_db), user: User = Dep
     c = db.get(PublicCase, case_id)
     if not c or c.status != CaseStatus.published:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "사건을 찾을 수 없습니다.")
-    row = db.scalar(select(PublicCaseEmpathy).where(PublicCaseEmpathy.case_id == case_id, PublicCaseEmpathy.user_id == user.id))
-    if row:
-        db.delete(row)
-        c.empathy_count = max(0, c.empathy_count - 1)
-        db.commit()
-    return EmpathyOut(empathized=False, empathy_count=c.empathy_count)
+    # 삭제된 행 수로 판단해야 같은 사람의 동시 취소 두 번이 카운터를 두 번 깎지 않는다.
+    deleted = db.execute(
+        delete(PublicCaseEmpathy).where(PublicCaseEmpathy.case_id == case_id, PublicCaseEmpathy.user_id == user.id)
+    ).rowcount
+    if deleted:
+        db.execute(update(PublicCase).where(PublicCase.id == case_id, PublicCase.empathy_count > 0)
+                   .values(empathy_count=PublicCase.empathy_count - 1))
+    db.commit()
+    count = db.scalar(select(PublicCase.empathy_count).where(PublicCase.id == case_id))
+    return EmpathyOut(empathized=False, empathy_count=count or 0)
 
 
 @router.post("/{case_id}/updates", response_model=CaseUpdateOut, status_code=status.HTTP_201_CREATED,

@@ -167,9 +167,13 @@ def create_review(body: ReviewCreate, db: Session = Depends(get_db), user: User 
             raise HTTPException(422, {"message": "수사관 이름에 쓸 수 없는 표현이 있습니다."})
         # 같은 경찰서에 같은 이름이 이미 있으면 그 사람으로 본다(위키처럼 한 사람 = 한 항목).
         officer = db.scalar(select(Officer).where(Officer.station_id == station.id, Officer.name == body.officer_name))
-        if officer and not officer.is_visible:
-            raise HTTPException(422, {"message": "해당 수사관 정보는 당사자 요청 등으로 비공개 처리되어 평가 대상으로 지정할 수 없습니다."})
-        if officer is None:
+        hidden_match = officer is not None and not officer.is_visible
+        if hidden_match:
+            # 당사자 요청 등으로 비공개 처리된 사람의 이름이면, 그 사실을 응답으로 드러내지 않는다(다르게
+            # 응답하면 "이 실명이 맞다"는 확인 수단이 된다). 수사관 지정 없이 경찰서·부서 평가로만 저장하고
+            # 이름도 다시 만들지 않는다.
+            officer = None
+        elif officer is None:
             officer = Officer(
                 station_id=station.id, department_id=dept.id if dept else None, name=body.officer_name,
                 rank=body.officer_rank or "", source=OfficerSource.user_report,
@@ -182,11 +186,15 @@ def create_review(body: ReviewCreate, db: Session = Depends(get_db), user: User 
                 officer.department_id = dept.id
             if body.officer_rank and not officer.rank:
                 officer.rank = body.officer_rank
-    if officer and dept is None and officer.department_id:
+    # 수사관의 소속 부서가 이미 정해져 있으면 그게 우선이다(다른 부서를 같이 골라도 표기가 엇갈리지 않게).
+    if officer and officer.department_id and (dept is None or dept.id != officer.department_id):
         dept = db.get(Department, officer.department_id)
-    if officer:
-        # 이름 칸만 가리고 본문에 실명이 남으면 소용없으니 본문의 같은 이름도 가린다.
-        body.body = mask_in_text(body.body, officer.name)
+    typed_name = body.officer_name if body.officer_name else (officer.name if officer else None)
+    if typed_name:
+        # 이름 칸만 가리고 본문 등에 실명이 남으면 소용없으니 같은 이름(띄어 쓴 형태 포함)도 가린다.
+        body.body = mask_in_text(body.body, typed_name)
+        body.role_other = mask_in_text(body.role_other, typed_name) if body.role_other else body.role_other
+        body.case_type_other = mask_in_text(body.case_type_other, typed_name) if body.case_type_other else body.case_type_other
 
     # role_other/case_type_other 도 공개 화면에 그대로 노출되는 서술형 텍스트라 body 와
     # 동일하게 금칙어 필터를 거친다.

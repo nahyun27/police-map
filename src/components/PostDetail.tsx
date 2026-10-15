@@ -68,3 +68,15 @@ export function PostDetail({ initial }: { initial: PostOut }) {
     </>
   );
 }
+
+/** 서버 렌더(쿠키 없음)에서 404 가 난 글을, 브라우저에서 로그인 쿠키를 실어 다시 불러온다.
+ * 블라인드된 글은 작성자 본인과 관리자에게만 응답되므로(마이페이지 "내가 쓴 게시글" 링크 등),
+ * 서버에서 못 찾았다고 바로 404 를 띄우면 본인이 블라인드 사유를 볼 수 없다. */
+export function PostDetailLoader({ id }: { id: number }) {
+  const [post, setPost] = useState<PostOut | null>(null);
+  const [missing, setMissing] = useState(false);
+  useEffect(() => { getPost(id).then(setPost).catch(() => setMissing(true)); }, [id]);
+  if (missing) return <p className="sub">글을 찾을 수 없습니다. 삭제됐거나 비공개 상태일 수 있습니다.</p>;
+  if (!post) return <p className="sub">불러오는 중…</p>;
+  return <PostDetail initial={post} />;
+}

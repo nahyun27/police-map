@@ -27,6 +27,8 @@ def save_ad_image(upload: UploadFile, kind: str) -> str:
     try:
         im = Image.open(BytesIO(data))
         im.load()
+    except Image.DecompressionBombError:
+        raise HTTPException(422, "이미지 해상도가 너무 큽니다. 2000px 안팎으로 줄여서 올려 주세요.")
     except (UnidentifiedImageError, OSError):
         raise HTTPException(422, "이미지 파일(PNG·JPG·WebP)만 올릴 수 있습니다.")
     if im.format not in ("PNG", "JPEG", "WEBP", "GIF"):
