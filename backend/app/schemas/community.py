@@ -124,6 +124,7 @@ class BoardFeedItem(BaseModel):
     author_nickname: str | None = None  # post 전용
     is_mine: bool = False
     role_label: str | None = None  # review 전용
+    target_label: str | None = None  # review 전용: 부서·수사관(가린 이름) 대상이면 그 표기
     overall: float | None = None  # review 전용(별점)
     evidence_verified: bool | None = None  # review 전용
     view_count: int | None = None  # post 전용

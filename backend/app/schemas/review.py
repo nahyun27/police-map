@@ -1,3 +1,5 @@
+import re
+
 from pydantic import BaseModel, Field, model_validator
 
 from app.models import CaseType, ReviewRole
@@ -20,6 +22,12 @@ class ReviewCreate(BaseModel):
     # 화면엔 그냥 "기타"로 표시된다.
     role_other: str | None = Field(default=None, max_length=40)
     case_type_other: str | None = Field(default=None, max_length=40)
+    # 평가 대상(2026-10 의뢰인 결정). 모두 비우면 경찰서 전체 평가. 수사관은 기존 등록자(officer_id)를
+    # 고르거나 이름을 새로 입력(officer_name) — 새 이름은 바로 DB 에 등록되고 공개 화면엔 가린 이름만 나간다.
+    department_id: int | None = None
+    officer_id: int | None = None
+    officer_name: str | None = Field(default=None, max_length=20)
+    officer_rank: str | None = Field(default=None, max_length=30)
     # 선택 입력. 게시되지 않고 경험 검증·중복 제출 방지에만 쓴다.
     case_number: str | None = Field(default=None, max_length=100)
     ratings: RatingsIn
@@ -45,6 +53,12 @@ class ReviewCreate(BaseModel):
         self.case_type_other = (self.case_type_other or "").strip() or None
         if self.case_type != CaseType.other:
             self.case_type_other = None
+        self.officer_name = re.sub(r"\s+", "", self.officer_name or "") or None
+        self.officer_rank = (self.officer_rank or "").strip() or None
+        if self.officer_id is not None:
+            self.officer_name = None  # 기존 수사관을 골랐으면 이름 입력은 무시
+        if self.officer_name is not None and not re.fullmatch(r"[가-힣]{2,5}", self.officer_name):
+            raise ValueError("수사관 이름은 한글 2~5자로 입력해 주세요.")
         return self
 
 
@@ -70,6 +84,7 @@ class MyReviewOut(BaseModel):
     status: str
     reject_reason: str | None
     blind_reason: str | None = None
+    target_label: str | None = None  # 부서·수사관 대상 평가면 그 이름(수사관은 가린 이름)
     created_at: str | None
     published_at: str | None
     comment_count: int = 0

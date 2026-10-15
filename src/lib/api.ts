@@ -84,6 +84,25 @@ export interface StationItem {
   lng: number | null;
 }
 
+export interface TargetSummary {
+  kind: 'department' | 'officer';
+  id: number;
+  label: string;
+  rank: string | null;
+  department_name: string | null;
+  rating: RatingSummary;
+}
+
+export interface TargetOption {
+  id: number;
+  label: string;
+  rank: string | null;
+  department_id: number | null;
+  department_name: string | null;
+}
+export const getStationTargets = (id: number) =>
+  apiFetch<{ departments: TargetOption[]; officers: TargetOption[] }>(`/stations/${id}/targets`);
+
 export interface RegionDetail extends RegionOut {
   stations: StationItem[];
 }
@@ -123,6 +142,11 @@ export interface ReviewPublic {
   evidence_verified: boolean;
   reply: ReplyOut | null;
   is_scrapped: boolean;
+  // 평가 대상(경찰서 전체 / 부서 / 수사관). 수사관 이름은 항상 일부 가린 형태(김*현).
+  target_type?: 'station' | 'department' | 'officer';
+  target_label?: string | null;
+  department_id?: number | null;
+  officer_id?: number | null;
 }
 
 export interface Page<T> {
@@ -159,6 +183,9 @@ export interface StationDetail {
   reviews: Page<ReviewPublic>;
   lat: number | null;
   lng: number | null;
+  department_ratings?: TargetSummary[];
+  officer_ratings?: TargetSummary[];
+  filter_label?: string | null;
 }
 
 export interface RecentReview extends ReviewPublic {
@@ -202,11 +229,16 @@ export interface StatsOverview {
 export const getRegions = () => apiFetch<RegionOut[]>('/regions', { revalidateSeconds: 30 });
 export const getRegion = (id: string) => apiFetch<RegionDetail>(`/regions/${encodeURIComponent(id)}`, { revalidateSeconds: 30 });
 
-export function getStation(id: number | string, opts?: { page?: number; size?: number; evidenceOnly?: boolean }) {
+export function getStation(
+  id: number | string,
+  opts?: { page?: number; size?: number; evidenceOnly?: boolean; departmentId?: number; officerId?: number },
+) {
   const qs = new URLSearchParams();
   if (opts?.page) qs.set('page', String(opts.page));
   if (opts?.size) qs.set('size', String(opts.size));
   if (opts?.evidenceOnly) qs.set('evidence_only', 'true');
+  if (opts?.departmentId) qs.set('department_id', String(opts.departmentId));
+  if (opts?.officerId) qs.set('officer_id', String(opts.officerId));
   const suffix = qs.toString() ? `?${qs}` : '';
   return apiFetch<StationDetail>(`/stations/${encodeURIComponent(String(id))}${suffix}`, { revalidateSeconds: 30 });
 }
@@ -250,6 +282,11 @@ export interface ReviewCreatePayload {
   // role/case_type 이 'other' 일 때만 쓰는 직접입력 라벨. 비우면 '기타'로 표시된다.
   role_other?: string | null;
   case_type_other?: string | null;
+  // 평가 대상. 수사관은 기존 등록자(officer_id) 또는 새 이름(officer_name, 등록 후 가린 이름으로만 공개).
+  department_id?: number | null;
+  officer_id?: number | null;
+  officer_name?: string | null;
+  officer_rank?: string | null;
   case_number?: string | null;
   ratings: ReviewRatingsIn;
   body?: string;
@@ -334,6 +371,7 @@ export interface MyReviewOut {
   status: 'pending' | 'published' | 'rejected' | 'blinded' | 'removed';
   reject_reason: string | null;
   blind_reason?: string | null;
+  target_label?: string | null;
   created_at: string | null;
   published_at: string | null;
   comment_count: number;
@@ -548,6 +586,7 @@ export interface BoardFeedItem {
   author_nickname: string | null;
   is_mine: boolean;
   role_label: string | null;
+  target_label?: string | null;
   overall: number | null;
   evidence_verified: boolean | null;
   view_count: number | null;

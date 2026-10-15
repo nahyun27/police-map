@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.core.deps import get_client_ip_hash, get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
 from app.core.rate_limit import comment_limiter, post_limiter, view_limiter, vote_limiter
-from app.api.v1._present import review_overall
+from app.api.v1._present import review_overall, review_target
 from app.models import (
     Post, PostCategory, PostComment, PostCommentVote, PostScrap, PostVote, Region, RegionFollow, Review,
     ReviewComment, ReviewScrap, ReviewVote, Station, User, UserRole,
@@ -217,6 +217,7 @@ def board_feed(
                 station_id=r.station_id, station_name=r.station.name if r.station else None,
                 category="review", category_label="평가", title=None, body=r.body or "",
                 role_label=review_role_label(r), overall=review_overall(r), evidence_verified=r.evidence_verified,
+                target_label=review_target(r)["target_label"],
                 comment_count=counts[r.id], up=v.up, down=v.down, score=v.score, my_vote=v.my_vote,
                 is_scrapped=r.id in scrapped,
                 created_at=r.published_at.isoformat() if r.published_at else None,

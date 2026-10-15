@@ -1,5 +1,6 @@
 import enum
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import (
     CheckConstraint, DateTime, Enum, ForeignKey, Index, SmallInteger, String, Text, UniqueConstraint, func,
@@ -7,7 +8,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
-from app.models.geo import Station
+from app.models.geo import Department, Station
 
 
 class ReviewRole(str, enum.Enum):
@@ -114,6 +115,10 @@ class Review(Base):
     # 노출되므로(위 role_label/case_type_label 참고) 다른 서술형 필드와 동일하게 금칙어 필터를 거친다.
     role_other: Mapped[str | None] = mapped_column(String(40))
     case_type_other: Mapped[str | None] = mapped_column(String(40))
+    # 평가 대상(2026-10 의뢰인 결정: 경찰서 전체 / 특정 부서 / 특정 수사관). 둘 다 비면 경찰서 전체 평가.
+    # 부서·수사관은 반드시 station_id 와 같은 경찰서 소속이어야 한다(작성 API 에서 검증).
+    department_id: Mapped[int | None] = mapped_column(ForeignKey("departments.id"), index=True)
+    officer_id: Mapped[int | None] = mapped_column(ForeignKey("officers.id"), index=True)
 
     # 사건번호는 선택 입력이며 게시하지 않고 '경험 검증·중복 제출 방지'에만 쓴다.
     # 공개 응답 스키마에 절대 포함하지 말 것.
@@ -153,3 +158,5 @@ class Review(Base):
     evidence_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     station: Mapped[Station] = relationship()
+    department: Mapped[Department | None] = relationship()
+    officer: Mapped[Optional["Officer"]] = relationship("Officer")  # noqa: F821 (순환 import 회피용 문자열 참조)

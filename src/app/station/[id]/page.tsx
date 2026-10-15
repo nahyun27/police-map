@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Bars, Card, Crumb, Stars } from '@/components/ui';
+import { Bars, Card, Crumb, Score, Stars } from '@/components/ui';
 import { ReviewList } from '@/components/ReviewList';
 import { ExternalLink, ShieldCheck } from 'lucide-react';
 import { ApiError, getStation } from '@/lib/api';
@@ -19,7 +19,7 @@ type JurisdictionEntry = {
   stationY?: number;
 };
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ page?: string; evidence?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ page?: string; evidence?: string; dept?: string; officer?: string }> };
 
 const PAGE_SIZE = 10;
 
@@ -38,15 +38,21 @@ export default async function StationPage({ params, searchParams }: Props) {
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
   const evidenceOnly = sp.evidence === '1';
+  // 부서·수사관별 평가만 보기(2026-10 의뢰인 결정: 경찰서·부서·개인 단위 평가)
+  const deptFilter = Number(sp.dept) || undefined;
+  const officerFilter = Number(sp.officer) || undefined;
   let s;
   try {
-    s = await getStation(id, { page, size: PAGE_SIZE, evidenceOnly });
+    s = await getStation(id, { page, size: PAGE_SIZE, evidenceOnly, departmentId: deptFilter, officerId: officerFilter });
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) notFound();
     throw e;
   }
   const totalPages = Math.max(1, Math.ceil(s.reviews.total / s.reviews.size));
-  const pageHref = (p: number) => `/station/${s.id}?page=${p}${evidenceOnly ? '&evidence=1' : ''}`;
+  const filterQs = `${deptFilter ? `&dept=${deptFilter}` : ''}${officerFilter ? `&officer=${officerFilter}` : ''}`;
+  const pageHref = (p: number) => `/station/${s.id}?page=${p}${evidenceOnly ? '&evidence=1' : ''}${filterQs}`;
+  const deptRatings = s.department_ratings ?? [];
+  const officerRatings = s.officer_ratings ?? [];
   // 이름+지역을 키로 쓴다(숫자 id 는 로컬 개발 DB와 운영 DB에서 같은 관서라도 다르게
   // 배정돼 있어서 환경마다 어긋난다 — scripts/build_station_jurisdiction.py 주석 참고).
   const jurisdiction = (stationJurisdiction as Record<string, JurisdictionEntry>)[`${s.name}:${s.region.id}`];
@@ -176,7 +182,55 @@ export default async function StationPage({ params, searchParams }: Props) {
         </Card>
       )}
 
-      <Card>
+      {(deptRatings.length > 0 || officerRatings.length > 0) && (
+        <Card id="target-ratings">
+          <h2>부서·수사관별 평가</h2>
+          <p className="sub" style={{ marginBottom: 12 }}>
+            누르면 해당 평가만 모아 볼 수 있어요. 수사관 이름은 일부 가려서 표시하며, 이용자가 입력한 미검증 정보입니다.
+          </p>
+          <div className="grid2" style={{ marginBottom: 0 }}>
+            {deptRatings.length > 0 && (
+              <div>
+                <h3 style={{ fontSize: 15, marginBottom: 8 }}>부서</h3>
+                {deptRatings.map((t) => (
+                  <Link key={`d${t.id}`} href={`/station/${s.id}?dept=${t.id}#reviews`} className="target-row">
+                    <span>{t.label}</span>
+                    <span className="sub"><Score value={t.rating.overall} /> · {t.rating.count}건</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+            {officerRatings.length > 0 && (
+              <div>
+                <h3 style={{ fontSize: 15, marginBottom: 8 }}>수사관</h3>
+                {officerRatings.map((t) => (
+                  <div key={`o${t.id}`} className="target-row">
+                    <Link href={`/station/${s.id}?officer=${t.id}#reviews`}>
+                      {t.label}{t.rank ? ` ${t.rank}` : ''}{t.department_name ? <span className="sub"> · {t.department_name}</span> : null}
+                    </Link>
+                    <span className="sub"><Score value={t.rating.overall} /> · {t.rating.count}건</span>
+                  </div>
+                ))}
+                <p className="sub" style={{ fontSize: 12, marginTop: 8 }}>
+                  본인 정보가 잘못 올라갔거나 게시를 원하지 않으면, 이름을 눌러 나오는 &quot;이 수사관 정보 삭제·정정 요청&quot;으로
+                  요청할 수 있습니다. 접수 즉시 비공개 처리됩니다.
+                </p>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      <Card id="reviews">
+        {s.filter_label && (
+          <div className="guidebox" style={{ marginTop: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span><b>{s.filter_label}</b> 대상 평가만 보는 중</span>
+            <span className="btn-row" style={{ alignItems: 'center' }}>
+              {officerFilter && <Link href={`/takedown/officer/${officerFilter}`} className="sub">이 수사관 정보 삭제·정정 요청</Link>}
+              <Link href={`/station/${s.id}#reviews`} className="btn line sm">전체 보기</Link>
+            </span>
+          </div>
+        )}
         <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
           <h2 style={{ marginBottom: 0 }}>평가 후기 <span className="sub" style={{ fontWeight: 500 }}>{s.reviews.total}건</span></h2>
           <Link href={`/station/${s.id}${evidenceOnly ? '' : '?evidence=1'}`} className={`link-btn ${evidenceOnly ? 'on' : ''}`}>

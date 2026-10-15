@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { BANNED } from '@/data/sample';
-import { ApiError, submitReview, type ReviewRatingsIn } from '@/lib/api';
+import { ApiError, getStationTargets, submitReview, type ReviewRatingsIn, type TargetOption } from '@/lib/api';
 
 const CRITERIA: [keyof ReviewRatingsIn, string][] = [
   ['fair', '공정성·중립성'],
@@ -21,6 +21,9 @@ const ROLE_OPTIONS: [string, string][] = [
 const CASE_TYPE_OPTIONS: [string, string][] = [
   ['fraud', '사기(경제)'], ['assault', '폭행·상해'], ['cyber', '사이버 범죄'], ['sexual', '성범죄'], ['traffic', '교통'], ['other', '기타(직접입력)'],
 ];
+
+const RANK_OPTIONS = ['순경', '경장', '경사', '경위', '경감', '경정', '총경'];
+type Target = 'station' | 'department' | 'officer';
 
 function StarPick({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
@@ -51,6 +54,18 @@ export default function WriteForm({ stationId }: { stationId: number }) {
   const [caseType, setCaseType] = useState(CASE_TYPE_OPTIONS[0][0]);
   const [caseTypeOther, setCaseTypeOther] = useState('');
   const [caseNo, setCaseNo] = useState('');
+  // 평가 대상(2026-10 의뢰인 결정: 경찰서 전체 / 부서 / 수사관). 수사관은 이미 등록된 사람을 고르거나
+  // 이름을 새로 입력 — 새 이름은 DB 에 등록되고 공개 화면에는 일부 가린 이름(김*현)으로만 나온다.
+  const [target, setTarget] = useState<Target>('station');
+  const [depts, setDepts] = useState<TargetOption[]>([]);
+  const [officers, setOfficers] = useState<TargetOption[]>([]);
+  const [deptId, setDeptId] = useState('');
+  const [officerId, setOfficerId] = useState(''); // '' = 새로 입력
+  const [officerName, setOfficerName] = useState('');
+  const [officerRank, setOfficerRank] = useState('');
+  useEffect(() => {
+    getStationTargets(stationId).then((t) => { setDepts(t.departments); setOfficers(t.officers); }).catch(() => {});
+  }, [stationId]);
   const [pick, setPick] = useState<Record<keyof ReviewRatingsIn, number>>({ fair: 0, proc: 0, att: 0, comm: 0, speed: 0 });
   const [text, setText] = useState('');
   const [evidenceNote, setEvidenceNote] = useState('');
@@ -62,6 +77,11 @@ export default function WriteForm({ stationId }: { stationId: number }) {
 
   const submit = async () => {
     if (hit.length) return;
+    if (target === 'department' && !deptId) { alert('평가할 부서를 골라 주세요.'); return; }
+    if (target === 'officer' && !officerId && !/^[가-힣]{2,5}$/.test(officerName.trim())) {
+      alert('수사관 이름을 한글 2~5자로 입력하거나, 이미 등록된 수사관을 골라 주세요.');
+      return;
+    }
     if (Object.values(pick).every((v) => v === 0)) {
       alert('별점 항목을 1개 이상 입력해 주세요.');
       return;
@@ -75,6 +95,10 @@ export default function WriteForm({ stationId }: { stationId: number }) {
         case_type: caseType,
         role_other: role === 'other' ? roleOther.trim() || null : null,
         case_type_other: caseType === 'other' ? caseTypeOther.trim() || null : null,
+        department_id: target !== 'station' && deptId ? Number(deptId) : null,
+        officer_id: target === 'officer' && officerId ? Number(officerId) : null,
+        officer_name: target === 'officer' && !officerId ? officerName.trim() : null,
+        officer_rank: target === 'officer' && !officerId ? officerRank || null : null,
         case_number: caseNo.trim() || null,
         ratings: Object.fromEntries(Object.entries(pick).map(([k, v]) => [k, v || null])),
         body: text,
@@ -90,7 +114,59 @@ export default function WriteForm({ stationId }: { stationId: number }) {
 
   return (
     <>
-      <div className="form-section">1. 사건 정보</div>
+      <div className="form-section">1. 평가 대상</div>
+      <div className="field">
+        <div className="seg">
+          {([['station', '경찰서 전체'], ['department', '특정 부서'], ['officer', '특정 수사관']] as [Target, string][]).map(([v, l]) => (
+            <button key={v} type="button" className={target === v ? 'active' : ''} onClick={() => setTarget(v)}>{l}</button>
+          ))}
+        </div>
+      </div>
+      {target !== 'station' && (
+        <div className="field">
+          <label>부서 {target === 'officer' && <span className="tag">선택</span>}</label>
+          <select value={deptId} onChange={(e) => setDeptId(e.target.value)}>
+            <option value="">{depts.length ? (target === 'officer' ? '모름 / 선택 안 함' : '부서를 골라 주세요') : '등록된 부서 정보가 없습니다'}</option>
+            {depts.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+          </select>
+        </div>
+      )}
+      {target === 'officer' && (
+        <>
+          <div className="field">
+            <label>수사관</label>
+            <select value={officerId} onChange={(e) => setOfficerId(e.target.value)}>
+              <option value="">새로 입력하기</option>
+              {officers.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}{o.rank ? ` ${o.rank}` : ''}{o.department_name ? ` · ${o.department_name}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          {!officerId && (
+            <div className="grid2" style={{ marginBottom: 0 }}>
+              <div className="field">
+                <label>수사관 이름</label>
+                <input type="text" value={officerName} onChange={(e) => setOfficerName(e.target.value)} maxLength={5} placeholder="예: 김철수" />
+              </div>
+              <div className="field">
+                <label>계급 <span className="tag">선택</span></label>
+                <select value={officerRank} onChange={(e) => setOfficerRank(e.target.value)}>
+                  <option value="">모름</option>
+                  {RANK_OPTIONS.map((rk) => <option key={rk} value={rk}>{rk}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+          <p className="sub" style={{ marginTop: -8, marginBottom: 16, fontSize: 12.5 }}>
+            이름은 공개 화면에서 <b>김*수</b>처럼 일부 가려져 표시되고, 본문에 같은 이름을 적어도 자동으로 가려집니다.
+            같은 경찰서에 이미 있는 이름이면 같은 사람으로 묶입니다. 해당 경찰관 본인은 언제든 삭제·정정을 요청할 수 있습니다.
+          </p>
+        </>
+      )}
+
+      <div className="form-section">2. 사건 정보</div>
       <div className="grid2" style={{ marginBottom: 0 }}>
         <div className="field">
           <label>사건에서의 지위</label>
@@ -130,7 +206,7 @@ export default function WriteForm({ stationId }: { stationId: number }) {
         />
       </div>
 
-      <div className="form-section">2. 항목별 평가</div>
+      <div className="form-section">3. 항목별 평가</div>
       <div className="grid2" style={{ marginBottom: 0 }}>
         {CRITERIA.map(([k, label]) => (
           <div className="field" key={k}>
@@ -140,7 +216,7 @@ export default function WriteForm({ stationId }: { stationId: number }) {
         ))}
       </div>
 
-      <div className="form-section">3. 경험 서술 <span className="sub" style={{ fontWeight: 500 }}>(선택)</span></div>
+      <div className="form-section">4. 경험 서술 <span className="sub" style={{ fontWeight: 500 }}>(선택)</span></div>
       <div className="field">
         <textarea value={text} onChange={(e) => setText(e.target.value)}
           placeholder="직무수행과 관련하여 직접 경험한 사실을 구체적으로 작성해 주세요." />

@@ -3,17 +3,19 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.v1._present import reply_out, review_public
+from app.api.v1._present import reply_out, review_public, review_target
 from app.core.database import get_db
 from app.core.deps import get_client_ip_hash, get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
 from app.core.rate_limit import comment_limiter, reply_limiter, review_limiter, vote_limiter
 from app.core.security import hash_case_number
 from app.models import (
-    Review, ReviewComment, ReviewCommentVote, ReviewReply, ReviewScrap, ReviewStatus, ReviewVote, Station, User,
+    Department, Officer, Review, ReviewComment, ReviewCommentVote, ReviewReply, ReviewScrap, ReviewStatus, ReviewVote, Station, User,
     UserRole,
 )
+from app.models.officer import OfficerSource
 from app.models.review import case_type_label, role_label
+from app.services.names import mask_in_text
 from app.schemas.community import CommentCreate, CommentOut, ScrapStatus, VoteIn, VoteSummary
 from app.schemas.public import Page, RecentReview
 from app.schemas.review import MyReviewOut, ReviewCreate, ReviewReceipt
@@ -65,6 +67,7 @@ def list_my_reviews(
             role=r.role.value, role_label=role_label(r), case_type=r.case_type.value, case_type_label=case_type_label(r),
             ratings=_ratings_dict(r), overall=_overall(r), body=r.body, status=r.status.value, reject_reason=r.reject_reason,
             blind_reason=r.blind_reason if r.status == ReviewStatus.blinded else None,
+            target_label=review_target(r)["target_label"],
             created_at=_iso(r.created_at), published_at=_iso(r.published_at),
             comment_count=counts[r.id], up=votes[r.id].up, down=votes[r.id].down, score=votes[r.id].score,
             evidence_note=r.evidence_note, evidence_verified=r.evidence_verified,
@@ -148,6 +151,43 @@ def create_review(body: ReviewCreate, db: Session = Depends(get_db), user: User 
     if not station:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "경찰서를 찾을 수 없습니다.")
 
+    # 평가 대상(부서·수사관). 둘 다 반드시 이 경찰서 소속이어야 한다.
+    dept = None
+    if body.department_id is not None:
+        dept = db.get(Department, body.department_id)
+        if not dept or dept.station_id != station.id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "이 경찰서의 부서를 찾을 수 없습니다.")
+    officer = None
+    if body.officer_id is not None:
+        officer = db.get(Officer, body.officer_id)
+        if not officer or officer.station_id != station.id or not officer.is_visible:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "이 경찰서의 수사관을 찾을 수 없습니다.")
+    elif body.officer_name:
+        if find_banned(f"{body.officer_name} {body.officer_rank or ''}"):
+            raise HTTPException(422, {"message": "수사관 이름에 쓸 수 없는 표현이 있습니다."})
+        # 같은 경찰서에 같은 이름이 이미 있으면 그 사람으로 본다(위키처럼 한 사람 = 한 항목).
+        officer = db.scalar(select(Officer).where(Officer.station_id == station.id, Officer.name == body.officer_name))
+        if officer and not officer.is_visible:
+            raise HTTPException(422, {"message": "해당 수사관 정보는 당사자 요청 등으로 비공개 처리되어 평가 대상으로 지정할 수 없습니다."})
+        if officer is None:
+            officer = Officer(
+                station_id=station.id, department_id=dept.id if dept else None, name=body.officer_name,
+                rank=body.officer_rank or "", source=OfficerSource.user_report,
+            )
+            db.add(officer)
+            db.flush()
+            log_action(db, user.id if user else None, "officer.user_add", "officer", officer.id, {"station_id": station.id})
+        else:
+            if dept and officer.department_id is None:
+                officer.department_id = dept.id
+            if body.officer_rank and not officer.rank:
+                officer.rank = body.officer_rank
+    if officer and dept is None and officer.department_id:
+        dept = db.get(Department, officer.department_id)
+    if officer:
+        # 이름 칸만 가리고 본문에 실명이 남으면 소용없으니 본문의 같은 이름도 가린다.
+        body.body = mask_in_text(body.body, officer.name)
+
     # role_other/case_type_other 도 공개 화면에 그대로 노출되는 서술형 텍스트라 body 와
     # 동일하게 금칙어 필터를 거친다.
     banned = find_banned(" ".join(filter(None, [body.body, body.role_other, body.case_type_other])))
@@ -168,6 +208,7 @@ def create_review(body: ReviewCreate, db: Session = Depends(get_db), user: User 
     review = Review(
         station_id=station.id, author_id=user.id if user else None, role=body.role, case_type=body.case_type,
         role_other=body.role_other, case_type_other=body.case_type_other,
+        department_id=dept.id if dept else None, officer_id=officer.id if officer else None,
         case_number=body.case_number, case_number_hash=case_hash, body=body.body,
         evidence_note=body.evidence_note, status=ReviewStatus.published, published_at=now,
         **body.ratings.model_dump(),

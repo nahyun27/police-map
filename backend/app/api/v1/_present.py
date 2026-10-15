@@ -4,6 +4,7 @@ from app.models.review import case_type_label, role_label
 from app.schemas.community import VoteSummary
 from app.schemas.public import ReviewPublic
 from app.schemas.verification import ReplyOut
+from app.services.names import mask_name
 from app.services.ratings import DIMS
 
 _EMPTY_VOTE = VoteSummary(up=0, down=0, score=0, my_vote=0)
@@ -37,6 +38,24 @@ def reply_out(reply: ReviewReply, author: User | None, viewer_id: int | None) ->
     )
 
 
+def officer_label(o) -> str:
+    """공개용 수사관 표기. 삭제·정정 요청 등으로 비공개 처리된 사람은 이름 대신 안내 문구."""
+    if not o.is_visible:
+        return "비공개 처리된 수사관"
+    return f"{mask_name(o.name)} {o.rank}".strip()
+
+
+def review_target(r: Review) -> dict:
+    if r.officer_id and r.officer:
+        label = officer_label(r.officer)
+        if r.department and r.officer.is_visible:
+            label = f"{label} · {r.department.name}"
+        return {"target_type": "officer", "target_label": label, "department_id": r.department_id, "officer_id": r.officer_id}
+    if r.department_id and r.department:
+        return {"target_type": "department", "target_label": r.department.name, "department_id": r.department_id, "officer_id": None}
+    return {"target_type": "station", "target_label": None, "department_id": None, "officer_id": None}
+
+
 def review_public(
     r: Review, vote: VoteSummary = _EMPTY_VOTE, comment_count: int = 0, reply: ReplyOut | None = None,
     is_scrapped: bool = False,
@@ -47,5 +66,5 @@ def review_public(
         body=r.body, published_at=iso(r.published_at),
         comment_count=comment_count, up=vote.up, down=vote.down, score=vote.score, my_vote=vote.my_vote,
         evidence_verified=r.evidence_verified,
-        reply=reply, is_scrapped=is_scrapped,
+        reply=reply, is_scrapped=is_scrapped, **review_target(r),
     )

@@ -73,6 +73,11 @@ class ReviewPublic(BaseModel):
     evidence_verified: bool = False  # 운영자가 증빙자료를 확인했을 때만 true(공개 배지용)
     reply: ReplyOut | None = None  # 인증된 경찰관의 공식 해명(있으면)
     is_scrapped: bool = False  # 로그인 + 스크랩한 경우만 true
+    # 평가 대상: station(경찰서 전체) | department | officer. 수사관 이름은 항상 일부 가린 형태(김*현).
+    target_type: str = "station"
+    target_label: str | None = None
+    department_id: int | None = None
+    officer_id: int | None = None
 
 
 class CaseTypeSummary(BaseModel):
@@ -86,6 +91,30 @@ class NearbyStation(BaseModel):
     name: str
     distance_km: float
     rating: RatingSummary
+
+
+class TargetSummary(BaseModel):
+    """경찰서 상세의 부서별·수사관별 평가 요약 한 줄. 수사관 label 은 가린 이름."""
+    kind: str  # department | officer
+    id: int
+    label: str
+    rank: str | None = None
+    department_name: str | None = None
+    rating: RatingSummary
+
+
+class TargetOption(BaseModel):
+    id: int
+    label: str
+    rank: str | None = None
+    department_id: int | None = None
+    department_name: str | None = None
+
+
+class StationTargets(BaseModel):
+    """평가 작성 화면에서 고를 수 있는 부서·수사관 목록(수사관은 가린 이름)."""
+    departments: list[TargetOption]
+    officers: list[TargetOption]
 
 
 class StationDetail(BaseModel):
@@ -102,6 +131,9 @@ class StationDetail(BaseModel):
     reviews: Page[ReviewPublic]
     lat: float | None = None
     lng: float | None = None
+    department_ratings: list[TargetSummary] = []
+    officer_ratings: list[TargetSummary] = []
+    filter_label: str | None = None  # 부서·수사관으로 거른 경우 그 이름(가린 이름)
 
 
 class RecentReview(ReviewPublic):

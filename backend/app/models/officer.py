@@ -15,6 +15,7 @@ class OfficerSource(str, enum.Enum):
     homepage = "homepage"  # 관서 홈페이지 공개정보
     media = "media"  # 언론보도
     verified_report = "verified_report"  # 사건서류로 검증된 이용자 제보
+    user_report = "user_report"  # 평가 작성 시 이용자가 직접 입력(미검증, 2026-10 의뢰인 결정: 위키처럼 수집)
 
 
 SOURCE_LABELS = {
@@ -22,6 +23,7 @@ SOURCE_LABELS = {
     OfficerSource.homepage: "관서 홈페이지 공개정보",
     OfficerSource.media: "언론보도",
     OfficerSource.verified_report: "이용자 제보(사건서류 검증)",
+    OfficerSource.user_report: "이용자 입력(미검증)",
 }
 
 

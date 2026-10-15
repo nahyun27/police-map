@@ -385,7 +385,7 @@ export default function MyPage() {
             return (
               <div className="review" key={r.id}>
                 <div className="meta">
-                  <span className="badge brand">{r.role_label}</span><span className="badge">{r.case_type_label}</span>
+                  <span className="badge brand">{r.role_label}</span><span className="badge">{r.case_type_label}</span>{r.target_label && <span className="badge target">{r.target_label}</span>}
                   {formatDate(r.created_at)}
                   {r.evidence_verified && <span className="badge good" title="운영진이 증빙자료 제출 사실을 확인했다는 표시입니다. 서술 내용 전체의 사실 여부를 보증하지는 않습니다."><ShieldCheck size={11} />증빙확인</span>}
                 </div>

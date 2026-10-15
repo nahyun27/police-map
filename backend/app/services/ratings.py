@@ -60,3 +60,13 @@ def station_case_type_summaries(db: Session, station_id: int) -> dict[CaseType, 
         .where(Review.station_id == station_id).group_by(Review.case_type)
     )
     return {row[0]: _to_summary(row[1:]) for row in db.execute(q)}
+
+
+def station_target_summaries(db: Session, station_id: int, column) -> dict[int, RatingSummary]:
+    """한 경찰서의 평가를 부서별(Review.department_id) 또는 수사관별(Review.officer_id)로 쪼갠 집계
+    (2026-10 의뢰인 결정: 경찰서·부서·개인 단위 평가)."""
+    q = (
+        visible_reviews(column, *_summary_columns())
+        .where(Review.station_id == station_id, column.is_not(None)).group_by(column)
+    )
+    return {row[0]: _to_summary(row[1:]) for row in db.execute(q)}

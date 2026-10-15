@@ -73,6 +73,7 @@ class AdminReview(BaseModel):
     created_at: str | None
     evidence_note: str | None
     evidence_verified: bool
+    target_label: str | None = None  # 관리자에게는 수사관 실명 그대로
 
 
 def _admin_review(r: Review) -> AdminReview:
@@ -81,6 +82,10 @@ def _admin_review(r: Review) -> AdminReview:
         role=r.role.value, role_label=role_label(r), case_type=r.case_type.value, case_type_label=case_type_label(r),
         case_number=r.case_number, ratings=ratings_dict(r), body=r.body, status=r.status.value, reject_reason=r.reject_reason,
         created_at=iso(r.created_at), evidence_note=r.evidence_note, evidence_verified=r.evidence_verified,
+        target_label=(
+            f"{r.officer.name} {r.officer.rank}".strip() + (f" · {r.department.name}" if r.department else "")
+            if r.officer else (r.department.name if r.department else None)
+        ),
     )
 
 

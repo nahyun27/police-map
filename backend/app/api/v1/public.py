@@ -5,22 +5,25 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.v1._present import reply_out, review_public
+from app.api.v1._present import officer_label, reply_out, review_public
 from app.core.database import get_db
 from app.core.deps import get_client_ip_hash, get_current_user_optional
 from app.core.rate_limit import view_limiter
 from app.models import (
-    Department, PublicStatistic, Region, Report, ReportStatus, Review, ReviewComment, ReviewScrap, ReviewStatus,
+    Department, Officer, PublicStatistic, Region, Report, ReportStatus, Review, ReviewComment, ReviewScrap, ReviewStatus,
     ReviewVote, Station, TakedownRequest, TakedownStatus, User,
 )
 from app.schemas.public import (
     CaseTypeSummary, NearbyStation, Page, RankedStation, RecentReview, RegionDetail, RegionOut, RegionRef,
-    SearchResult, StationDetail, StationItem, StatsOverview, Totals, TransparencyQuarter, TransparencyReport,
+    SearchResult, StationDetail, StationItem, StationTargets, StatsOverview, TargetOption, TargetSummary, Totals, TransparencyQuarter, TransparencyReport,
     YearValue,
 )
 from app.services.engagement import comment_counts, reply_rows, scrapped_set, vote_summaries
 from app.models.review import CASE_TYPE_LABELS
-from app.services.ratings import EMPTY, national_summary, station_case_type_summaries, station_summaries, visible_reviews
+from app.services.names import mask_name
+from app.services.ratings import (
+    EMPTY, national_summary, station_case_type_summaries, station_summaries, station_target_summaries, visible_reviews,
+)
 
 router = APIRouter(tags=["public"])
 
@@ -81,6 +84,8 @@ def get_region(region_id: str, db: Session = Depends(get_db)):
 def get_station(
     request: Request, station_id: int, page: int = Query(1, ge=1), size: int = Query(10, ge=1, le=50),
     evidence_only: bool = Query(False, description="증빙확인된 평가만 보기"),
+    department_id: int | None = Query(None, description="이 부서 대상 평가만"),
+    officer_id: int | None = Query(None, description="이 수사관 대상 평가만"),
     db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
 ):
     s = db.get(Station, station_id)
@@ -89,6 +94,17 @@ def get_station(
     base = (Review.station_id == s.id, Review.status == ReviewStatus.published)
     if evidence_only:
         base = (*base, Review.evidence_verified.is_(True))
+    filter_label = None
+    if officer_id:
+        o = db.get(Officer, officer_id)
+        if o and o.station_id == s.id:
+            base = (*base, Review.officer_id == officer_id)
+            filter_label = officer_label(o)
+    elif department_id:
+        d = db.get(Department, department_id)
+        if d and d.station_id == s.id:
+            base = (*base, Review.department_id == department_id)
+            filter_label = d.name
     total = db.scalar(select(func.count(Review.id)).where(*base)) or 0
     reviews = db.scalars(
         select(Review).where(*base).order_by(Review.published_at.desc(), Review.id.desc()).offset((page - 1) * size).limit(size)
@@ -121,12 +137,51 @@ def get_station(
              for o in others),
             key=lambda n: n.distance_km,
         )[:5]
+    dept_sums = station_target_summaries(db, s.id, Review.department_id)
+    officer_sums = station_target_summaries(db, s.id, Review.officer_id)
+    dept_names = dict(db.execute(select(Department.id, Department.name).where(Department.id.in_(dept_sums))).all()) if dept_sums else {}
+    officers = {o.id: o for o in db.scalars(select(Officer).where(Officer.id.in_(officer_sums)))} if officer_sums else {}
+    department_ratings = sorted(
+        (TargetSummary(kind="department", id=did, label=dept_names[did], rating=sm) for did, sm in dept_sums.items() if did in dept_names),
+        key=lambda t: -t.rating.count,
+    )
+    # 비공개 처리(삭제·정정 요청 등)된 수사관은 요약 목록에서 아예 뺀다.
+    officer_ratings = sorted(
+        (TargetSummary(kind="officer", id=oid, label=mask_name(o.name), rank=o.rank or None,
+                       department_name=o.department.name if o.department else None, rating=officer_sums[oid])
+         for oid, o in officers.items() if o.is_visible),
+        key=lambda t: -t.rating.count,
+    )
     return StationDetail(
         id=s.id, name=s.name, address=s.address, website=s.website, source=s.source,
         region=_region_ref(s.region), departments=[d.name for d in s.departments],
         rating=station_summaries(db, [s.id]).get(s.id, EMPTY), by_case_type=by_case_type, nearby=nearby,
         reviews=Page(items=items, total=total, page=page, size=size),
-        lat=s.lat, lng=s.lng,
+        lat=s.lat, lng=s.lng, department_ratings=department_ratings, officer_ratings=officer_ratings,
+        filter_label=filter_label,
+    )
+
+
+@router.get("/stations/{station_id}/targets", response_model=StationTargets)
+def station_targets(station_id: int, db: Session = Depends(get_db)):
+    """평가 작성 화면용: 이 경찰서의 부서 목록과, 이용자들이 이미 등록한 수사관 목록(가린 이름).
+    비공개 처리된 수사관은 빼서 다시 평가 대상으로 고를 수 없게 한다."""
+    s = db.get(Station, station_id)
+    if not s:
+        raise HTTPException(404, "경찰서를 찾을 수 없습니다.")
+    depts = db.scalars(select(Department).where(Department.station_id == s.id).order_by(Department.name)).all()
+    offs = db.scalars(
+        select(Officer).options(joinedload(Officer.department))
+        .where(Officer.station_id == s.id, Officer.is_published.is_(True), Officer.is_blinded.is_(False))
+        .order_by(Officer.name)
+    ).all()
+    return StationTargets(
+        departments=[TargetOption(id=d.id, label=d.name) for d in depts],
+        officers=[
+            TargetOption(id=o.id, label=mask_name(o.name), rank=o.rank or None, department_id=o.department_id,
+                         department_name=o.department.name if o.department else None)
+            for o in offs
+        ],
     )
 
 

@@ -901,3 +901,10 @@ table.channel-table .pill {
 .ad-bottom img, .ad-inline img { display: block; width: 100%; height: auto; max-height: 220px; object-fit: contain; border-radius: 14px; background: #fff; }
 .ad-inline { display: grid; gap: 14px; }
 .ad-inline > div { display: flex; flex-direction: column; gap: 6px; }
+
+/* 평가 대상(부서·수사관) 표시. 수사관 이름은 항상 가린 형태로만 내려온다. */
+.badge.target { background: #f3ecff; color: #6d28d9; }
+.target-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--line2); color: var(--ink); font-size: 14.5px; }
+.target-row:last-of-type { border-bottom: none; }
+a.target-row:hover, .target-row a:hover { color: var(--brand); }
+#reviews, #target-ratings { scroll-margin-top: 80px; }

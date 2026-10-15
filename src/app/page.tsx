@@ -131,7 +131,7 @@ export default async function Home() {
           {recent.length ? recent.map((rv) => (
             <div className="review" key={rv.id}>
               <div className="meta">
-                <span className="badge">{rv.role_label}</span>{rv.station_name} · {formatDate(rv.published_at)}
+                <span className="badge">{rv.role_label}</span>{rv.target_label && <span className="badge target">{rv.target_label}</span>}{rv.station_name} · {formatDate(rv.published_at)}
                 {rv.evidence_verified && <span className="badge good" title="운영진이 증빙자료 제출 사실을 확인했다는 표시입니다. 서술 내용 전체의 사실 여부를 보증하지는 않습니다."><ShieldCheck size={11} />증빙확인</span>}
               </div>
               <div className="head"><Score value={rv.overall} /></div>

@@ -135,7 +135,7 @@ export default async function BoardPage({ searchParams }: Props) {
                   {it.kind === 'review' ? (
                     <div className="post-row-title">
                       <Star size={13} style={{ verticalAlign: -2, marginRight: 4, color: 'var(--star)' }} fill="var(--star)" />
-                      {it.overall?.toFixed(1) ?? '-'} · {it.role_label} · {it.body ? it.body.slice(0, 60) + (it.body.length > 60 ? '…' : '') : '(서술 없음, 별점만 등록)'}
+                      {it.overall?.toFixed(1) ?? '-'} · {it.role_label}{it.target_label ? ` → ${it.target_label}` : ''} · {it.body ? it.body.slice(0, 60) + (it.body.length > 60 ? '…' : '') : '(서술 없음, 별점만 등록)'}
                     </div>
                   ) : (
                     <div className="post-row-title">{it.title}</div>
