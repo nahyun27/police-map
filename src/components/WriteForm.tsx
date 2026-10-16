@@ -133,6 +133,8 @@ export default function WriteForm({ stationId }: { stationId: number }) {
       )}
       {target === 'officer' && (
         <>
+          {/* 아직 아무도 등록하지 않은 경찰서면 고를 게 "새로 입력하기"뿐이라 셀렉트박스 자체를 숨긴다. */}
+          {officers.length > 0 && (
           <div className="field">
             <label>수사관</label>
             <select value={officerId} onChange={(e) => setOfficerId(e.target.value)}>
@@ -144,6 +146,7 @@ export default function WriteForm({ stationId }: { stationId: number }) {
               ))}
             </select>
           </div>
+          )}
           {!officerId && (
             <div className="grid2" style={{ marginBottom: 0 }}>
               <div className="field">
