@@ -84,7 +84,7 @@ export default function BoardWritePage() {
       <Card>
         <form onSubmit={submit}>
           <div className="field">
-            <label>지역 <span className="tag">선택</span></label>
+            <label htmlFor="bw-region">지역 <span className="tag">선택</span></label>
             {regionsState === 'error' ? (
               <div className="warn" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 지역 목록을 불러오지 못했습니다.
@@ -92,7 +92,7 @@ export default function BoardWritePage() {
               </div>
             ) : (
               <select
-                className="sel" style={{ width: '100%' }} value={regionId} onChange={(e) => setRegionId(e.target.value)}
+                id="bw-region" className="sel" style={{ width: '100%' }} value={regionId} onChange={(e) => setRegionId(e.target.value)}
                 disabled={regionsState === 'loading'}
               >
                 <option value="">{regionsState === 'loading' ? '불러오는 중…' : '지역 지정 안 함(자유 주제)'}</option>
@@ -102,26 +102,26 @@ export default function BoardWritePage() {
           </div>
           {regionId && (
             <div className="field">
-              <label>경찰서 <span className="tag">선택</span></label>
-              <select className="sel" style={{ width: '100%' }} value={stationId} onChange={(e) => setStationId(e.target.value)}>
+              <label htmlFor="bw-1">경찰서 <span className="tag">선택</span></label>
+              <select id="bw-1" className="sel" style={{ width: '100%' }} value={stationId} onChange={(e) => setStationId(e.target.value)}>
                 <option value="">특정 경찰서 지정 안 함</option>
                 {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
           )}
           <div className="field">
-            <label>글머리</label>
-            <select className="sel" style={{ width: '100%' }} value={category} onChange={(e) => setCategory(e.target.value as PostCategory)}>
+            <label htmlFor="bw-2">글머리</label>
+            <select id="bw-2" className="sel" style={{ width: '100%' }} value={category} onChange={(e) => setCategory(e.target.value as PostCategory)}>
               {CATEGORY_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           <div className="field">
-            <label>제목</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} minLength={2} maxLength={200} required />
+            <label htmlFor="bw-3">제목</label>
+            <input id="bw-3" type="text" value={title} onChange={(e) => setTitle(e.target.value)} minLength={2} maxLength={200} required />
           </div>
           <div className="field">
-            <label>내용</label>
-            <textarea value={body} onChange={(e) => setBody(e.target.value)} maxLength={5000} required />
+            <label htmlFor="bw-4">내용</label>
+            <textarea id="bw-4" value={body} onChange={(e) => setBody(e.target.value)} maxLength={5000} required />
           </div>
           {error && <div className="warn">{error}</div>}
           <button className="btn lg" type="submit" disabled={submitting}>

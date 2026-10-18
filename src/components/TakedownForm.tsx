@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2 } from 'lucide-react';
 import { apiErrorMessage, submitTakedown, type TakedownCreatePayload } from '@/lib/api';
@@ -24,7 +24,15 @@ export default function TakedownForm({ targetType, targetId }: { targetType: 're
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<{ public_code: string; due_at: string } | null>(null);
 
-  const canSubmit = name.trim().length >= 2 && contact.trim().length >= 5 && reason.trim().length >= 10;
+  const id = useId();
+  const nameLen = name.trim().length, contactLen = contact.trim().length, reasonLen = reason.trim().length;
+  const canSubmit = nameLen >= 2 && contactLen >= 5 && reasonLen >= 10;
+  // 버튼이 회색으로 막혀만 있고 이유가 안 보이던 문제: 무엇을 더 채워야 하는지 알려 준다.
+  const missing = [
+    nameLen < 2 && '성명 2자 이상',
+    contactLen < 5 && '연락처 5자 이상',
+    reasonLen < 10 && `요청 사유 10자 이상(현재 ${reasonLen}자)`,
+  ].filter(Boolean) as string[];
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -64,36 +72,37 @@ export default function TakedownForm({ targetType, targetId }: { targetType: 're
     <>
       <div className="grid2" style={{ marginBottom: 0 }}>
         <div className="field">
-          <label>요청 유형</label>
-          <select value={requestType} onChange={(e) => setRequestType(e.target.value as TakedownCreatePayload['request_type'])}>
+          <label htmlFor={`${id}-type`}>요청 유형</label>
+          <select id={`${id}-type`} value={requestType} onChange={(e) => setRequestType(e.target.value as TakedownCreatePayload['request_type'])}>
             <option value="delete">삭제 요청</option>
             <option value="correct">정정 요청</option>
           </select>
         </div>
         <div className="field">
-          <label>게시물과의 관계</label>
-          <select value={relation} onChange={(e) => setRelation(e.target.value as TakedownCreatePayload['relation'])}>
+          <label htmlFor={`${id}-rel`}>게시물과의 관계</label>
+          <select id={`${id}-rel`} value={relation} onChange={(e) => setRelation(e.target.value as TakedownCreatePayload['relation'])}>
             {RELATION_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
           </select>
         </div>
       </div>
       <div className="grid2" style={{ marginBottom: 0 }}>
         <div className="field">
-          <label>성명(또는 기관명)</label>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 홍길동" />
+          <label htmlFor={`${id}-name`}>성명(또는 기관명)</label>
+          <input id={`${id}-name`} type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 홍길동" />
         </div>
         <div className="field">
-          <label>연락처 <span className="tag">처리 결과 통지용 · 비공개</span></label>
-          <input type="text" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="이메일 또는 전화번호" />
+          <label htmlFor={`${id}-contact`}>연락처 <span className="tag">처리 결과 통지용 · 비공개</span></label>
+          <input id={`${id}-contact`} type="text" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="이메일 또는 전화번호" />
         </div>
       </div>
       <div className="field">
-        <label>요청 사유</label>
-        <textarea value={reason} onChange={(e) => setReason(e.target.value)}
+        <label htmlFor={`${id}-reason`}>요청 사유 <span className="tag">10자 이상</span></label>
+        <textarea id={`${id}-reason`} value={reason} onChange={(e) => setReason(e.target.value)}
           placeholder="권리 침해 사실을 구체적으로 적어 주세요. (예: 해당 게시물은 본인이 담당하지 않은 사건에 관한 내용입니다.)" />
       </div>
 
       {error && <div className="warn">{error}</div>}
+      {missing.length > 0 && <p className="sub" style={{ marginBottom: 8 }}>접수하려면 {missing.join(', ')}을 입력해 주세요.</p>}
       <button className="btn lg" onClick={submit} disabled={!canSubmit || submitting}>
         {submitting ? '접수 중…' : '삭제·정정 요청 접수'}
       </button>

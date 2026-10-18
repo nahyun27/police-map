@@ -130,6 +130,8 @@ nav.gnb a.active { color: var(--ink); background: var(--line2); }
 .hauth a:not(.btn) { color: var(--muted); font-size: 14px; font-weight: 600; }
 .hauth a:not(.btn):hover { color: var(--ink); }
 .hauth-user { display: inline-flex; align-items: center; gap: 5px; color: var(--ink) !important; }
+.hauth-logout { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: var(--muted); font-size: 14px; font-weight: 600; }
+.hauth-logout:hover { color: var(--ink); }
 
 main { max-width: var(--container); margin: 0 auto; padding: 32px 24px 88px; width: 100%; flex: 1 0 auto; }
 main.main-admin { max-width: none; margin: 0; padding: 0; }
@@ -137,7 +139,9 @@ main.main-admin { max-width: none; margin: 0; padding: 0; }
 footer.site { background: var(--navy); color: #94a3c4; font-size: 13px; padding: 44px 0; flex-shrink: 0; }
 .fwrap { max-width: var(--container); margin: 0 auto; padding: 0 24px; display: grid; gap: 14px; }
 footer.site .flogo { color: #fff; font-weight: 800; font-size: 17px; letter-spacing: -0.03em; }
-footer.site .flinks { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+footer.site .flinks { display: flex; flex-wrap: wrap; gap: 0 20px; }
+/* 모바일에서 링크가 글자 높이(약 18px)만큼만 눌려 옆 링크를 잘못 누르기 쉬웠다. 위아래 여백으로 터치 영역 확보. */
+footer.site .flinks a { display: inline-block; padding: 10px 0; }
 footer.site a { color: #c6d2ee; }
 footer.site a:hover { color: #fff; }
 footer.site p { line-height: 1.8; max-width: 720px; }
@@ -159,7 +163,8 @@ footer.site p { line-height: 1.8; max-width: 720px; }
   }
   .gnb-drop-menu a { padding: 10px 12px; font-size: 14.5px; }
   .hsearch-wrap { margin-left: 0; }
-  .hauth { margin-left: 0; padding-top: 4px; }
+  .hauth { margin-left: 0; padding-top: 4px; gap: 18px; }
+  .hauth a:not(.btn), .hauth-logout { padding: 10px 0; }
   .hsearch input, .hsearch input:focus { width: 100%; }
   main { padding: 20px 16px 64px; }
   .fwrap { padding: 0 16px; }
@@ -252,7 +257,7 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 /* 설명 문구가 640px 폭 제한 때문에 불필요하게 두 줄로 꺾이던 문제 — 페이지 헤더에서는 폭 제한을 풀어 한 줄로 둔다. */
 .pagehead .lead { max-width: none; }
 .crumb { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 13.5px; color: var(--muted); margin-bottom: 18px; }
-.crumb a { color: var(--muted); font-weight: 500; }
+.crumb a { color: var(--muted); font-weight: 500; display: inline-block; padding: 8px 2px; margin: -8px 0; } /* 터치 영역 확보(레이아웃 높이는 그대로) */
 .crumb a:hover { color: var(--ink); }
 .crumb svg { opacity: .5; }
 
@@ -671,7 +676,7 @@ table.channel-table .pill {
 
 /* ---------- Forms ---------- */
 .field { margin-bottom: 20px; }
-.field label { display: block; font-weight: 650; font-size: 14px; margin-bottom: 8px; }
+.field label, .field .label { display: block; font-weight: 650; font-size: 14px; margin-bottom: 8px; }
 .field input, .field select, .field textarea {
   width: 100%; border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 12px 14px; font-size: 15px; color: var(--ink); transition: .15s;
 }

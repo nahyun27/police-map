@@ -4,8 +4,8 @@ import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronDown, Menu, Search, User, X } from 'lucide-react';
-import { getMe, type UserOut } from '@/lib/api';
+import { ChevronDown, LogOut, Menu, Search, User, X } from 'lucide-react';
+import { getMe, logout, type UserOut } from '@/lib/api';
 import { useSearchSuggestions } from '@/lib/useSearchSuggestions';
 
 const NAV = [
@@ -37,6 +37,14 @@ export default function Header() {
   useEffect(() => {
     getMe().then(setUser).catch(() => setUser(null));
   }, [pathname]);
+
+  // 로그아웃이 마이페이지 안에만 있어 공용 PC 등에서 찾기 어려웠다. 상단·모바일 메뉴에서도 바로 할 수 있게 한다.
+  const doLogout = async () => {
+    await logout().catch(() => {});
+    setUser(null);
+    setOpen(false);
+    router.refresh();
+  };
 
   const goStation = (id: number) => {
     setSuggestOpen(false);
@@ -130,7 +138,12 @@ export default function Header() {
           </div>
           <div className="hauth">
             {user === undefined ? null : user ? (
-              <Link href="/mypage" className="hauth-user"><User size={15} />{user.nickname}님</Link>
+              <>
+                <Link href="/mypage" className="hauth-user"><User size={15} />{user.nickname}님</Link>
+                <button type="button" className="hauth-logout" onClick={doLogout}>
+                  <LogOut size={14} style={{ verticalAlign: -2, marginRight: 4 }} />로그아웃
+                </button>
+              </>
             ) : (
               <>
                 <Link href="/login">로그인</Link>

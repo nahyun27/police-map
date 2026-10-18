@@ -119,16 +119,16 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
     <>
       <div className="form-section">1. 평가 대상</div>
       <div className="field">
-        <div className="seg">
+        <div className="seg" role="group" aria-label="평가 대상">
           {([['station', '경찰서 전체'], ['department', '특정 부서'], ['officer', '특정 수사관']] as [Target, string][]).map(([v, l]) => (
-            <button key={v} type="button" className={target === v ? 'active' : ''} onClick={() => setTarget(v)}>{l}</button>
+            <button key={v} type="button" className={target === v ? 'active' : ''} aria-pressed={target === v} onClick={() => setTarget(v)}>{l}</button>
           ))}
         </div>
       </div>
       {target !== 'station' && (
         <div className="field">
-          <label>부서 {target === 'officer' && <span className="tag">선택</span>}</label>
-          <select value={deptId} onChange={(e) => setDeptId(e.target.value)}>
+          <label htmlFor="wf-1">부서 {target === 'officer' && <span className="tag">선택</span>}</label>
+          <select id="wf-1" value={deptId} onChange={(e) => setDeptId(e.target.value)}>
             <option value="">{depts.length ? (target === 'officer' ? '모름 / 선택 안 함' : '부서를 골라 주세요') : '등록된 부서 정보가 없습니다'}</option>
             {depts.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
           </select>
@@ -139,8 +139,8 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
           {/* 아직 아무도 등록하지 않은 경찰서면 고를 게 "새로 입력하기"뿐이라 셀렉트박스 자체를 숨긴다. */}
           {officers.length > 0 && (
           <div className="field">
-            <label>수사관</label>
-            <select value={officerId} onChange={(e) => setOfficerId(e.target.value)}>
+            <label htmlFor="wf-2">수사관</label>
+            <select id="wf-2" value={officerId} onChange={(e) => setOfficerId(e.target.value)}>
               <option value="">새로 입력하기</option>
               {officers.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -153,12 +153,12 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
           {!officerId && (
             <div className="grid2" style={{ marginBottom: 0 }}>
               <div className="field">
-                <label>수사관 이름</label>
-                <input type="text" value={officerName} onChange={(e) => setOfficerName(e.target.value)} maxLength={5} placeholder="예: 김철수" />
+                <label htmlFor="wf-3">수사관 이름</label>
+                <input id="wf-3" type="text" value={officerName} onChange={(e) => setOfficerName(e.target.value)} maxLength={5} placeholder="예: 김철수" />
               </div>
               <div className="field">
-                <label>계급 <span className="tag">선택</span></label>
-                <select value={officerRank} onChange={(e) => setOfficerRank(e.target.value)}>
+                <label htmlFor="wf-4">계급 <span className="tag">선택</span></label>
+                <select id="wf-4" value={officerRank} onChange={(e) => setOfficerRank(e.target.value)}>
                   <option value="">모름</option>
                   {RANK_OPTIONS.map((rk) => <option key={rk} value={rk}>{rk}</option>)}
                 </select>
@@ -175,8 +175,8 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
       <div className="form-section">2. 사건 정보</div>
       <div className="grid2" style={{ marginBottom: 0 }}>
         <div className="field">
-          <label>사건에서의 지위</label>
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
+          <label htmlFor="wf-5">사건에서의 지위</label>
+          <select id="wf-5" value={role} onChange={(e) => setRole(e.target.value)}>
             {ROLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
           {role === 'other' && (
@@ -187,8 +187,8 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
           )}
         </div>
         <div className="field">
-          <label>사건 유형</label>
-          <select value={caseType} onChange={(e) => setCaseType(e.target.value)}>
+          <label htmlFor="wf-6">사건 유형</label>
+          <select id="wf-6" value={caseType} onChange={(e) => setCaseType(e.target.value)}>
             {CASE_TYPE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
           {caseType === 'other' && (
@@ -200,13 +200,13 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
         </div>
       </div>
       <div className="field">
-        <label>사건번호 <span className="tag">선택 · 비공개 · 경험 검증용</span></label>
-        <input type="text" value={caseNo} onChange={(e) => setCaseNo(e.target.value)}
+        <label htmlFor="wf-7">사건번호 <span className="tag">선택 · 비공개 · 경험 검증용</span></label>
+        <input id="wf-7" type="text" value={caseNo} onChange={(e) => setCaseNo(e.target.value)}
           placeholder="예: 2026-형제-00000 (입력하지 않아도 제출할 수 있습니다)" />
       </div>
       <div className="field">
-        <label>증빙 자료 <span className="tag">선택 · 비공개</span></label>
-        <input
+        <label htmlFor="wf-8">증빙 자료 <span className="tag">선택 · 비공개</span></label>
+        <input id="wf-8"
           type="text" value={evidenceNote} onChange={(e) => setEvidenceNote(e.target.value)} maxLength={300}
           placeholder="예: 불기소 결정문 사본 보유 (운영진이 확인하면 '증빙확인' 배지가 붙습니다)"
         />

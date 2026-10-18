@@ -36,12 +36,12 @@ function LoginForm() {
     <Card style={{ maxWidth: 420, margin: '0 auto' }}>
       <form onSubmit={submit}>
         <div className="field">
-          <label>이메일</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
+          <label htmlFor="li-1">이메일</label>
+          <input id="li-1" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
         </div>
         <div className="field">
-          <label>비밀번호</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+          <label htmlFor="li-2">비밀번호</label>
+          <input id="li-2" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
         </div>
         {error && <div className="warn">{error}</div>}
         <button className="btn lg" type="submit" style={{ width: '100%' }} disabled={submitting}>

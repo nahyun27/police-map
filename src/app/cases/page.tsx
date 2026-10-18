@@ -100,9 +100,9 @@ export default async function CasesPage({ searchParams }: Props) {
             <input type="text" name="q" defaultValue={q} placeholder="사건 제목·내용 검색" aria-label="사건 검색" />
           </form>
           <div className="btn-row board-filter-group">
-            <div className="seg">
-              <Link href={buildHref({ ...f, sort: 'new', page: 1 })} className={sort === 'new' ? 'active' : ''}>최신순</Link>
-              <Link href={buildHref({ ...f, sort: 'empathy', page: 1 })} className={sort === 'empathy' ? 'active' : ''}>공감순</Link>
+            <div className="seg" role="group" aria-label="정렬">
+              <Link href={buildHref({ ...f, sort: 'new', page: 1 })} className={sort === 'new' ? 'active' : ''} aria-current={sort === 'new' ? 'true' : undefined}>최신순</Link>
+              <Link href={buildHref({ ...f, sort: 'empathy', page: 1 })} className={sort === 'empathy' ? 'active' : ''} aria-current={sort === 'empathy' ? 'true' : undefined}>공감순</Link>
             </div>
           </div>
         </div>

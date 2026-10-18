@@ -118,41 +118,41 @@ export default function OfficerVerifyPage() {
         <Card>
           <form onSubmit={submit}>
             <div className="field">
-              <label>소속 지역</label>
-              <select className="sel" style={{ width: '100%' }} value={regionId} onChange={(e) => setRegionId(e.target.value)} required>
+              <label htmlFor="ov-1">소속 지역</label>
+              <select id="ov-1" className="sel" style={{ width: '100%' }} value={regionId} onChange={(e) => setRegionId(e.target.value)} required>
                 <option value="">지역 선택</option>
                 {regions.map((r) => <option key={r.id} value={r.id}>{r.full_name}</option>)}
               </select>
             </div>
             <div className="field">
-              <label>소속 경찰서</label>
-              <select className="sel" style={{ width: '100%' }} value={stationId} onChange={(e) => setStationId(e.target.value)} required disabled={!regionId}>
+              <label htmlFor="ov-2">소속 경찰서</label>
+              <select id="ov-2" className="sel" style={{ width: '100%' }} value={stationId} onChange={(e) => setStationId(e.target.value)} required disabled={!regionId}>
                 <option value="">경찰서 선택</option>
                 {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
             <div className="field">
-              <label>성명</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} minLength={2} maxLength={50} required />
+              <label htmlFor="ov-3">성명</label>
+              <input id="ov-3" type="text" value={name} onChange={(e) => setName(e.target.value)} minLength={2} maxLength={50} required />
             </div>
             <div className="field">
-              <label>계급</label>
-              <input type="text" value={rank} onChange={(e) => setRank(e.target.value)} placeholder="예: 경위" maxLength={30} required />
+              <label htmlFor="ov-4">계급</label>
+              <input id="ov-4" type="text" value={rank} onChange={(e) => setRank(e.target.value)} placeholder="예: 경위" maxLength={30} required />
             </div>
             <div className="field">
-              <label>부서 <span className="tag">선택</span></label>
-              <input type="text" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="예: 수사과" maxLength={100} />
+              <label htmlFor="ov-5">부서 <span className="tag">선택</span></label>
+              <input id="ov-5" type="text" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="예: 수사과" maxLength={100} />
             </div>
             <div className="field">
-              <label>연락처 <span className="tag">비공개</span></label>
-              <input
+              <label htmlFor="ov-6">연락처 <span className="tag">비공개</span></label>
+              <input id="ov-6"
                 type="text" value={contact} onChange={(e) => setContact(e.target.value)} maxLength={200} required
                 placeholder="예: kim@police.go.kr (경찰 공식 메일이면 확인이 더 빠릅니다)"
               />
             </div>
             <div className="field">
-              <label>확인 방법 메모 <span className="tag">선택</span></label>
-              <input
+              <label htmlFor="ov-7">확인 방법 메모 <span className="tag">선택</span></label>
+              <input id="ov-7"
                 type="text" value={proofNote} onChange={(e) => setProofNote(e.target.value)} maxLength={300}
                 placeholder="예: 소속 경찰서 대표번호로 확인 요망"
               />

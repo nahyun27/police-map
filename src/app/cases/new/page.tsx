@@ -74,40 +74,40 @@ export default function NewCasePage() {
       <Card>
         <form onSubmit={submit}>
           <div className="field">
-            <label>어떤 문제를 겪으셨나요?</label>
-            <select className="sel" style={{ width: '100%' }} value={category} onChange={(e) => setCategory(e.target.value as CaseCategory)}>
+            <label htmlFor="cn-1">어떤 문제를 겪으셨나요?</label>
+            <select id="cn-1" className="sel" style={{ width: '100%' }} value={category} onChange={(e) => setCategory(e.target.value as CaseCategory)}>
               {CASE_CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           <div className="grid2" style={{ marginBottom: 0 }}>
             <div className="field">
-              <label>지역 <span className="tag">선택</span></label>
-              <select className="sel" style={{ width: '100%' }} value={regionId} onChange={(e) => setRegionId(e.target.value)}>
+              <label htmlFor="cn-2">지역 <span className="tag">선택</span></label>
+              <select id="cn-2" className="sel" style={{ width: '100%' }} value={regionId} onChange={(e) => setRegionId(e.target.value)}>
                 <option value="">지정 안 함</option>
                 {regions.map((r) => <option key={r.id} value={r.id}>{r.full_name}</option>)}
               </select>
             </div>
             <div className="field">
-              <label>관할 경찰서 <span className="tag">선택</span></label>
-              <select className="sel" style={{ width: '100%' }} value={stationId} onChange={(e) => setStationId(e.target.value)} disabled={!regionId}>
+              <label htmlFor="cn-3">관할 경찰서 <span className="tag">선택</span></label>
+              <select id="cn-3" className="sel" style={{ width: '100%' }} value={stationId} onChange={(e) => setStationId(e.target.value)} disabled={!regionId}>
                 <option value="">지정 안 함</option>
                 {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
           </div>
           <div className="field">
-            <label>사건 제목</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} minLength={5} maxLength={120} required
+            <label htmlFor="cn-4">사건 제목</label>
+            <input id="cn-4" type="text" value={title} onChange={(e) => setTitle(e.target.value)} minLength={5} maxLength={120} required
               placeholder="무슨 일이 있었는지 간단하게 (5자 이상)" />
           </div>
           <div className="field">
-            <label>어떤 일이 있었나요?</label>
-            <textarea value={body} onChange={(e) => setBody(e.target.value)} minLength={30} maxLength={5000} required
+            <label htmlFor="cn-5">어떤 일이 있었나요?</label>
+            <textarea id="cn-5" value={body} onChange={(e) => setBody(e.target.value)} minLength={30} maxLength={5000} required
               placeholder="일시(대략적인 시기), 겪은 절차, 직접 확인한 사실을 중심으로 작성해 주세요. (30자 이상)" />
           </div>
           <div className="field">
-            <label>어떤 조치를 원하시나요? <span className="tag">선택</span></label>
-            <textarea value={desired} onChange={(e) => setDesired(e.target.value)} maxLength={1000} style={{ minHeight: 80 }}
+            <label htmlFor="cn-6">어떤 조치를 원하시나요? <span className="tag">선택</span></label>
+            <textarea id="cn-6" value={desired} onChange={(e) => setDesired(e.target.value)} maxLength={1000} style={{ minHeight: 80 }}
               placeholder="예: 처리 경과에 대한 설명, 절차 확인, 공식 답변 등" />
           </div>
 

@@ -96,14 +96,14 @@ export default async function BoardPage({ searchParams }: Props) {
           </form>
           <div className="btn-row board-filter-group">
             <RegionFilterSelect regions={regions} value={region ?? ''} category={category} sort={sort} period={period} q={q} />
-            <div className="seg">
-              <Link href={buildHref({ ...f, sort: 'new', page: 1 })} className={sort === 'new' ? 'active' : ''}>최신순</Link>
-              <Link href={buildHref({ ...f, sort: 'top', page: 1 })} className={sort === 'top' ? 'active' : ''}>인기순</Link>
+            <div className="seg" role="group" aria-label="정렬">
+              <Link href={buildHref({ ...f, sort: 'new', page: 1 })} className={sort === 'new' ? 'active' : ''} aria-current={sort === 'new' ? 'true' : undefined}>최신순</Link>
+              <Link href={buildHref({ ...f, sort: 'top', page: 1 })} className={sort === 'top' ? 'active' : ''} aria-current={sort === 'top' ? 'true' : undefined}>인기순</Link>
             </div>
             {sort === 'top' && (
-              <div className="seg">
+              <div className="seg" role="group" aria-label="기간">
                 {PERIOD_OPTIONS.map(([v, l]) => (
-                  <Link key={v} href={buildHref({ ...f, sort: 'top', period: v, page: 1 })} className={period === v ? 'active' : ''}>{l}</Link>
+                  <Link key={v} href={buildHref({ ...f, sort: 'top', period: v, page: 1 })} className={period === v ? 'active' : ''} aria-current={period === v ? 'true' : undefined}>{l}</Link>
                 ))}
               </div>
             )}

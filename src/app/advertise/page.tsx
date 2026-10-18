@@ -84,34 +84,34 @@ export default function AdvertisePage() {
         ) : (
           <form onSubmit={submit}>
             <div className="field">
-              <label>문의 유형</label>
-              <div className="seg">
+              <div className="label" id="ad-type">문의 유형</div>
+              <div className="seg" role="group" aria-labelledby="ad-type">
                 {TYPES.map(([v, l]) => (
-                  <button key={v} type="button" className={type === v ? 'active' : ''} onClick={() => setType(v)}>{l}</button>
+                  <button key={v} type="button" className={type === v ? 'active' : ''} aria-pressed={type === v} onClick={() => setType(v)}>{l}</button>
                 ))}
               </div>
             </div>
             <div className="grid2" style={{ marginBottom: 0 }}>
               <div className="field">
-                <label>회사·단체명</label>
-                <input type="text" value={company} onChange={(e) => setCompany(e.target.value)} maxLength={100} required />
+                <label htmlFor="ad-1">회사·단체명</label>
+                <input id="ad-1" type="text" value={company} onChange={(e) => setCompany(e.target.value)} maxLength={100} required />
               </div>
               <div className="field">
-                <label>담당자 이름</label>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={50} required />
+                <label htmlFor="ad-2">담당자 이름</label>
+                <input id="ad-2" type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={50} required />
               </div>
               <div className="field">
-                <label>연락처(이메일 또는 전화번호)</label>
-                <input type="text" value={contact} onChange={(e) => setContact(e.target.value)} minLength={5} maxLength={100} required />
+                <label htmlFor="ad-3">연락처(이메일 또는 전화번호)</label>
+                <input id="ad-3" type="text" value={contact} onChange={(e) => setContact(e.target.value)} minLength={5} maxLength={100} required />
               </div>
               <div className="field">
-                <label>관심 지역 <span className="tag">선택</span></label>
-                <input type="text" value={region} onChange={(e) => setRegion(e.target.value)} maxLength={50} placeholder="예: 제주, 전국" />
+                <label htmlFor="ad-4">관심 지역 <span className="tag">선택</span></label>
+                <input id="ad-4" type="text" value={region} onChange={(e) => setRegion(e.target.value)} maxLength={50} placeholder="예: 제주, 전국" />
               </div>
             </div>
             <div className="field">
-              <label>문의 내용</label>
-              <textarea value={message} onChange={(e) => setMessage(e.target.value)} minLength={10} maxLength={3000} required
+              <label htmlFor="ad-5">문의 내용</label>
+              <textarea id="ad-5" value={message} onChange={(e) => setMessage(e.target.value)} minLength={10} maxLength={3000} required
                 placeholder="광고하려는 내용, 희망 기간·지역, 예산 등을 적어 주세요." />
             </div>
             <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--ink2)', marginBottom: 14 }}>

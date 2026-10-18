@@ -41,20 +41,20 @@ function SignupForm() {
     <Card style={{ maxWidth: 420, margin: '0 auto' }}>
       <form onSubmit={submit}>
         <div className="field">
-          <label>이메일</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
+          <label htmlFor="su-1">이메일</label>
+          <input id="su-1" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
         </div>
         <div className="field">
-          <label>닉네임</label>
-          <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} autoComplete="nickname" minLength={2} maxLength={30} required />
+          <label htmlFor="su-2">닉네임</label>
+          <input id="su-2" type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} autoComplete="nickname" minLength={2} maxLength={30} required />
         </div>
         <div className="field">
-          <label>비밀번호 <span className="tag">8자 이상</span></label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={8} required />
+          <label htmlFor="su-3">비밀번호 <span className="tag">8자 이상</span></label>
+          <input id="su-3" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={8} required />
         </div>
         <div className="field">
-          <label>비밀번호 확인</label>
-          <input
+          <label htmlFor="su-4">비밀번호 확인</label>
+          <input id="su-4"
             type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)}
             autoComplete="new-password" minLength={8} required
           />
