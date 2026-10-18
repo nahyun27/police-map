@@ -92,7 +92,7 @@ export default async function CasesPage({ searchParams }: Props) {
       />
 
       <Card className="flat">
-        <div className="btn-row" style={{ marginBottom: 10, alignItems: 'center' }}>
+        <div className="btn-row board-search-row" style={{ marginBottom: 10, alignItems: 'center' }}>
           <form action="/cases" method="get" className="hsearch" style={{ marginLeft: 0 }}>
             {category && <input type="hidden" name="category" value={category} />}
             {sort !== 'new' && <input type="hidden" name="sort" value={sort} />}

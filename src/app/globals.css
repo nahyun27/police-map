@@ -908,3 +908,30 @@ table.channel-table .pill {
 .target-row:last-of-type { border-bottom: none; }
 a.target-row:hover, .target-row a:hover { color: var(--brand); }
 #reviews, #target-ratings { scroll-margin-top: 80px; }
+
+/* 탭이 화면보다 길 때 오른쪽 끝을 흐리게(옆으로 넘길 수 있다는 표시). CategoryTabs 가 has-more 를 붙인다. */
+.cat-tabs.has-more {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent);
+}
+
+/* 커뮤니티·사건 공론화 검색/필터 줄: 모바일에선 검색창을 가로 전체로, 지역 선택·정렬은 그 아래 한 줄로. */
+@media (max-width: 860px) {
+  .board-search-row { flex-direction: column; align-items: stretch !important; gap: 8px; }
+  .board-search-row .hsearch, .board-search-row .hsearch input { width: 100%; }
+  .board-search-row .board-filter-group { width: 100%; flex-wrap: nowrap; gap: 8px; }
+  .board-search-row .board-filter-group select { flex: 1; min-width: 0; }
+  .board-search-row .board-filter-group .seg { flex-shrink: 0; margin-left: auto; }
+}
+.post-row-rating { display: flex; align-items: center; gap: 5px; font-size: 13.5px; margin-bottom: 4px; }
+.post-row-rating b { color: var(--ink); }
+.score.score-empty { color: var(--muted); font-weight: 500; font-size: 12.5px; opacity: .75; background: none; padding: 0; }
+.search-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--ink); border-radius: 12px; transition: background .12s; }
+.search-row:hover { background: #f8f9fc; }
+.search-row:hover .search-row-name { color: var(--brand); }
+.starpick { align-items: center; }
+.starpick-value { margin-left: 8px; font-size: 13px; color: var(--muted); }
+.starpick-value.set { color: var(--ink2); font-weight: 650; }
+.bigscore-empty .lbl { font-size: 13.5px; color: var(--muted); }
+.badge.dept-badge { cursor: pointer; transition: background .12s, color .12s; }
+.badge.dept-badge:hover, .badge.dept-badge.on { background: var(--brand-soft); color: var(--brand-ink); }

@@ -67,10 +67,17 @@ export default async function StationPage({ params, searchParams }: Props) {
             <h1>{s.name}</h1>
             <p className="sub" style={{ marginTop: 8 }}>{s.address ?? '주소 정보 없음'}</p>
           </div>
-          <div className="bigscore">
-            <div className="num">{s.rating.overall !== null ? s.rating.overall.toFixed(1) : '–'}</div>
-            <div className="lbl"><Stars value={s.rating.overall} /> · 평가 {s.rating.count}건</div>
-          </div>
+          {s.rating.count ? (
+            <div className="bigscore">
+              <div className="num">{s.rating.overall !== null ? s.rating.overall.toFixed(1) : '–'}</div>
+              <div className="lbl"><Stars value={s.rating.overall} /> · 평가 {s.rating.count}건</div>
+            </div>
+          ) : (
+            // 평가가 없을 때 큰 점수 자리에 "–" 하나만 덩그러니 뜨던 것 대신 작은 안내 문구로.
+            <div className="bigscore bigscore-empty">
+              <div className="lbl">아직 평가 없음</div>
+            </div>
+          )}
         </div>
         <div className="btn-row" style={{ marginTop: 24 }}>
           <Link href={`/station/${s.id}/write`} className="btn">이 경찰서 평가 작성</Link>
@@ -84,8 +91,7 @@ export default async function StationPage({ params, searchParams }: Props) {
         </div>
       </Card>
 
-      <div className="grid2">
-        <Card>
+      <Card>
           <h2>평가 요약</h2>
           {s.rating.count ? (
             <>
@@ -107,12 +113,7 @@ export default async function StationPage({ params, searchParams }: Props) {
           ) : (
             <p className="sub">아직 등록된 평가가 없습니다. 이 경찰서의 첫 평가를 남겨 주세요.</p>
           )}
-        </Card>
-        <Card className="tint">
-          <h2>공개 정보 출처</h2>
-          <p style={{ color: 'var(--ink2)' }}>{s.source ?? '경찰청 전국경찰관서안내 공개자료'}</p>
-        </Card>
-      </div>
+      </Card>
 
       {s.nearby.length > 0 && (
         <Card>
@@ -134,7 +135,12 @@ export default async function StationPage({ params, searchParams }: Props) {
         <h2>수사부서 <span className="tag">홈페이지 공개 기준</span></h2>
         {s.departments.length ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {s.departments.map((d) => <span key={d} className="badge">{d}</span>)}
+            {(s.department_items ?? s.departments.map((name, i) => ({ id: -i, label: name }))).map((d) => (
+              d.id > 0 ? (
+                // 누르면 그 부서 대상 평가만 모아 본다(부서별 평가, 2026-10).
+                <Link key={d.id} href={`/station/${s.id}?dept=${d.id}#reviews`} className={`badge dept-badge${deptFilter === d.id ? ' on' : ''}`}>{d.label}</Link>
+              ) : <span key={d.id} className="badge">{d.label}</span>
+            ))}
           </div>
         ) : (
           <p className="sub">공개된 부서 정보가 없습니다.</p>
@@ -240,7 +246,11 @@ export default async function StationPage({ params, searchParams }: Props) {
         {s.reviews.items.length ? (
           <ReviewList stationId={s.id} stationName={s.name} items={s.reviews.items} />
         ) : (
-          <p className="sub">{evidenceOnly ? '증빙확인된 평가가 아직 없습니다.' : '등록된 평가가 없습니다.'}</p>
+          <p className="sub">
+            {evidenceOnly ? '증빙확인된 평가가 아직 없습니다.'
+              : deptFilter ? <>이 부서에 대한 평가가 아직 없습니다. <Link href={`/station/${s.id}/write?dept=${deptFilter}`}>이 부서 평가 작성하기</Link></>
+              : '등록된 평가가 없습니다.'}
+          </p>
         )}
         {totalPages > 1 && (
           <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>
@@ -250,6 +260,9 @@ export default async function StationPage({ params, searchParams }: Props) {
           </div>
         )}
       </Card>
+      <p className="sub" style={{ fontSize: 12, textAlign: 'center', marginTop: 4 }}>
+        경찰서 정보 출처: {s.source ?? '경찰청 전국경찰관서안내 공개자료'}
+      </p>
       <AdSlots stationId={s.id} />
     </>
   );

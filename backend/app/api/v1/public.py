@@ -158,6 +158,7 @@ def get_station(
         rating=station_summaries(db, [s.id]).get(s.id, EMPTY), by_case_type=by_case_type, nearby=nearby,
         reviews=Page(items=items, total=total, page=page, size=size),
         lat=s.lat, lng=s.lng, department_ratings=department_ratings, officer_ratings=officer_ratings,
+        department_items=[TargetOption(id=d.id, label=d.name) for d in s.departments],
         filter_label=filter_label,
     )
 

@@ -183,6 +183,7 @@ export interface StationDetail {
   reviews: Page<ReviewPublic>;
   lat: number | null;
   lng: number | null;
+  department_items?: TargetOption[];
   department_ratings?: TargetSummary[];
   officer_ratings?: TargetSummary[];
   filter_label?: string | null;

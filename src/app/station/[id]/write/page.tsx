@@ -7,11 +7,13 @@ import { Card, Crumb, PageHead } from '@/components/ui';
 import { ApiError, getStation } from '@/lib/api';
 import { NOINDEX } from '@/lib/seo';
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ dept?: string }> };
 
 export const metadata: Metadata = { title: '평가 작성', robots: NOINDEX };
 
-export default async function WritePage({ params }: Props) {
+export default async function WritePage({ params, searchParams }: Props) {
+  // 경찰서 상세의 "이 부서 평가 작성하기"에서 오면 그 부서를 평가 대상으로 미리 골라 둔다.
+  const initialDept = Number((await searchParams).dept) || undefined;
   const { id } = await params;
   let s;
   try {
@@ -46,7 +48,7 @@ export default async function WritePage({ params }: Props) {
       </Card>
 
       <Card>
-        <WriteForm stationId={s.id} />
+        <WriteForm stationId={s.id} initialDept={initialDept} />
       </Card>
     </>
   );

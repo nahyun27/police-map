@@ -43,17 +43,17 @@ export default async function SearchPage({ searchParams }: Props) {
           <>
             <h2><PoliceStationIcon size={17} style={{ verticalAlign: -2, marginRight: 8, color: 'var(--brand)' }} />경찰서 ({stations.length})</h2>
             {failed ? <p className="sub">검색 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.</p> : stations.length ? stations.map((s) => (
-              <div className="review" key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              // 줄 전체를 눌러 이동(이름 글자만 링크면 모바일에서 누르기 어렵다). 평가 작성 모드면 바로 작성 화면으로.
+              <Link
+                key={s.id} href={forWrite ? `/station/${s.id}/write` : `/station/${s.id}`}
+                className="review search-row"
+              >
                 <div>
-                  <Link href={`/station/${s.id}`} style={{ fontWeight: 650 }}>{s.name}</Link>
+                  <b className="search-row-name">{s.name}</b>
                   <div className="sub">{s.address ?? '주소 정보 없음'}</div>
                 </div>
-                {forWrite ? (
-                  <Link href={`/station/${s.id}/write`} className="btn sm">평가 작성</Link>
-                ) : (
-                  <Score value={s.rating.overall} />
-                )}
-              </div>
+                {forWrite ? <span className="btn sm">평가 작성</span> : <Score value={s.rating.overall} />}
+              </Link>
             )) : <p className="sub">결과 없음</p>}
           </>
         )}

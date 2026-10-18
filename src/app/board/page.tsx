@@ -85,7 +85,7 @@ export default async function BoardPage({ searchParams }: Props) {
       />
 
       <Card className="flat">
-        <div className="btn-row" style={{ marginBottom: 10, alignItems: 'center' }}>
+        <div className="btn-row board-search-row" style={{ marginBottom: 10, alignItems: 'center' }}>
           <form action="/board" method="get" className="hsearch" style={{ marginLeft: 0 }}>
             {region && <input type="hidden" name="region" value={region} />}
             {category && <input type="hidden" name="category" value={category} />}
@@ -133,10 +133,17 @@ export default async function BoardPage({ searchParams }: Props) {
                     <span className="sub">{it.region_name ?? '전체'}{it.station_name ? ` · ${it.station_name}` : ''}</span>
                   </div>
                   {it.kind === 'review' ? (
-                    <div className="post-row-title">
-                      <Star size={13} style={{ verticalAlign: -2, marginRight: 4, color: 'var(--star)' }} fill="var(--star)" />
-                      {it.overall?.toFixed(1) ?? '-'} · {it.role_label}{it.target_label ? ` → ${it.target_label}` : ''} · {it.body ? it.body.slice(0, 60) + (it.body.length > 60 ? '…' : '') : '(서술 없음, 별점만 등록)'}
-                    </div>
+                    <>
+                      {/* 별점·역할·대상 줄과 본문 줄을 나눠서, 한 덩어리로 길게 이어지지 않게 한다. */}
+                      <div className="post-row-rating">
+                        <Star size={13} fill="var(--star)" style={{ color: 'var(--star)' }} />
+                        <b>{it.overall?.toFixed(1) ?? '-'}</b>
+                        <span className="sub">{it.role_label}{it.target_label ? ` · ${it.target_label}` : ''}</span>
+                      </div>
+                      <div className="post-row-title">
+                        {it.body ? it.body.slice(0, 80) + (it.body.length > 80 ? '…' : '') : '(서술 없음, 별점만 등록)'}
+                      </div>
+                    </>
                   ) : (
                     <div className="post-row-title">{it.title}</div>
                   )}

@@ -131,6 +131,7 @@ class StationDetail(BaseModel):
     reviews: Page[ReviewPublic]
     lat: float | None = None
     lng: float | None = None
+    department_items: list[TargetOption] = []  # 수사부서 배지를 눌러 그 부서 평가만 보이게 하려고 id 포함
     department_ratings: list[TargetSummary] = []
     officer_ratings: list[TargetSummary] = []
     filter_label: str | None = None  # 부서·수사관으로 거른 경우 그 이름(가린 이름)

@@ -12,7 +12,8 @@ export function Stars({ value }: { value: number | null }) {
 /** 평점(별 5개 채우기 + 숫자). 3.8 이상 good, 3.2 이상 mid, 그 미만 low. value=null 이면 "평가 없음". */
 export function Score({ value }: { value: number | null }) {
   if (value === null) {
-    return <span className="score" style={{ color: 'var(--muted)' }}>평가 없음</span>;
+    // 목록에서 수십 번 반복되므로 굵은 점수보다 한 단계 흐리고 가볍게 보이게 한다.
+    return <span className="score score-empty">평가 없음</span>;
   }
   const tone = value >= 3.8 ? 'good' : value >= 3.2 ? 'mid' : 'low';
   const filled = Math.max(0, Math.min(5, Math.round(value)));

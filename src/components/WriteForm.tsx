@@ -25,12 +25,20 @@ const CASE_TYPE_OPTIONS: [string, string][] = [
 const RANK_OPTIONS = ['순경', '경장', '경사', '경위', '경감', '경정', '총경'];
 type Target = 'station' | 'department' | 'officer';
 
-function StarPick({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+const STAR_WORDS = ['', '매우 나쁨', '나쁨', '보통', '좋음', '매우 좋음'];
+
+/** 별점 고르기. 고른 점수를 숫자·말로 옆에 보여주고, 같은 별을 한 번 더 누르면 선택이 취소된다
+ * (항목은 모두 선택 사항이라 "안 고름"으로 되돌릴 수 있어야 한다). */
+function StarPick({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
   return (
-    <div className="starpick">
+    <div className="starpick" role="radiogroup" aria-label={label}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <button key={i} type="button" className={i <= value ? 'on' : ''} onClick={() => onChange(i)} aria-label={`${i}점`}>★</button>
+        <button
+          key={i} type="button" className={i <= value ? 'on' : ''} role="radio" aria-checked={value === i}
+          onClick={() => onChange(value === i ? 0 : i)} aria-label={`${i}점`}
+        >★</button>
       ))}
+      <span className={`starpick-value${value ? ' set' : ''}`}>{value ? `${value}점 · ${STAR_WORDS[value]}` : '선택 안 함'}</span>
     </div>
   );
 }
@@ -47,7 +55,7 @@ function errorMessage(e: unknown): string {
   return '제출에 실패했습니다. 잠시 후 다시 시도해 주세요.';
 }
 
-export default function WriteForm({ stationId }: { stationId: number }) {
+export default function WriteForm({ stationId, initialDept }: { stationId: number; initialDept?: number }) {
   const router = useRouter();
   const [role, setRole] = useState(ROLE_OPTIONS[0][0]);
   const [roleOther, setRoleOther] = useState('');
@@ -56,10 +64,10 @@ export default function WriteForm({ stationId }: { stationId: number }) {
   const [caseNo, setCaseNo] = useState('');
   // 평가 대상(2026-10 의뢰인 결정: 경찰서 전체 / 부서 / 수사관). 수사관은 이미 등록된 사람을 고르거나
   // 이름을 새로 입력 — 새 이름은 DB 에 등록되고 공개 화면에는 일부 가린 이름(김*현)으로만 나온다.
-  const [target, setTarget] = useState<Target>('station');
+  const [target, setTarget] = useState<Target>(initialDept ? 'department' : 'station');
   const [depts, setDepts] = useState<TargetOption[]>([]);
   const [officers, setOfficers] = useState<TargetOption[]>([]);
-  const [deptId, setDeptId] = useState('');
+  const [deptId, setDeptId] = useState(initialDept ? String(initialDept) : '');
   const [officerId, setOfficerId] = useState(''); // '' = 새로 입력
   const [officerName, setOfficerName] = useState('');
   const [officerRank, setOfficerRank] = useState('');
@@ -209,12 +217,12 @@ export default function WriteForm({ stationId }: { stationId: number }) {
         />
       </div>
 
-      <div className="form-section">3. 항목별 평가</div>
+      <div className="form-section">3. 항목별 평가 <span className="sub" style={{ fontWeight: 500 }}>(겪어 본 항목만 1개 이상 고르면 됩니다)</span></div>
       <div className="grid2" style={{ marginBottom: 0 }}>
         {CRITERIA.map(([k, label]) => (
           <div className="field" key={k}>
             <label>{label}</label>
-            <StarPick value={pick[k]} onChange={(v) => setPick((p) => ({ ...p, [k]: v }))} />
+            <StarPick label={label} value={pick[k]} onChange={(v) => setPick((p) => ({ ...p, [k]: v }))} />
           </div>
         ))}
       </div>
