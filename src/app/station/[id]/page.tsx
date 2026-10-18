@@ -27,7 +27,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const s = await getStation((await params).id);
     const ratingNote = s.rating.count ? `(평균 ${s.rating.overall?.toFixed(1)}점, ${s.rating.count}건)` : '';
-    return { title: `${s.name} 수사 평가`, description: `${s.name}의 수사 절차 평가${ratingNote}와 수사부서 정보.` };
+    const title = `${s.name} 수사 평가`;
+    const description = `${s.name}의 수사 절차 평가${ratingNote}와 수사부서 정보.`;
+    return { title, description, openGraph: { title, description } };
   } catch {
     return {};
   }

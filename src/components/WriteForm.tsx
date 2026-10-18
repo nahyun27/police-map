@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { BANNED } from '@/data/sample';
-import { ApiError, getStationTargets, submitReview, type ReviewRatingsIn, type TargetOption } from '@/lib/api';
+import { apiErrorMessage, getStationTargets, submitReview, type ReviewRatingsIn, type TargetOption } from '@/lib/api';
 
 const CRITERIA: [keyof ReviewRatingsIn, string][] = [
   ['fair', '공정성·중립성'],
@@ -44,15 +44,10 @@ function StarPick({ value, onChange, label }: { value: number; onChange: (v: num
 }
 
 function errorMessage(e: unknown): string {
-  if (e instanceof ApiError) {
-    if (e.status === 0) return '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.';
-    if (e.status === 409) return '같은 사건번호로 이미 제출된 평가가 있습니다.';
-    const detail = (e.body as { detail?: unknown } | null)?.detail;
-    if (typeof detail === 'string') return detail;
-    if (detail && typeof detail === 'object' && 'message' in detail) return String((detail as { message: unknown }).message);
-    return '입력값을 확인해 주세요.';
-  }
-  return '제출에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+  return apiErrorMessage(e, {
+    fallback: '제출에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+    byStatus: { 409: '같은 사건번호로 이미 제출된 평가가 있습니다.' },
+  });
 }
 
 export default function WriteForm({ stationId, initialDept }: { stationId: number; initialDept?: number }) {
@@ -84,7 +79,7 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
   const hit = BANNED.filter((b) => text.includes(b) || roleOther.includes(b) || caseTypeOther.includes(b));
 
   const submit = async () => {
-    if (hit.length) return;
+    if (hit.length || submitting || done) return;
     if (target === 'department' && !deptId) { alert('평가할 부서를 골라 주세요.'); return; }
     if (target === 'officer' && !officerId && !/^[가-힣]{2,5}$/.test(officerName.trim())) {
       alert('수사관 이름을 한글 2~5자로 입력하거나, 이미 등록된 수사관을 골라 주세요.');
@@ -239,9 +234,12 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
       </div>
 
       {error && <div className="warn">{error}</div>}
-      <button className="btn lg" onClick={submit} disabled={submitting}>
-        {submitting ? '게시 중…' : '게시하기'}
-      </button>
+      {/* 게시 후에도 버튼이 살아 있어 한 번 더 누르면 같은 평가가 두 번 올라가던 문제를 막는다. */}
+      {!done && (
+        <button className="btn lg" onClick={submit} disabled={submitting}>
+          {submitting ? '게시 중…' : '게시하기'}
+        </button>
+      )}
 
       {done && (
         <div className="modal-ok">
@@ -253,6 +251,9 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
           <hr className="divider" style={{ margin: '14px 0' }} />
           <p>비슷한 문제로 불편을 겪으셨다면 후기에서 멈추지 마세요.</p>
           <div className="btn-row" style={{ marginTop: 10 }}>
+            <button className="btn line sm" onClick={() => router.push(`/station/${stationId}#reviews`)}>
+              게시된 평가 보기
+            </button>
             <button className="btn sm" onClick={() => router.push(`/remedy/${stationId}`)}>
               공식 민원·권리구제 절차로 <ArrowRight size={14} />
             </button>

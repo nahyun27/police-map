@@ -77,6 +77,7 @@ export function Engagement({
   const [authNeeded, setAuthNeeded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const [posting, setPosting] = useState(false);
   const [replyTo, setReplyTo] = useState<number | null>(null);
   const [replyDraft, setReplyDraft] = useState('');
   const draftRef = useRef<HTMLTextAreaElement>(null);
@@ -151,8 +152,9 @@ export function Engagement({
 
   const submit = async (body: string, parentId?: number) => {
     const text = body.trim();
-    if (!text) return;
-    setAuthNeeded(false); setError(null);
+    // 등록 요청이 끝나기 전에 버튼을 한 번 더 누르면 같은 댓글이 두 번 달리던 문제를 막는다.
+    if (!text || posting) return;
+    setAuthNeeded(false); setError(null); setPosting(true);
     try {
       await api.create(targetId, text, parentId);
       await loadComments();
@@ -162,6 +164,8 @@ export function Engagement({
       if (e instanceof ApiError && e.status === 401) setAuthNeeded(true);
       else if (e instanceof ApiError && e.status === 422) setError('게시할 수 없는 표현이 포함되어 있는지 확인해 주세요.');
       else setError('등록하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setPosting(false);
     }
   };
 
@@ -207,7 +211,7 @@ export function Engagement({
             ref={replyDraftRef} value={replyDraft} onChange={(e) => setReplyDraft(e.target.value)}
             placeholder="답글을 입력하세요" maxLength={1000} rows={1}
           />
-          <button type="button" className="btn sm" onClick={() => submit(replyDraft, c.id)} disabled={!replyDraft.trim()}>등록</button>
+          <button type="button" className="btn sm" onClick={() => submit(replyDraft, c.id)} disabled={!replyDraft.trim() || posting}>등록</button>
         </div>
       )}
       {c.replies.map((r) => renderComment(r, depth + 1))}
@@ -252,7 +256,7 @@ export function Engagement({
               ref={draftRef} value={draft} onChange={(e) => setDraft(e.target.value)}
               placeholder="댓글을 입력하세요" maxLength={1000} rows={1}
             />
-            <button type="button" className="btn sm" onClick={() => submit(draft)} disabled={!draft.trim()}>등록</button>
+            <button type="button" className="btn sm" onClick={() => submit(draft)} disabled={!draft.trim() || posting}>등록</button>
           </div>
         </div>
       )}

@@ -5,20 +5,16 @@ import { useRouter } from 'next/navigation';
 import { ShieldAlert, Send } from 'lucide-react';
 import { Card, Crumb, PageHead } from '@/components/ui';
 import {
-  ApiError, CASE_CATEGORIES, createCase, getMe, getRegion, getRegions,
+  apiErrorMessage, CASE_CATEGORIES, createCase, getMe, getRegion, getRegions,
   type CaseCategory, type RegionOut, type StationItem,
 } from '@/lib/api';
 
 function errorMessage(e: unknown): string {
-  if (e instanceof ApiError) {
-    if (e.status === 429) return '오늘은 더 이상 등록할 수 없습니다(하루 5건). 내일 다시 시도해 주세요.';
-    const detail = (e.body as { detail?: unknown } | null)?.detail;
-    if (typeof detail === 'string') return detail;
-    if (Array.isArray(detail)) return '입력값을 확인해 주세요. 제목은 5자, 내용은 30자 이상이어야 합니다.';
-    if (detail && typeof detail === 'object' && 'message' in detail) return String((detail as { message: unknown }).message);
-    return '입력값을 확인해 주세요.';
-  }
-  return '등록에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+  return apiErrorMessage(e, {
+    fallback: '등록에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+    invalid: '입력값을 확인해 주세요. 제목은 5자, 내용은 30자 이상이어야 합니다.',
+    byStatus: { 429: '오늘은 더 이상 등록할 수 없습니다(하루 5건). 내일 다시 시도해 주세요.' },
+  });
 }
 
 export default function NewCasePage() {

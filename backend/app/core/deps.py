@@ -1,46 +1,57 @@
 import hashlib
 import hmac
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, Response, status
 from jose import JWTError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.cookies import get_access_token
+from app.core.cookies import get_access_token, get_refresh_token, set_access_cookie
 from app.core.database import get_db
-from app.core.security import decode_token, token_matches_user
+from app.core.security import create_access_token, decode_token, token_matches_user
 from app.models.user import User, UserRole
 
 
-def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
-    exc = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="로그인이 필요합니다.")
+def _user_from_cookies(request: Request, response: Response, db: Session) -> User | None:
+    """access 토큰으로 사용자를 찾고, 없거나 만료됐으면 refresh 토큰으로 이어 준다(새 access 쿠키도 발급).
+
+    access 쿠키는 30분이면 브라우저에서 사라지는데, 그 뒤로 "로그인한 줄 아는" 사용자의 요청이
+    익명으로 처리돼 글이 본인 계정과 연결되지 않는 문제가 있었다(2026-10 출시 전 점검). refresh 쿠키는
+    원래 모든 요청에 함께 오므로 여기서 쓰는 것이 노출 범위를 넓히지 않고, 로그아웃·탈퇴 시
+    token_version 으로 함께 무효화된다."""
     token = get_access_token(request)
-    if not token:
-        raise exc
-    try:
-        payload = decode_token(token, expected_type="access")
-        user_id = int(payload["sub"])
-    except (JWTError, KeyError, ValueError):
-        raise exc
-    user = db.get(User, user_id)
-    if user is None or not user.is_active or not token_matches_user(payload, user):
-        raise exc
+    if token:
+        try:
+            payload = decode_token(token, expected_type="access")
+            user = db.get(User, int(payload["sub"]))
+            if user and user.is_active and token_matches_user(payload, user):
+                return user
+        except (JWTError, KeyError, ValueError):
+            pass
+    refresh = get_refresh_token(request)
+    if refresh:
+        try:
+            payload = decode_token(refresh, expected_type="refresh")
+            user = db.get(User, int(payload["sub"]))
+        except (JWTError, KeyError, ValueError):
+            return None
+        if user and user.is_active and token_matches_user(payload, user):
+            set_access_cookie(response, create_access_token(user.id, user.token_version))
+            return user
+    return None
+
+
+def get_current_user(request: Request, response: Response, db: Session = Depends(get_db)) -> User:
+    user = _user_from_cookies(request, response, db)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="로그인이 필요합니다.")
     return user
 
 
-def get_current_user_optional(request: Request, db: Session = Depends(get_db)) -> User | None:
+def get_current_user_optional(request: Request, response: Response, db: Session = Depends(get_db)) -> User | None:
     """로그인 여부에 따라 동작이 달라지는(익명도 허용하는) 엔드포인트용. 토큰이 없거나
     유효하지 않아도 401 을 내지 않고 그냥 None 을 돌려준다."""
-    token = get_access_token(request)
-    if not token:
-        return None
-    try:
-        payload = decode_token(token, expected_type="access")
-        user_id = int(payload["sub"])
-    except (JWTError, KeyError, ValueError):
-        return None
-    user = db.get(User, user_id)
-    return user if user and user.is_active and token_matches_user(payload, user) else None
+    return _user_from_cookies(request, response, db)
 
 
 def get_client_ip_hash(request: Request) -> str:

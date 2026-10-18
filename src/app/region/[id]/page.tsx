@@ -11,10 +11,9 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const rg = await getRegion((await params).id);
-    return {
-      title: `${rg.full_name} 관할 경찰서 평가`,
-      description: `${rg.full_name} 관할 경찰서 ${rg.station_count}곳의 수사 절차 평가와 공개정보.`,
-    };
+    const title = `${rg.full_name} 관할 경찰서 평가`;
+    const description = `${rg.full_name} 관할 경찰서 ${rg.station_count}곳의 수사 절차 평가와 공개정보.`;
+    return { title, description, openGraph: { title, description } };
   } catch {
     return {};
   }

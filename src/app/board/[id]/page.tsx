@@ -9,7 +9,7 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const p = await getPost(Number((await params).id));
-    return { title: p.title, description: p.body.slice(0, 100) };
+    return { title: p.title, description: p.body.slice(0, 100), openGraph: { title: p.title, description: p.body.slice(0, 100) } };
   } catch {
     return {};
   }

@@ -46,10 +46,12 @@ export default function ReportForm({ stationName }: { stationName?: string }) {
     if (!draft) return;
     try {
       await navigator.clipboard.writeText(draft);
+      setCopied(true);
     } catch {
-      // 클립보드 API 가 막힌 환경(구형 브라우저·권한 거부)을 위한 대비. 실패해도 조용히 넘어간다.
+      // 클립보드 API 가 막힌 환경(구형 브라우저·권한 거부·http)에서는 복사가 안 됐는데도 "복사됨"이
+      // 떠서 사용자가 빈 클립보드를 붙여넣게 되던 문제. 실패를 알리고 다운로드를 권한다.
+      alert('복사하지 못했습니다. 옆의 "파일로 저장"을 누르거나, 위 본문을 직접 선택해 복사해 주세요.');
     }
-    setCopied(true);
   };
 
   const download = () => {

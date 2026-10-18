@@ -21,6 +21,28 @@ export class ApiError extends Error {
   }
 }
 
+/** 폼 제출 실패를 사용자에게 보여줄 문장으로 바꾼다. 서버가 준 문장(detail)이 있으면 그대로 쓰고,
+ * 연결 실패·요청 과다·서버 오류는 "입력값을 확인해 주세요"로 뭉뚱그리지 않고 따로 알려 준다.
+ * `byStatus` 로 화면별 문구(예: 409 중복)를, `invalid` 로 422 검증 실패 문구를 바꿀 수 있다. */
+export function apiErrorMessage(
+  e: unknown,
+  opts: { fallback?: string; invalid?: string; byStatus?: Record<number, string> } = {},
+): string {
+  const fallback = opts.fallback ?? '처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  if (!(e instanceof ApiError)) return fallback;
+  if (opts.byStatus?.[e.status]) return opts.byStatus[e.status];
+  if (e.status === 0) return '서버에 연결할 수 없습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.';
+  if (e.status === 401) return '로그인이 필요합니다. 다시 로그인해 주세요.';
+  if (e.status === 429) return '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.';
+  if (e.status >= 500) return '일시적인 서버 오류입니다. 잠시 후 다시 시도해 주세요.';
+  const detail = (e.body as { detail?: unknown } | null)?.detail;
+  if (typeof detail === 'string') return detail;
+  if (detail && typeof detail === 'object' && !Array.isArray(detail) && 'message' in detail) {
+    return String((detail as { message: unknown }).message);
+  }
+  return opts.invalid ?? '입력값을 확인해 주세요.';
+}
+
 interface ApiFetchInit extends RequestInit {
   /** 이 값을 주면 Next 의 Data Cache 에 N초간 캐시한다(프로덕션 빌드에서만 효과가 있음 —
    * `next dev` 는 매번 새로 렌더링하고 절대 캐시하지 않는 게 Next.js 자체의 설계). 생략하면

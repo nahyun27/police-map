@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Send } from 'lucide-react';
 import { Card, Crumb, PageHead } from '@/components/ui';
 import {
-  ApiError, createPost, getRegion, getRegions,
+  apiErrorMessage, createPost, getRegion, getRegions,
   type PostCategory, type RegionDetail, type RegionOut, type StationItem,
 } from '@/lib/api';
 
@@ -14,13 +14,7 @@ const CATEGORY_OPTIONS: [PostCategory, string][] = [
 ];
 
 function errorMessage(e: unknown): string {
-  if (e instanceof ApiError) {
-    const detail = (e.body as { detail?: unknown } | null)?.detail;
-    if (typeof detail === 'string') return detail;
-    if (detail && typeof detail === 'object' && 'message' in detail) return String((detail as { message: unknown }).message);
-    return '입력값을 확인해 주세요.';
-  }
-  return '등록에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+  return apiErrorMessage(e, { fallback: '등록에 실패했습니다. 잠시 후 다시 시도해 주세요.' });
 }
 
 export default function BoardWritePage() {

@@ -332,6 +332,15 @@ export default function MyPage() {
   };
 
   if (loading) return <Card><p className="sub">불러오는 중…</p></Card>;
+  // 401 이 아닌 실패(서버 오류·연결 끊김)에서도 빈 화면만 보이던 문제: 이유와 재시도 버튼을 보여 준다.
+  if (!user && error) {
+    return (
+      <Card>
+        <div className="warn">{error}</div>
+        <button type="button" className="btn sm" onClick={() => window.location.reload()}>다시 시도</button>
+      </Card>
+    );
+  }
   if (!user) return null; // 401 처리 중 리다이렉트
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.size)) : 1;

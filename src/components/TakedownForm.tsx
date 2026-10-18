@@ -3,18 +3,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2 } from 'lucide-react';
-import { ApiError, submitTakedown, type TakedownCreatePayload } from '@/lib/api';
+import { apiErrorMessage, submitTakedown, type TakedownCreatePayload } from '@/lib/api';
 
 const RELATION_OPTIONS: TakedownCreatePayload['relation'][] = ['본인', '대리인', '기타'];
 
 function errorMessage(e: unknown): string {
-  if (e instanceof ApiError) {
-    if (e.status === 0) return '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.';
-    if (e.status === 404) return '대상 게시물을 찾을 수 없습니다. 이미 삭제되었거나 잘못된 주소일 수 있습니다.';
-    if (e.status === 429) return '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.';
-    return '입력값을 확인해 주세요.';
-  }
-  return '접수에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+  return apiErrorMessage(e, {
+    fallback: '접수에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+    byStatus: { 404: '대상 게시물을 찾을 수 없습니다. 이미 삭제되었거나 잘못된 주소일 수 있습니다.' },
+  });
 }
 
 export default function TakedownForm({ targetType, targetId }: { targetType: 'review' | 'officer' | 'public_case'; targetId: number }) {

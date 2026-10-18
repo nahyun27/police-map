@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { LogIn } from 'lucide-react';
 import { Card, PageHead } from '@/components/ui';
 import { ApiError, login } from '@/lib/api';
+import { safeNext } from '@/lib/format';
 
 function LoginForm() {
   const router = useRouter();
@@ -21,7 +22,7 @@ function LoginForm() {
     setError(null);
     try {
       await login(email.trim(), password);
-      router.replace(params.get('next') || '/mypage');
+      router.replace(safeNext(params.get('next'), '/mypage'));
       router.refresh();
     } catch (e) {
       if (e instanceof ApiError && e.status === 429) setError('로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.');

@@ -58,3 +58,21 @@ def test_cannot_vote_comment_under_hidden_review(db, user_client, admin_client, 
     cid = user_client.post(f"{API}/reviews/{rid}/comments", json={"body": "댓글입니다"}).json()["id"]
     admin_client.post(f"{API}/admin/blind", json={"target_type": "review", "target_id": rid})
     assert user_client.post(f"{API}/reviews/comments/{cid}/vote", json={"value": 1}).status_code == 404
+
+
+def test_expired_access_cookie_is_renewed_from_refresh(db, user_client, world):
+    """access 쿠키가 만료돼 사라진 뒤에도(30분) 로그인이 이어지고, 글이 익명이 아닌 본인 계정으로 저장된다."""
+    user_client.cookies.delete("pm_access")
+    me = user_client.get(f"{API}/auth/me")
+    assert me.status_code == 200 and "pm_access" in me.cookies  # 새 access 쿠키 발급
+    user_client.cookies.delete("pm_access")
+    rid = user_client.post(f"{API}/reviews", json=review_payload(world["station"].id)).json()["id"]
+    assert any(x["id"] == rid for x in user_client.get(f"{API}/reviews/mine").json()["items"])
+
+
+def test_refresh_fallback_respects_logout(db, user_client):
+    stolen_refresh = user_client.cookies.get("pm_refresh")
+    user_client.post(f"{API}/auth/logout")
+    thief = TestClient(app)
+    thief.cookies.set("pm_refresh", stolen_refresh)
+    assert thief.get(f"{API}/auth/me").status_code == 401

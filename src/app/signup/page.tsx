@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { UserPlus } from 'lucide-react';
 import { Card, PageHead } from '@/components/ui';
 import { ApiError, register } from '@/lib/api';
+import { safeNext } from '@/lib/format';
 
 function SignupForm() {
   const router = useRouter();
@@ -25,7 +26,7 @@ function SignupForm() {
     setSubmitting(true);
     try {
       await register(email.trim(), password, nickname.trim());
-      router.replace(params.get('next') || '/mypage');
+      router.replace(safeNext(params.get('next'), '/mypage'));
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) setError('이미 가입된 이메일입니다.');
       else if (e instanceof ApiError && e.status === 429) setError('가입 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.');

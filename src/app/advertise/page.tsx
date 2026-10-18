@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { Check, MapPin, Megaphone, MousePointerClick, Send } from 'lucide-react';
 import { Card } from '@/components/ui';
-import { ApiError, createInquiry, type InquiryType } from '@/lib/api';
+import { apiErrorMessage, createInquiry, type InquiryType } from '@/lib/api';
 
 const TYPES: [InquiryType, string][] = [['ad', '광고 문의'], ['partnership', '제휴·비즈니스'], ['other', '기타']];
 
@@ -15,13 +15,10 @@ const POINTS = [
 ];
 
 function errorMessage(e: unknown): string {
-  if (e instanceof ApiError) {
-    if (e.status === 429) return '잠시 후 다시 시도해 주세요.';
-    const detail = (e.body as { detail?: unknown } | null)?.detail;
-    if (typeof detail === 'string') return detail;
-    return '입력값을 확인해 주세요. 연락처는 5자 이상, 문의 내용은 10자 이상이어야 합니다.';
-  }
-  return '접수에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+  return apiErrorMessage(e, {
+    fallback: '접수에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+    invalid: '입력값을 확인해 주세요. 연락처는 5자 이상, 문의 내용은 10자 이상이어야 합니다.',
+  });
 }
 
 export default function AdvertisePage() {

@@ -17,6 +17,10 @@ def set_auth_cookies(response: Response, access: str, refresh: str) -> None:
     _set(response, REFRESH_COOKIE, refresh, settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400)
 
 
+def set_access_cookie(response: Response, access: str) -> None:
+    _set(response, ACCESS_COOKIE, access, settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+
+
 def clear_auth_cookies(response: Response) -> None:
     for name in (ACCESS_COOKIE, REFRESH_COOKIE):
         response.delete_cookie(name, path="/")

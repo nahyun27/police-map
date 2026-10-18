@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { LogIn, MapPinned } from 'lucide-react';
 import { Card } from '@/components/ui';
 import { ApiError, login } from '@/lib/api';
+import { safeNext } from '@/lib/format';
 
 function LoginForm() {
   const router = useRouter();
@@ -24,7 +25,7 @@ function LoginForm() {
         setError('관리자 계정이 아닙니다.');
         return;
       }
-      router.replace(params.get('next') || '/admin');
+      router.replace(safeNext(params.get('next'), '/admin'));
     } catch (e) {
       if (e instanceof ApiError && e.status === 429) setError('로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.');
       else setError('이메일 또는 비밀번호가 올바르지 않습니다.');
