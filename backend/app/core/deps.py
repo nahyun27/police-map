@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.cookies import get_access_token
 from app.core.database import get_db
-from app.core.security import decode_token
+from app.core.security import decode_token, token_matches_user
 from app.models.user import User, UserRole
 
 
@@ -18,11 +18,12 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     if not token:
         raise exc
     try:
-        user_id = int(decode_token(token, expected_type="access")["sub"])
+        payload = decode_token(token, expected_type="access")
+        user_id = int(payload["sub"])
     except (JWTError, KeyError, ValueError):
         raise exc
     user = db.get(User, user_id)
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or not token_matches_user(payload, user):
         raise exc
     return user
 
@@ -34,11 +35,12 @@ def get_current_user_optional(request: Request, db: Session = Depends(get_db)) -
     if not token:
         return None
     try:
-        user_id = int(decode_token(token, expected_type="access")["sub"])
+        payload = decode_token(token, expected_type="access")
+        user_id = int(payload["sub"])
     except (JWTError, KeyError, ValueError):
         return None
     user = db.get(User, user_id)
-    return user if user and user.is_active else None
+    return user if user and user.is_active and token_matches_user(payload, user) else None
 
 
 def get_client_ip_hash(request: Request) -> str:

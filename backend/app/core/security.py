@@ -30,18 +30,25 @@ def hash_case_number(case_number: str) -> str:
     return hmac.new(settings.CASE_HASH_PEPPER.encode(), normalized.encode(), hashlib.sha256).hexdigest()
 
 
-def _create_token(subject: str | int, token_type: TokenType, expires_delta: timedelta) -> str:
+def _create_token(subject: str | int, token_type: TokenType, expires_delta: timedelta, token_version: int = 0) -> str:
     now = datetime.now(timezone.utc)
-    payload: dict[str, Any] = {"sub": str(subject), "type": token_type, "iat": now, "exp": now + expires_delta}
+    payload: dict[str, Any] = {
+        "sub": str(subject), "type": token_type, "iat": now, "exp": now + expires_delta, "tv": token_version,
+    }
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def create_access_token(subject: str | int) -> str:
-    return _create_token(subject, "access", timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
+def create_access_token(subject: str | int, token_version: int = 0) -> str:
+    return _create_token(subject, "access", timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES), token_version)
 
 
-def create_refresh_token(subject: str | int) -> str:
-    return _create_token(subject, "refresh", timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS))
+def create_refresh_token(subject: str | int, token_version: int = 0) -> str:
+    return _create_token(subject, "refresh", timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS), token_version)
+
+
+def token_matches_user(payload: dict[str, Any], user) -> bool:
+    """토큰이 발급된 뒤 로그아웃·탈퇴로 token_version 이 올라갔으면 더는 유효하지 않다."""
+    return int(payload.get("tv", 0)) == user.token_version
 
 
 def decode_token(token: str, expected_type: TokenType) -> dict[str, Any]:

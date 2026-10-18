@@ -8,7 +8,7 @@ from app.core.rate_limit import report_limiter
 from app.models import Report, ReportStatus, User
 from app.schemas.report import ReportCreate, ReportReceipt
 from app.services.blinding import maybe_auto_blind
-from app.services.reports import get_target
+from app.services.reports import get_target, is_publicly_visible
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 def create_report(body: ReportCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """평가·게시판 글·댓글·해명 신고. 관리자가 사후에 삭제하거나 기각한다(기존 관리자 주도
     사후삭제와 별개로, 이용자가 직접 문제를 지적해 큐에 올리는 경로)."""
-    if not get_target(db, body.target_type, body.target_id):
+    if not is_publicly_visible(db, body.target_type, get_target(db, body.target_type, body.target_id)):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "신고 대상을 찾을 수 없습니다.")
     existing = db.scalar(
         select(Report.id).where(

@@ -8,7 +8,7 @@ from app.api.v1._present import iso
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
-from app.core.rate_limit import case_limiter, comment_limiter, view_limiter, vote_limiter
+from app.core.rate_limit import case_limiter, comment_limiter, empathy_limiter, view_limiter
 from app.models import (
     CASE_CATEGORY_LABELS, CaseCategory, CaseStatus, PublicCase, PublicCaseEmpathy, PublicCaseUpdate, Station, User,
     UserRole,
@@ -167,7 +167,7 @@ def delete_case(case_id: int, db: Session = Depends(get_db), user: User = Depend
     db.commit()
 
 
-@router.post("/{case_id}/empathy", response_model=EmpathyOut, dependencies=[Depends(vote_limiter)])
+@router.post("/{case_id}/empathy", response_model=EmpathyOut, dependencies=[Depends(empathy_limiter)])
 def add_empathy(case_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     c = db.get(PublicCase, case_id)
     if not c or c.status != CaseStatus.published:
@@ -185,7 +185,7 @@ def add_empathy(case_id: int, db: Session = Depends(get_db), user: User = Depend
     return EmpathyOut(empathized=True, empathy_count=count or 0)
 
 
-@router.delete("/{case_id}/empathy", response_model=EmpathyOut, dependencies=[Depends(vote_limiter)])
+@router.delete("/{case_id}/empathy", response_model=EmpathyOut, dependencies=[Depends(empathy_limiter)])
 def remove_empathy(case_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     c = db.get(PublicCase, case_id)
     if not c or c.status != CaseStatus.published:

@@ -7,7 +7,7 @@ from app.api.v1._present import reply_out, review_public, review_target
 from app.core.database import get_db
 from app.core.deps import get_client_ip_hash, get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
-from app.core.rate_limit import comment_limiter, reply_limiter, review_limiter, vote_limiter
+from app.core.rate_limit import comment_limiter, reply_limiter, review_limiter, scrap_limiter, vote_limiter
 from app.core.security import hash_case_number
 from app.models import (
     Department, Officer, Review, ReviewComment, ReviewCommentVote, ReviewReply, ReviewScrap, ReviewStatus, ReviewVote, Station, User,
@@ -118,7 +118,7 @@ def list_my_scraps(
     return Page(items=items, total=total, page=page, size=size)
 
 
-@router.post("/{review_id}/scrap", response_model=ScrapStatus, dependencies=[Depends(vote_limiter)])
+@router.post("/{review_id}/scrap", response_model=ScrapStatus, dependencies=[Depends(scrap_limiter)])
 def scrap_review(review_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     _published_or_404(db, review_id)
     if not db.scalar(select(ReviewScrap.id).where(ReviewScrap.review_id == review_id, ReviewScrap.user_id == user.id)):
@@ -130,7 +130,7 @@ def scrap_review(review_id: int, db: Session = Depends(get_db), user: User = Dep
     return ScrapStatus(scrapped=True)
 
 
-@router.delete("/{review_id}/scrap", response_model=ScrapStatus, dependencies=[Depends(vote_limiter)])
+@router.delete("/{review_id}/scrap", response_model=ScrapStatus, dependencies=[Depends(scrap_limiter)])
 def unscrap_review(review_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     existing = db.scalar(select(ReviewScrap).where(ReviewScrap.review_id == review_id, ReviewScrap.user_id == user.id))
     if existing:
@@ -325,7 +325,9 @@ def vote_review_comment(
     user: User | None = Depends(get_current_user_optional),
 ):
     comment = db.get(ReviewComment, comment_id)
-    if not comment or comment.is_removed:
+    parent = db.get(Review, comment.review_id) if comment else None
+    # 비공개(블라인드·삭제·검수대기)된 평가의 댓글엔 투표할 수 없다.
+    if not comment or comment.is_removed or not parent or parent.status != ReviewStatus.published:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "댓글을 찾을 수 없습니다.")
     uid = user.id if user else None
     ip_hash = None if uid else get_client_ip_hash(request)

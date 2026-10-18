@@ -29,6 +29,29 @@ def get_target(db: Session, target_type: ReportTarget, target_id: int):
     return db.get(TARGET_MODEL[target_type], target_id)
 
 
+def is_publicly_visible(db: Session, target_type: ReportTarget, obj) -> bool:
+    """신고는 공개 화면에 보이는 것만 받는다. 비공개(검수대기·블라인드·삭제·보류) 대상에 신고가 되면
+    "그 id 가 존재한다"는 게 드러나고, 이미 숨긴 글이 신고 큐·자동 블라인드 집계에 섞인다."""
+    if obj is None:
+        return False
+    if target_type == ReportTarget.review:
+        return obj.status == ReviewStatus.published
+    if target_type == ReportTarget.post:
+        return not obj.is_removed and not obj.is_blinded
+    if target_type == ReportTarget.public_case:
+        return obj.status == CaseStatus.published
+    if target_type == ReportTarget.review_comment:
+        parent = db.get(Review, obj.review_id)
+        return not obj.is_removed and parent is not None and parent.status == ReviewStatus.published
+    if target_type == ReportTarget.post_comment:
+        parent = db.get(Post, obj.post_id)
+        return not obj.is_removed and parent is not None and not parent.is_removed and not parent.is_blinded
+    if target_type == ReportTarget.review_reply:
+        parent = db.get(Review, obj.review_id)
+        return parent is not None and parent.status == ReviewStatus.published
+    return False
+
+
 def _preview_of(target_type: ReportTarget, obj) -> str:
     if not obj:
         return "(대상이 이미 삭제됨)"

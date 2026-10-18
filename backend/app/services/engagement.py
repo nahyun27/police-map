@@ -3,6 +3,7 @@
 ReviewVote/PostVote, ReviewComment/PostComment 는 대상 FK 이름만 다를 뿐 구조가 완전히
 같아서(값/작성자/부모-자식), 집계·트리 변환 로직을 여기서 공유한다."""
 from sqlalchemy import case, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import InstrumentedAttribute, Session
 
 from app.models import ReviewReply, User
@@ -29,7 +30,12 @@ def cast_vote(
         existing.value = value
     else:
         db.add(vote_model(**{fk_name: target_id, "user_id": user_id, "ip_hash": ip_hash, "value": value}))
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # 같은 사람이 거의 동시에 두 번 눌러 유니크 인덱스에 걸린 경우 — 먼저 들어간 표가 남아 있으니
+        # 500 대신 조용히 무시한다(호출하는 쪽이 이어서 집계를 다시 읽어 응답한다).
+        db.rollback()
 
 
 def vote_summaries(

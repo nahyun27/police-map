@@ -3,11 +3,13 @@ from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.cookies import clear_auth_cookies, get_refresh_token, set_auth_cookies
+from app.core.cookies import clear_auth_cookies, get_access_token, get_refresh_token, set_auth_cookies
 from app.core.database import get_db
 from app.core.deps import get_current_user
-from app.core.rate_limit import delete_account_limiter, login_limiter, register_limiter
-from app.core.security import create_access_token, create_refresh_token, decode_token, hash_password, verify_password
+from app.core.rate_limit import delete_account_limiter, login_limiter, refresh_limiter, register_limiter
+from app.core.security import (
+    create_access_token, create_refresh_token, decode_token, hash_password, token_matches_user, verify_password,
+)
 from app.models import User
 from app.schemas.auth import DeleteAccountIn, LoginIn, RegisterIn, UserOut
 from app.services.account import delete_account
@@ -27,7 +29,9 @@ def user_out(u: User) -> UserOut:
 
 
 def _issue(response: Response, user: User) -> None:
-    set_auth_cookies(response, create_access_token(user.id), create_refresh_token(user.id))
+    set_auth_cookies(
+        response, create_access_token(user.id, user.token_version), create_refresh_token(user.id, user.token_version),
+    )
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(register_limiter)])
@@ -52,25 +56,40 @@ def login(body: LoginIn, response: Response, db: Session = Depends(get_db)):
     return user_out(user)
 
 
-@router.post("/refresh", response_model=UserOut)
+@router.post("/refresh", response_model=UserOut, dependencies=[Depends(refresh_limiter)])
 def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
     exc = HTTPException(status.HTTP_401_UNAUTHORIZED, "다시 로그인해 주세요.")
     token = get_refresh_token(request)
     if not token:
         raise exc
     try:
-        user_id = int(decode_token(token, expected_type="refresh")["sub"])
+        payload = decode_token(token, expected_type="refresh")
+        user_id = int(payload["sub"])
     except (JWTError, KeyError, ValueError):
         raise exc
     user = db.get(User, user_id)
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or not token_matches_user(payload, user):
         raise exc
     _issue(response, user)
     return user_out(user)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(response: Response):
+def logout(request: Request, response: Response, db: Session = Depends(get_db)):
+    """쿠키만 지우면 그 전에 복사된(탈취된) 토큰은 만료 때까지 계속 쓸 수 있다 — token_version 을 올려
+    이 계정으로 발급된 모든 토큰을 즉시 무효로 만든다(다른 기기의 로그인도 함께 풀린다)."""
+    for token, kind in ((get_refresh_token(request), "refresh"), (get_access_token(request), "access")):
+        if not token:
+            continue
+        try:
+            payload = decode_token(token, expected_type=kind)
+            user = db.get(User, int(payload["sub"]))
+        except (JWTError, KeyError, ValueError):
+            continue
+        if user and token_matches_user(payload, user):
+            user.token_version += 1
+            db.commit()
+            break
     clear_auth_cookies(response)
 
 
@@ -87,4 +106,6 @@ def withdraw(
     if not verify_password(body.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "비밀번호가 올바르지 않습니다.")
     delete_account(db, user)
+    user.token_version += 1  # 탈퇴 전에 발급된 토큰도 즉시 무효(is_active=False 로도 막히지만 이중으로)
+    db.commit()
     clear_auth_cookies(response)

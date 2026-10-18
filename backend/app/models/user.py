@@ -22,6 +22,9 @@ class User(Base):
     nickname: Mapped[str] = mapped_column(String(50))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole, native_enum=False, length=20), default=UserRole.user)
     is_active: Mapped[bool] = mapped_column(default=True)
+    # 토큰 무효화용 버전. 로그아웃·탈퇴 때 1 올리면 그 전에 발급된 모든 토큰(탈취된 것 포함)이 즉시 무효가 된다
+    # (JWT 는 서버에 저장하지 않으니, 이 값과 토큰 안의 tv 를 비교해서 끊는다).
+    token_version: Mapped[int] = mapped_column(default=0, server_default="0")
     # 휴대폰 본인인증 완료 시각. 연동 전에는 항상 None.
     identity_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -54,8 +54,9 @@ class Settings(BaseSettings):
     )
 
     def assert_safe_for_production(self) -> None:
-        """운영 환경에서 기본 시크릿으로 뜨는 것을 막는다."""
-        if self.ENVIRONMENT != "production":
+        """운영 환경에서 기본 시크릿으로 뜨는 것을 막는다. 실수로 ENVIRONMENT 를 "prod"·"Production" 처럼
+        다르게 적거나 빼먹어도 검사를 건너뛰지 않도록, 명시적으로 개발·테스트라고 한 경우만 통과시킨다."""
+        if self.ENVIRONMENT.strip().lower() in ("development", "dev", "test", "local"):
             if self.JWT_SECRET_KEY == INSECURE_DEFAULT:
                 logger.warning("JWT_SECRET_KEY 가 기본값입니다. 로컬 개발에서만 사용하세요.")
             return

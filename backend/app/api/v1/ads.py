@@ -11,7 +11,7 @@ from app.api.v1._present import iso
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import require_admin
-from app.core.rate_limit import ad_limiter, takedown_limiter
+from app.core.rate_limit import ad_limiter, inquiry_limiter
 from app.models import INQUIRY_TYPE_LABELS, Ad, AdInquiry, InquiryStatus, Region, Station, User
 from app.schemas.ads import (
     AdminAdOut, AdminInquiryOut, AdOut, AdUpdate, InquiryCreate, InquiryDoneIn, InquiryReceipt,
@@ -87,7 +87,7 @@ def click_ad(ad_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/ad-inquiries", response_model=InquiryReceipt, status_code=status.HTTP_201_CREATED,
-             dependencies=[Depends(takedown_limiter)])
+             dependencies=[Depends(inquiry_limiter)])
 def create_inquiry(body: InquiryCreate, background: BackgroundTasks, db: Session = Depends(get_db)):
     q = AdInquiry(
         inquiry_type=body.inquiry_type, company=body.company, name=body.name, contact=body.contact,
