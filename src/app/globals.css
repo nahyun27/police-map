@@ -902,12 +902,6 @@ table.channel-table .pill {
 }
 .ad-rail img { display: block; width: 160px; height: auto; border-radius: 12px; box-shadow: var(--shadow); }
 .ad-label { font-size: 11.5px; color: var(--muted); }
-.ad-rail-empty {
-  display: flex; flex-direction: column; gap: 8px; justify-content: center; align-items: center; text-align: center;
-  height: 300px; border: 1.5px dashed #cdd3e0; border-radius: 12px; background: #fbfbfd; color: var(--muted); font-size: 12.5px;
-}
-.ad-rail-empty b { color: var(--ink2); font-size: 14px; }
-.ad-rail-empty:hover { border-color: var(--brand); color: var(--brand); }
 .ad-bottom { margin: 8px 0 20px; display: flex; flex-direction: column; gap: 6px; }
 .ad-bottom img, .ad-inline img { display: block; width: 100%; height: auto; max-height: 220px; object-fit: contain; border-radius: 14px; background: #fff; }
 .ad-inline { display: grid; gap: 14px; }

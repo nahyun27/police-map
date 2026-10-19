@@ -52,23 +52,16 @@ export function AdSlots({ regionId, stationId }: { regionId?: string; stationId?
             <AdLabel ad={left} />
           </aside>
         )}
-        <aside className="ad-rail right" aria-label="광고">
-          {right ? (
-            <>
-              <a href={apiAsset(right.click_url)} target="_blank" rel="noopener sponsored">
-                {/* eslint-disable-next-line @next/next/no-img-element -- 외부 업로드 배너, 크기 고정 */}
-                <img src={apiAsset(right.image_side_url!)} alt={right.title} width={160} />
-              </a>
-              <AdLabel ad={right} />
-            </>
-          ) : (
-            // 집행 중인 광고가 없으면 빈 자리 대신 "광고 모집" 안내를 둔다(수익화 창구).
-            <Link href="/advertise" className="ad-rail-empty">
-              <b>이 자리에<br />광고하세요</b>
-              <span>지역별 타겟 광고<br />문의 받습니다</span>
-            </Link>
-          )}
-        </aside>
+        {/* 집행 중인 광고가 없으면 자리 자체를 비워 둔다("광고하세요" 안내는 어색하다는 의견으로 뺐다). */}
+        {right && (
+          <aside className="ad-rail right" aria-label="광고">
+            <a href={apiAsset(right.click_url)} target="_blank" rel="noopener sponsored">
+              {/* eslint-disable-next-line @next/next/no-img-element -- 외부 업로드 배너, 크기 고정 */}
+              <img src={apiAsset(right.image_side_url!)} alt={right.title} width={160} />
+            </a>
+            <AdLabel ad={right} />
+          </aside>
+        )}
       </>
     );
   }
