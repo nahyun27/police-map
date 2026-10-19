@@ -11,12 +11,13 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
+DB_URL = settings.MIGRATION_DATABASE_URL or settings.DATABASE_URL
+config.set_main_option("sqlalchemy.url", DB_URL.replace("%", "%%"))
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    context.configure(url=settings.DATABASE_URL, target_metadata=target_metadata, literal_binds=True, compare_type=True)
+    context.configure(url=DB_URL, target_metadata=target_metadata, literal_binds=True, compare_type=True)
     with context.begin_transaction():
         context.run_migrations()
 

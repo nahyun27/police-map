@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: policemap
       POSTGRES_PASSWORD: policemap
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"  # 서버 밖에서 DB 에 직접 접속하지 못하게(필요하면 SSH 터널로)
     volumes:
       - police_postgres_data:/var/lib/postgresql/data
     healthcheck:
