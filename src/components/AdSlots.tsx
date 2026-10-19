@@ -16,7 +16,9 @@ function AdLabel({ ad }: { ad: AdOut }) {
  * 없으면 전국 광고를 보여준다. 화면 폭에 맞는 슬롯 한 종류만 불러와서 실제로 보이는 광고만 노출로 센다. */
 export function AdSlots({ regionId, stationId }: { regionId?: string; stationId?: number }) {
   const [mode, setMode] = useState<'side' | 'wide' | null>(null);
-  const [ads, setAds] = useState<AdOut[]>([]);
+  // null = 아직 불러오는 중. 이때 "이 자리에 광고하세요" 안내를 먼저 그리면 광고가 있어도 안내가 잠깐
+  // 보였다가 광고로 바뀌어 깜빡이므로, 응답이 올 때까지는 그 자리를 비워 둔다.
+  const [ads, setAds] = useState<AdOut[] | null>(null);
 
   useEffect(() => {
     const m = window.matchMedia(WIDE_QUERY);
@@ -28,7 +30,7 @@ export function AdSlots({ regionId, stationId }: { regionId?: string; stationId?
 
   useEffect(() => {
     if (!mode) return;
-    setAds([]); // 슬롯 종류가 바뀌면 이전 슬롯 광고(세로 이미지 없을 수 있음)를 먼저 비운다
+    setAds(null); // 슬롯 종류가 바뀌면 이전 슬롯 광고(세로 이미지 없을 수 있음)를 먼저 비운다
     let cancelled = false;
     listAds({ regionId, stationId, slot: mode, limit: mode === 'side' ? 2 : 1 })
       .then((r) => { if (!cancelled) setAds(r); })
@@ -37,6 +39,7 @@ export function AdSlots({ regionId, stationId }: { regionId?: string; stationId?
   }, [mode, regionId, stationId]);
 
   if (mode === 'side') {
+    if (ads === null) return null;
     const [left, right] = ads.length === 1 ? [undefined, ads[0]] : ads;
     return (
       <>
@@ -70,7 +73,7 @@ export function AdSlots({ regionId, stationId }: { regionId?: string; stationId?
     );
   }
 
-  if (mode === 'wide' && ads[0]) {
+  if (mode === 'wide' && ads?.[0]) {
     const ad = ads[0];
     return (
       <div className="ad-bottom" aria-label="광고">
