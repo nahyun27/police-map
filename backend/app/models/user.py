@@ -28,6 +28,10 @@ class User(Base):
     # 휴대폰 본인인증 완료 시각. 연동 전에는 항상 None.
     identity_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # 가입 시 이용약관·개인정보 수집·이용·만 14세 이상 동의 시각과 그때의 약관 버전(동의 증빙용).
+    # 이 기능 이전 가입자는 None.
+    terms_agreed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    terms_version: Mapped[str | None] = mapped_column(String(20))
 
     # 경찰관 신원 인증(OfficerVerification 승인) 결과 — 전부 None 이면 미인증 일반 회원이다.
     # officer_station_id 가 있어야만 그 경찰서 리뷰에 해명(ReviewReply)을 달 수 있다.

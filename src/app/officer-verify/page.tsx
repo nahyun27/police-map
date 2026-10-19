@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck } from 'lucide-react';
 import { Card, Crumb, PageHead } from '@/components/ui';
@@ -62,6 +63,7 @@ export default function OfficerVerifyPage() {
   }, [regionId]);
 
   const pendingExists = mine.some((v) => v.status === 'pending');
+  const [agreed, setAgreed] = useState(false);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -157,8 +159,18 @@ export default function OfficerVerifyPage() {
                 placeholder="예: 소속 경찰서 대표번호로 확인 요망"
               />
             </div>
+            <div className="consent-box">
+              <label>
+                <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                <span>[필수] 경찰관 본인 확인을 위한 <Link href="/privacy" target="_blank" rel="noopener">개인정보 수집·이용</Link>에 동의합니다</span>
+              </label>
+              <div className="consent-summary">
+                수집 항목: 성명, 계급, 소속 경찰서·부서, 연락처, 확인 방법 메모 · 목적: 본인 확인과 해명 작성 권한 부여 ·
+                보관: 인증 해제 또는 회원 탈퇴 후 1년. 동의하지 않으면 인증을 신청할 수 없습니다.
+              </div>
+            </div>
             {error && <div className="warn">{error}</div>}
-            <button className="btn lg" type="submit" disabled={submitting || !stationId}>
+            <button className="btn lg" type="submit" disabled={submitting || !stationId || !agreed}>
               {submitting ? '제출 중…' : '인증 신청'}
             </button>
           </form>

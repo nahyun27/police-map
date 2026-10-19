@@ -13,9 +13,9 @@ export default function Footer() {
       <div className="fwrap">
         <div className="flogo">폴리스맵</div>
         <div className="flinks">
-          <Link href="/policy">이용약관</Link>
-          <Link href="/policy">커뮤니티 가이드라인</Link>
-          <Link href="/policy">개인정보처리방침</Link>
+          <Link href="/terms">이용약관</Link>
+          <Link href="/policy">운영원칙</Link>
+          <Link href="/privacy"><b>개인정보처리방침</b></Link>
           <Link href="/takedown/status">삭제·정정 요청</Link>
           <Link href="/board?category=suggestion">건의하기</Link>
           <Link href="/advertise">광고·제휴 문의</Link>

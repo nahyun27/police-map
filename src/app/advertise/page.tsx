@@ -117,8 +117,9 @@ export default function AdvertisePage() {
             <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, color: 'var(--ink2)', marginBottom: 14 }}>
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} style={{ width: 'auto', marginTop: 4 }} />
               <span>
-                문의 답변을 위해 회사·단체명, 담당자 이름, 연락처를 수집·이용하는 데 동의합니다. 수집한 정보는 문의 답변과 광고
-                상담에만 쓰고, 상담이 끝나면 지체 없이 파기합니다.
+                [필수] 문의 답변을 위해 회사·단체명, 담당자 이름, 연락처, 관심 지역, 문의 내용을 수집·이용하는 데 동의합니다.
+                문의 답변과 광고 상담에만 쓰며, 처리 완료 후 1년간 보관한 뒤 파기합니다. 접수 알림은 운영 메일(Google)로
+                전송됩니다. 자세한 내용은 <Link href="/privacy" target="_blank" rel="noopener">개인정보처리방침</Link>을 확인해 주세요.
               </span>
             </label>
             {error && <div className="warn">{error}</div>}

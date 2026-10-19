@@ -1,10 +1,23 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 class RegisterIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=72)
     nickname: str = Field(min_length=2, max_length=30)
+    # 셋 다 필수 동의. 화면의 체크박스와 별개로 서버에서도 확인한다(동의 없이 API 로 바로 가입하는 것 방지).
+    agree_terms: bool = False
+    agree_privacy: bool = False
+    age_over_14: bool = False
+    terms_version: str = Field(default="", max_length=20)
+
+    @model_validator(mode="after")
+    def _consents(self):
+        if not (self.agree_terms and self.agree_privacy):
+            raise ValueError("이용약관과 개인정보 수집·이용에 동의해 주세요.")
+        if not self.age_over_14:
+            raise ValueError("만 14세 이상만 가입할 수 있습니다.")
+        return self
 
     @field_validator("password")
     @classmethod

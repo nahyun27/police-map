@@ -107,6 +107,11 @@ export default function TakedownForm({ targetType, targetId }: { targetType: 're
         {submitting ? '접수 중…' : '삭제·정정 요청 접수'}
       </button>
       <p className="sub" style={{ marginTop: 10 }}>접수 즉시 해당 게시물은 임시조치(블라인드)되며, 10일 이내 재검토 결과를 통지합니다.</p>
+      {/* 권리침해 신고는 법령(정보통신망법 제44조의2)에 따른 처리라 별도 동의 대신 수집 내용을 알린다. */}
+      <p className="sub" style={{ marginTop: 6, fontSize: 12.5 }}>
+        입력하신 성명·연락처·관계·사유는 요청 처리와 결과 통지에만 쓰며, 처리 완료 후 3년간 보관한 뒤 파기합니다.{' '}
+        <Link href="/privacy" target="_blank" rel="noopener">개인정보처리방침</Link>
+      </p>
     </>
   );
 }

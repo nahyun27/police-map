@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from jose import JWTError
 from sqlalchemy import select
@@ -39,7 +41,10 @@ def register(body: RegisterIn, response: Response, db: Session = Depends(get_db)
     email = body.email.lower()
     if db.scalar(select(User.id).where(User.email == email)):
         raise HTTPException(status.HTTP_409_CONFLICT, "이미 가입된 이메일입니다.")
-    user = User(email=email, password_hash=hash_password(body.password), nickname=body.nickname)
+    user = User(
+        email=email, password_hash=hash_password(body.password), nickname=body.nickname,
+        terms_agreed_at=datetime.now(timezone.utc), terms_version=body.terms_version or None,
+    )
     db.add(user)
     db.commit()
     _issue(response, user)

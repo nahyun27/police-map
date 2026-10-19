@@ -389,8 +389,14 @@ export interface UserOut {
   officer_rank: string | null;
 }
 
-export const register = (email: string, password: string, nickname: string) =>
-  apiFetch<UserOut>('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, nickname }) });
+export interface RegisterConsents {
+  agree_terms: boolean;
+  agree_privacy: boolean;
+  age_over_14: boolean;
+  terms_version: string;
+}
+export const register = (email: string, password: string, nickname: string, consents: RegisterConsents) =>
+  apiFetch<UserOut>('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, nickname, ...consents }) });
 export const login = (email: string, password: string) =>
   apiFetch<UserOut>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
 export const logout = () => apiFetch<void>('/auth/logout', { method: 'POST' });

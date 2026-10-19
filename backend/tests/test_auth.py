@@ -1,10 +1,11 @@
 from conftest import make_user, review_payload
 
+CONSENT = {"agree_terms": True, "agree_privacy": True, "age_over_14": True, "terms_version": "2026-10-20"}
 API = "/api/v1/auth"
 
 
 def test_register_login_me_logout(client):
-    r = client.post(f"{API}/register", json={"email": "New@Example.com", "password": "password123", "nickname": "닉네임"})
+    r = client.post(f"{API}/register", json={"email": "New@Example.com", "password": "password123", "nickname": "닉네임", **CONSENT})
     assert r.status_code == 201 and r.json()["email"] == "new@example.com" and r.json()["role"] == "user"
     assert "password" not in r.text
     assert client.get(f"{API}/me").json()["nickname"] == "닉네임"  # 가입 직후 로그인 상태
@@ -14,14 +15,14 @@ def test_register_login_me_logout(client):
 
 
 def test_cookies_are_httponly(client):
-    r = client.post(f"{API}/register", json={"email": "a@example.com", "password": "password123", "nickname": "닉네임"})
+    r = client.post(f"{API}/register", json={"email": "a@example.com", "password": "password123", "nickname": "닉네임", **CONSENT})
     cookies = r.headers.get_list("set-cookie")
     assert len(cookies) == 2 and all("httponly" in c.lower() and "samesite=lax" in c.lower() for c in cookies)
 
 
 def test_duplicate_email_and_bad_credentials(client, db):
     make_user(db, "dup@example.com")
-    assert client.post(f"{API}/register", json={"email": "dup@example.com", "password": "password123", "nickname": "닉네임"}).status_code == 409
+    assert client.post(f"{API}/register", json={"email": "dup@example.com", "password": "password123", "nickname": "닉네임", **CONSENT}).status_code == 409
     assert client.post(f"{API}/login", json={"email": "dup@example.com", "password": "wrong-password"}).status_code == 401
     # 없는 계정과 틀린 비밀번호는 같은 응답(계정 존재 여부를 알려주지 않는다)
     a = client.post(f"{API}/login", json={"email": "dup@example.com", "password": "wrong-password"})
@@ -30,7 +31,7 @@ def test_duplicate_email_and_bad_credentials(client, db):
 
 
 def test_password_validation(client):
-    base = {"email": "p@example.com", "nickname": "닉네임"}
+    base = {"email": "p@example.com", "nickname": "닉네임", **CONSENT}
     assert client.post(f"{API}/register", json={**base, "password": "short"}).status_code == 422
     # 한글은 글자당 3바이트 — 25자면 75바이트라 bcrypt 한도(72)를 넘는다
     assert client.post(f"{API}/register", json={**base, "password": "가" * 25}).status_code == 422
@@ -85,7 +86,7 @@ def test_withdraw_deactivates_and_logs_out(user_client, db):
 
 def test_withdraw_frees_email_for_reregistration(user_client):
     user_client.request("DELETE", f"{API}/me", json={"password": "password123"})
-    r = user_client.post(f"{API}/register", json={"email": "user@example.com", "password": "password123", "nickname": "새계정"})
+    r = user_client.post(f"{API}/register", json={"email": "user@example.com", "password": "password123", "nickname": "새계정", **CONSENT})
     assert r.status_code == 201
 
 
@@ -102,3 +103,13 @@ def test_withdraw_anonymizes_content_instead_of_deleting_it(user_client, world):
 
     post_after = user_client.get(f"/api/v1/posts/{pid}").json()
     assert post_after["author_nickname"] == "익명" and post_after["is_mine"] is False
+
+
+def test_register_requires_consents(client, db):
+    base = {"email": "c@example.com", "password": "password123", "nickname": "닉네임"}
+    assert client.post(f"{API}/register", json=base).status_code == 422
+    assert client.post(f"{API}/register", json={**base, **CONSENT, "age_over_14": False}).status_code == 422
+    assert client.post(f"{API}/register", json={**base, **CONSENT}).status_code == 201
+    from app.models import User
+    u = db.query(User).filter_by(email="c@example.com").one()
+    assert u.terms_agreed_at is not None and u.terms_version == "2026-10-20"

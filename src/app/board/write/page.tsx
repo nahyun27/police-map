@@ -28,6 +28,7 @@ export default function BoardWritePage() {
   const [stations, setStations] = useState<StationItem[]>([]);
   const [stationId, setStationId] = useState('');
   const [category, setCategory] = useState<PostCategory>('chat');
+  const isSuggestion = category === 'suggestion';
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -62,7 +63,8 @@ export default function BoardWritePage() {
     setSubmitting(true);
     try {
       const r = await createPost({
-        region_id: regionId || null, station_id: stationId ? Number(stationId) : null, category,
+        region_id: isSuggestion ? null : regionId || null,
+        station_id: !isSuggestion && stationId ? Number(stationId) : null, category,
         title: title.trim(), body: body.trim(),
       });
       router.replace(`/board/${r.id}`);
@@ -84,37 +86,42 @@ export default function BoardWritePage() {
       <Card>
         <form onSubmit={submit}>
           <div className="field">
-            <label htmlFor="bw-region">지역 <span className="tag">선택</span></label>
-            {regionsState === 'error' ? (
-              <div className="warn" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                지역 목록을 불러오지 못했습니다.
-                <button type="button" className="btn line sm" onClick={loadRegions}>다시 시도</button>
-              </div>
-            ) : (
-              <select
-                id="bw-region" className="sel" style={{ width: '100%' }} value={regionId} onChange={(e) => setRegionId(e.target.value)}
-                disabled={regionsState === 'loading'}
-              >
-                <option value="">{regionsState === 'loading' ? '불러오는 중…' : '지역 지정 안 함(자유 주제)'}</option>
-                {regions.map((r) => <option key={r.id} value={r.id}>{r.full_name}</option>)}
-              </select>
-            )}
-          </div>
-          {regionId && (
-            <div className="field">
-              <label htmlFor="bw-1">경찰서 <span className="tag">선택</span></label>
-              <select id="bw-1" className="sel" style={{ width: '100%' }} value={stationId} onChange={(e) => setStationId(e.target.value)}>
-                <option value="">특정 경찰서 지정 안 함</option>
-                {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-          )}
-          <div className="field">
             <label htmlFor="bw-2">글머리</label>
             <select id="bw-2" className="sel" style={{ width: '100%' }} value={category} onChange={(e) => setCategory(e.target.value as PostCategory)}>
               {CATEGORY_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
+          {/* 건의는 사이트 운영에 대한 글이라 지역·경찰서를 고를 이유가 없다. */}
+          {!isSuggestion && (
+            <>
+              <div className="field">
+                <label htmlFor="bw-region">지역 <span className="tag">선택</span></label>
+                {regionsState === 'error' ? (
+                  <div className="warn" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    지역 목록을 불러오지 못했습니다.
+                    <button type="button" className="btn line sm" onClick={loadRegions}>다시 시도</button>
+                  </div>
+                ) : (
+                  <select
+                    id="bw-region" className="sel" style={{ width: '100%' }} value={regionId} onChange={(e) => setRegionId(e.target.value)}
+                    disabled={regionsState === 'loading'}
+                  >
+                    <option value="">{regionsState === 'loading' ? '불러오는 중…' : '지역 지정 안 함(자유 주제)'}</option>
+                    {regions.map((r) => <option key={r.id} value={r.id}>{r.full_name}</option>)}
+                  </select>
+                )}
+              </div>
+              {regionId && (
+                <div className="field">
+                  <label htmlFor="bw-1">경찰서 <span className="tag">선택</span></label>
+                  <select id="bw-1" className="sel" style={{ width: '100%' }} value={stationId} onChange={(e) => setStationId(e.target.value)}>
+                    <option value="">특정 경찰서 지정 안 함</option>
+                    {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              )}
+            </>
+          )}
           <div className="field">
             <label htmlFor="bw-3">제목</label>
             <input id="bw-3" type="text" value={title} onChange={(e) => setTitle(e.target.value)} minLength={2} maxLength={200} required />
