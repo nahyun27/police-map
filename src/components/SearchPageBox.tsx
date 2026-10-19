@@ -3,6 +3,7 @@
 import { useState, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
+import { MAX_SEARCH_LEN } from '@/lib/api';
 import { useSearchSuggestions } from '@/lib/useSearchSuggestions';
 
 /** /search 페이지 본문의 검색창. 헤더·홈 검색과 같은 자동완성을 붙였고, "평가 바로 작성하기"
@@ -34,7 +35,7 @@ export function SearchPageBox({ initialQ, forWrite }: { initialQ: string; forWri
       <div style={{ position: 'relative', flex: 1 }}>
         <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
         <input
-          type="text" name="q" value={q} placeholder="경찰서 이름으로 검색" autoComplete="off"
+          type="text" name="q" value={q} placeholder="경찰서 이름으로 검색" autoComplete="off" maxLength={MAX_SEARCH_LEN}
           role="combobox" aria-expanded={open && items.length > 0} aria-autocomplete="list"
           onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }}
           onFocus={() => setOpen(true)}

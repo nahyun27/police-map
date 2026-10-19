@@ -19,6 +19,7 @@ from app.schemas.public_case import (
 )
 from app.services import case_risk
 from app.services.audit import log_action
+from app.services.names import mask_station_officers
 from app.services.takedown import utcnow
 
 router = APIRouter(prefix="/cases", tags=["cases"])
@@ -134,6 +135,9 @@ def create_case(body: CaseCreate, db: Session = Depends(get_db), user: User = De
     """작성 즉시 공개. 개인정보·실명 노출 위험이 자동 탐지되면 보류(held)하고 관리자 확인 후 공개."""
     if body.station_id is not None and not db.get(Station, body.station_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "경찰서를 찾을 수 없습니다.")
+    body.title, body.body, body.desired_action = mask_station_officers(
+        db, body.station_id, body.title, body.body, body.desired_action,
+    )
     _reject_unsafe(body.title, body.body, body.desired_action)
     risks = case_risk.detect(body.title, body.body, body.desired_action)
     c = PublicCase(
@@ -212,6 +216,7 @@ def add_case_update(case_id: int, body: CaseUpdateCreate, db: Session = Depends(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "사건을 찾을 수 없습니다.")
     if c.author_id != user.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "작성자만 진행 상황을 추가할 수 있습니다.")
+    (body.body,) = mask_station_officers(db, c.station_id, body.body)
     _reject_unsafe(body.body)
     risks = case_risk.detect(body.body)
     if risks:

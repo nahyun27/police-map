@@ -30,6 +30,11 @@ def delete_account(db: Session, user: User) -> None:
     # 몇 개가 집계에서 빠지는 건 탈퇴의 자연스러운 결과로 본다.
     db.execute(delete(ReviewVote).where(ReviewVote.user_id == uid))
     db.execute(delete(ReviewCommentVote).where(ReviewCommentVote.user_id == uid))
+    # 게시글은 인기순 정렬용 점수 캐시(Post.score)가 따로 있어 투표 행만 지우면 점수가 그대로 남는다.
+    # 그러면 가입 → 추천 → 탈퇴(같은 이메일로 재가입 가능)를 반복해 점수를 끝없이 올릴 수 있었다
+    # (2026-10 출시 전 점검). 지우기 전에 그 투표만큼 점수를 되돌린다.
+    for post_id, value in db.execute(select(PostVote.post_id, PostVote.value).where(PostVote.user_id == uid)).all():
+        db.execute(update(Post).where(Post.id == post_id).values(score=Post.score - value))
     db.execute(delete(PostVote).where(PostVote.user_id == uid))
     db.execute(delete(PostCommentVote).where(PostCommentVote.user_id == uid))
 

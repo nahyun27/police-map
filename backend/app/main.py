@@ -1,6 +1,8 @@
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import DataError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -18,7 +20,37 @@ from app.core.config import settings
 
 settings.assert_safe_for_production()
 
-app = FastAPI(title=settings.PROJECT_NAME)
+_IS_DEV = settings.ENVIRONMENT.strip().lower() in ("development", "dev", "test", "local")
+
+# 운영에서는 API 문서(/docs, /openapi.json)를 끈다. 지금은 nginx 가 /api/ 만 넘겨 밖에서 안 보이지만,
+# 프록시 설정이 바뀌어도 전체 엔드포인트 목록이 노출되지 않도록 앱에서도 막아 둔다.
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    docs_url="/docs" if _IS_DEV else None,
+    redoc_url="/redoc" if _IS_DEV else None,
+    openapi_url="/openapi.json" if _IS_DEV else None,
+)
+
+
+@app.exception_handler(DataError)
+@app.exception_handler(OverflowError)
+async def out_of_range(request: Request, exc: Exception):
+    """/reviews/99999999999999999999 나 page=10**18 처럼 DB 정수 범위를 넘는 값이 500 오류로
+    떨어지던 문제. 서버 오류가 아니라 잘못된 요청으로 답한다."""
+    return JSONResponse(status_code=422, content={"detail": "요청 값이 올바르지 않습니다."})
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """API 응답에도 기본 보안 헤더를 붙인다(페이지 쪽은 next.config.ts 가 담당)."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    if not _IS_DEV:
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+    return response
+
 
 app.add_middleware(
     CORSMiddleware,

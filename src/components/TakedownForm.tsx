@@ -88,16 +88,16 @@ export default function TakedownForm({ targetType, targetId }: { targetType: 're
       <div className="grid2" style={{ marginBottom: 0 }}>
         <div className="field">
           <label htmlFor={`${id}-name`}>성명(또는 기관명)</label>
-          <input id={`${id}-name`} type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 홍길동" />
+          <input id={`${id}-name`} type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={50} placeholder="예: 홍길동" />
         </div>
         <div className="field">
           <label htmlFor={`${id}-contact`}>연락처 <span className="tag">처리 결과 통지용 · 비공개</span></label>
-          <input id={`${id}-contact`} type="text" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="이메일 또는 전화번호" />
+          <input id={`${id}-contact`} type="text" value={contact} onChange={(e) => setContact(e.target.value)} maxLength={100} placeholder="이메일 또는 전화번호" />
         </div>
       </div>
       <div className="field">
         <label htmlFor={`${id}-reason`}>요청 사유 <span className="tag">10자 이상</span></label>
-        <textarea id={`${id}-reason`} value={reason} onChange={(e) => setReason(e.target.value)}
+        <textarea id={`${id}-reason`} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={2000}
           placeholder="권리 침해 사실을 구체적으로 적어 주세요. (예: 해당 게시물은 본인이 담당하지 않은 사건에 관한 내용입니다.)" />
       </div>
 

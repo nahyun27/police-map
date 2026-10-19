@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { LogIn } from 'lucide-react';
 import { Card, PageHead } from '@/components/ui';
-import { ApiError, login } from '@/lib/api';
+import { resetAdminCheck } from '@/components/AdminBlindButton';
+import { apiErrorMessage, login } from '@/lib/api';
 import { safeNext } from '@/lib/format';
 
 function LoginForm() {
@@ -22,11 +23,18 @@ function LoginForm() {
     setError(null);
     try {
       await login(email.trim(), password);
+      resetAdminCheck();
       router.replace(safeNext(params.get('next'), '/mypage'));
       router.refresh();
     } catch (e) {
-      if (e instanceof ApiError && e.status === 429) setError('로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.');
-      else setError('이메일 또는 비밀번호가 올바르지 않습니다.');
+      // 예전엔 연결 실패·서버 오류까지 전부 "비밀번호가 틀렸다"로 보여서, 맞는 비밀번호를 계속 바꿔
+      // 입력하게 만들었다. 백엔드는 자격 증명이 틀리면 401 을 주므로 그 경우에만 이 문구를 쓴다.
+      setError(apiErrorMessage(e, {
+        byStatus: {
+          401: '이메일 또는 비밀번호가 올바르지 않습니다.',
+          429: '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+        },
+      }));
     } finally {
       setSubmitting(false);
     }

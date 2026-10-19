@@ -11,7 +11,7 @@ from app.api.v1._present import iso
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import require_admin
-from app.core.rate_limit import ad_limiter, inquiry_limiter
+from app.core.rate_limit import ad_click_limiter, ad_limiter, inquiry_limiter
 from app.models import INQUIRY_TYPE_LABELS, Ad, AdInquiry, InquiryStatus, Region, Station, User
 from app.schemas.ads import (
     AdminAdOut, AdminInquiryOut, AdOut, AdUpdate, InquiryCreate, InquiryDoneIn, InquiryReceipt,
@@ -75,10 +75,11 @@ def list_ads(
     ]
 
 
-@router.get("/ads/{ad_id}/click")
+@router.get("/ads/{ad_id}/click", dependencies=[Depends(ad_click_limiter)])
 def click_ad(ad_id: int, db: Session = Depends(get_db)):
-    """클릭 수를 세고 광고주 링크로 보낸다. 링크는 관리자가 등록할 때 http(s)만 허용한다."""
-    a = db.get(Ad, ad_id)
+    """클릭 수를 세고 광고주 링크로 보낸다. 링크는 관리자가 등록할 때 http(s)만 허용한다.
+    내렸거나 기간이 끝난 광고는 보내지 않는다(문제 있는 링크라 내린 경우에도 계속 열리던 문제)."""
+    a = db.scalar(select(Ad).where(Ad.id == ad_id, *_live_filter(date.today())))
     if not a:
         raise HTTPException(404, "광고를 찾을 수 없습니다.")
     db.execute(update(Ad).where(Ad.id == ad_id).values(clicks=Ad.clicks + 1))

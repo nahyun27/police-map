@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Check, EyeOff, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui';
@@ -13,14 +13,23 @@ const STATUS_TABS: [string, string][] = [['held', '보류(확인 필요)'], ['pu
  * 글은 '보류'로 들어와 여기서 확인 후 공개하거나 삭제한다. */
 export default function AdminCasesPage() {
   const [status, setStatus] = useState('held');
+  const [page, setPage] = useState(1);
   const [data, setData] = useState<Page<AdminCaseOut> | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // 탭(상태)을 빠르게 바꾸면 이전 탭 요청이 늦게 도착해 지금 탭 목록을 덮어쓰던 문제를 막으려고,
+  // 가장 최근 요청의 응답만 반영한다. 탭을 바꾸면 1쪽부터 다시 본다(다른 관리자 목록과 같은 방식).
+  const seq = useRef(0);
   const load = useCallback(() => {
-    listAdminCases(status).then(setData).catch(() => setError('목록을 불러오지 못했습니다.'));
-  }, [status]);
+    const mySeq = ++seq.current;
+    listAdminCases(status, page)
+      .then((d) => { if (seq.current === mySeq) setData(d); })
+      .catch(() => { if (seq.current === mySeq) setError('목록을 불러오지 못했습니다.'); });
+  }, [status, page]);
   useEffect(() => { load(); }, [load]);
+  const changeStatus = (v: string) => { setStatus(v); setPage(1); setData(null); setError(null); };
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.size)) : 1;
 
   const run = async (id: number, fn: () => Promise<void>) => {
     setBusy(id);
@@ -43,7 +52,7 @@ export default function AdminCasesPage() {
     <Card>
       <div className="seg">
         {STATUS_TABS.map(([v, l]) => (
-          <button key={v} type="button" className={status === v ? 'active' : ''} onClick={() => setStatus(v)}>{l}</button>
+          <button key={v} type="button" className={status === v ? 'active' : ''} onClick={() => changeStatus(v)}>{l}</button>
         ))}
       </div>
       {error && <div className="warn" style={{ marginTop: 16 }}>{error}</div>}
@@ -77,6 +86,13 @@ export default function AdminCasesPage() {
           </div>
         )) : <p className="sub">{data ? '해당 상태의 사건이 없습니다.' : '불러오는 중…'}</p>}
       </div>
+      {totalPages > 1 && (
+        <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>
+          {page > 1 && <button className="btn line sm" onClick={() => setPage((p) => p - 1)}>이전</button>}
+          <span className="sub">{page} / {totalPages} ({data?.total}건)</span>
+          {page < totalPages && <button className="btn line sm" onClick={() => setPage((p) => p + 1)}>다음</button>}
+        </div>
+      )}
     </Card>
   );
 }

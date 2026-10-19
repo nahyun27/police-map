@@ -13,11 +13,15 @@ interface RegionMiniMapProps {
 }
 
 /** 경찰서 좌표는 backend/scripts/geocode_stations.py 로 지오코딩한 값을 투영한 정적 데이터다
- * (src/data/stationPins.json). 좌표가 없는 관서는 핀 없이 생략된다. */
+ * (src/data/stationPins.json). 좌표가 없는 관서는 핀 없이 생략된다.
+ * 핀은 DB id 가 아니라 `관서명:region_id` 로 키를 잡는다. 로컬 개발 DB와 운영 DB는 시딩 순서가
+ * 달라 같은 관서라도 id 가 다르게 배정돼 있어서, id 로 맞추면 운영에서 핀이 엉뚱한 관서에 붙는다
+ * (stationJurisdiction.json 과 같은 이유, scripts/build_station_jurisdiction.py 주석 참고).
+ * 이동할 상세 페이지 id 는 API 가 준 관서 목록의 id 를 쓴다. */
 export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps) {
   const router = useRouter();
   const feature = koreaMap.features.find((f) => f.id === regionId);
-  const pins = (stationPinsData.pins as { id: number; region: string; x: number; y: number }[]).filter(
+  const pins = (stationPinsData.pins as { key: string; region: string; x: number; y: number }[]).filter(
     (p) => p.region === regionId,
   );
   const [hoverId, setHoverId] = useState<number | null>(null);
@@ -37,7 +41,7 @@ export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps
   }, []);
   if (!feature || !pins.length) return null;
 
-  const stationMap = new Map(stations.map((s) => [s.id, s]));
+  const stationMap = new Map(stations.map((s) => [`${s.name}:${regionId}`, s]));
   const [x0, y0, x1, y1] = feature.bbox;
   const padX = Math.max((x1 - x0) * 0.18, 12);
   const padY = Math.max((y1 - y0) * 0.18, 12);
@@ -51,11 +55,11 @@ export default function RegionMiniMap({ regionId, stations }: RegionMiniMapProps
 
   const visible = pins
     .map((p) => {
-      const st = stationMap.get(p.id);
+      const st = stationMap.get(p.key);
       if (!st) return null;
       const overall = st.rating.overall;
       const tone = overall === null ? 'none' : overall >= 3.8 ? 'good' : overall >= 3.2 ? 'mid' : 'low';
-      return { ...p, name: st.name, tone };
+      return { id: st.id, x: p.x, y: p.y, name: st.name, tone };
     })
     .filter((p): p is NonNullable<typeof p> => p !== null);
 

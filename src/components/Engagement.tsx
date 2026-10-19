@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { Bookmark, MessageSquare, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
 import {
   ApiError, type CommentOut, type ReportTargetType,
@@ -53,6 +52,15 @@ function findComment(nodes: CommentOut[], id: number): CommentOut | undefined {
   return undefined;
 }
 
+/** 로그인 후 돌아올 주소. pathname 만 넘기면 ?page=3 이나 #reviews 같은 위치가 사라져 로그인하고 나면
+ * 엉뚱한 페이지(1쪽 맨 위)로 돌아왔다. 이 링크는 401 을 받은 뒤(브라우저에서만) 그려지므로
+ * window.location 을 바로 읽어도 서버 렌더와 어긋날 일이 없다. */
+function loginHref(): string {
+  if (typeof window === 'undefined') return '/login';
+  const { pathname, search, hash } = window.location;
+  return `/login?next=${encodeURIComponent(pathname + search + hash)}`;
+}
+
 /** 평가(리뷰)·게시판 글에 공통으로 붙는 추천/비추천 + 댓글(1단계 대댓글) UI.
  * 로그인 여부를 미리 조회하지 않고, 실제 조치 시 401 을 받으면 그때 로그인 안내를 띄운다
  * (목록에 여러 개가 함께 뜨는 화면에서 카드마다 /auth/me 를 따로 호출하지 않기 위함). */
@@ -62,7 +70,6 @@ export function Engagement({
   kind: Kind; targetId: number; initialUp: number; initialDown: number; initialMyVote: number;
   initialCommentCount: number; initialScrapped?: boolean;
 }) {
-  const pathname = usePathname();
   const api = ACTIONS[kind];
   const [up, setUp] = useState(initialUp);
   const [down, setDown] = useState(initialDown);
@@ -95,7 +102,6 @@ export function Engagement({
     if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; }
   }, [replyDraft]);
 
-  const loginLink = `/login?next=${encodeURIComponent(pathname)}`;
 
   const doVote = async (value: 1 | -1) => {
     setAuthNeeded(false); setError(null);
@@ -238,7 +244,7 @@ export function Engagement({
           </button>
         </div>
       </div>
-      {authNeeded && <p className="warn">로그인 후 이용할 수 있습니다. <Link href={loginLink}>로그인</Link></p>}
+      {authNeeded && <p className="warn">로그인 후 이용할 수 있습니다. <Link href={loginHref()}>로그인</Link></p>}
       {error && <p className="warn">{error}</p>}
       {open && (
         <div className="cmt-list">

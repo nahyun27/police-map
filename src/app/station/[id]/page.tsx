@@ -25,7 +25,9 @@ const PAGE_SIZE = 10;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    const s = await getStation((await params).id);
+    const id = Number((await params).id);
+    if (!Number.isInteger(id) || id <= 0) return {};
+    const s = await getStation(id);
     const ratingNote = s.rating.count ? `(평균 ${s.rating.overall?.toFixed(1)}점, ${s.rating.count}건)` : '';
     const title = `${s.name} 수사 평가`;
     const description = `${s.name}의 수사 절차 평가${ratingNote}와 수사부서 정보.`;
@@ -36,7 +38,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function StationPage({ params, searchParams }: Props) {
-  const { id } = await params;
+  const id = Number((await params).id);
+  // /station/abc 처럼 숫자가 아닌 주소는 백엔드가 422 를 줘서 에러 페이지가 떴다. 없는 페이지로 처리한다.
+  if (!Number.isInteger(id) || id <= 0) notFound();
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
   const evidenceOnly = sp.evidence === '1';
@@ -47,7 +51,7 @@ export default async function StationPage({ params, searchParams }: Props) {
   try {
     s = await getStation(id, { page, size: PAGE_SIZE, evidenceOnly, departmentId: deptFilter, officerId: officerFilter });
   } catch (e) {
-    if (e instanceof ApiError && e.status === 404) notFound();
+    if (e instanceof ApiError && (e.status === 404 || e.status === 422)) notFound();
     throw e;
   }
   const totalPages = Math.max(1, Math.ceil(s.reviews.total / s.reviews.size));
@@ -246,7 +250,7 @@ export default async function StationPage({ params, searchParams }: Props) {
           </Link>
         </div>
         {s.reviews.items.length ? (
-          <ReviewList stationId={s.id} stationName={s.name} items={s.reviews.items} />
+          <ReviewList stationId={s.id} items={s.reviews.items} />
         ) : (
           <p className="sub">
             {evidenceOnly ? '증빙확인된 평가가 아직 없습니다.'

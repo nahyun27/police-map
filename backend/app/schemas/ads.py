@@ -55,10 +55,14 @@ class InquiryCreate(BaseModel):
     def _check(self):
         if not self.agreed:
             raise ValueError("개인정보 수집·이용에 동의해 주세요.")
-        self.company, self.name, self.contact, self.message = (
-            self.company.strip(), self.name.strip(), self.contact.strip(), self.message.strip()
-        )
-        self.region_interest = (self.region_interest or "").strip() or None
+        # 한 줄 항목의 줄바꿈은 지운다. 알림 메일 제목에 회사명이 들어가는데, 줄바꿈이 있으면 메일 헤더
+        # 설정에서 오류가 나 문의 알림이 조용히 빠지던 문제(2026-10 출시 전 점검).
+        one_line = lambda v: " ".join(v.split())  # noqa: E731
+        self.company, self.name, self.contact = one_line(self.company), one_line(self.name), one_line(self.contact)
+        self.message = self.message.strip()
+        self.region_interest = one_line(self.region_interest or "") or None
+        if not (self.company and self.name and len(self.contact) >= 5 and len(self.message) >= 10):
+            raise ValueError("입력값을 확인해 주세요. 연락처는 5자 이상, 문의 내용은 10자 이상이어야 합니다.")
         return self
 
 

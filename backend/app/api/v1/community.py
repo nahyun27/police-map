@@ -23,6 +23,7 @@ from app.schemas.community import (
 from app.schemas.public import Page
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
+from app.services.names import mask_station_officers
 from app.services.engagement import ANON_LABEL, cast_vote, comment_counts, comment_tree, scrapped_set, vote_summaries
 from app.services.ratings import visible_reviews
 
@@ -310,6 +311,8 @@ def create_post(body: PostCreate, db: Session = Depends(get_db), user: User | No
             region_id = station.region_id
         elif station.region_id != region_id:
             raise HTTPException(422, "선택한 경찰서가 해당 지역 소속이 아닙니다.")
+    # 경찰서를 지정한 글이면 그 경찰서 수사관 실명을 가린다(평가와 같은 기준).
+    body.title, body.body = mask_station_officers(db, body.station_id, body.title, body.body)
     banned = find_banned(f"{body.title}\n{body.body}")
     if banned:
         raise HTTPException(422, {"message": "게시할 수 없는 표현이 포함되어 있습니다.", "banned": banned})
@@ -397,6 +400,7 @@ def create_post_comment(
     p = db.get(Post, post_id)
     if not p or p.is_removed or p.is_blinded:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "글을 찾을 수 없습니다.")
+    (body.body,) = mask_station_officers(db, p.station_id, body.body)
     banned = find_banned(body.body)
     if banned:
         raise HTTPException(422, {"message": "게시할 수 없는 표현이 포함되어 있습니다.", "banned": banned})
@@ -467,7 +471,12 @@ def vote_post(
     # SQL 쪽 상대 증분(score = score + delta)으로 적용한다 — 파이썬에서 읽은 값에 더해 그대로
     # 덮어쓰면 위 잠금이 있어도 계산 경로 자체가 read-modify-write 라 방어가 약해진다.
     db.execute(update(Post).where(Post.id == post_id).values(score=Post.score + (body.value - before)))
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # 위 행 잠금이 없는 DB(SQLite)나 예외적인 경합에서 같은 사람의 첫 투표가 동시에 들어오면
+        # 고유 제약에 걸린다. 500 대신 이미 반영된 상태를 돌려준다(cast_vote 와 같은 처리).
+        db.rollback()
     return vote_summaries(db, PostVote, PostVote.post_id, [post_id], uid, ip_hash)[post_id]
 
 

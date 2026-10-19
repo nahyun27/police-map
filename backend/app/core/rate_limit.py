@@ -72,10 +72,11 @@ ad_limiter = RateLimiter(600, 3600, "ads")
 scrap_limiter = RateLimiter(120, 3600, "scrap")  # 스크랩·관심지역·공감 토글은 투표와 따로 센다
 follow_limiter = RateLimiter(60, 3600, "follow")
 empathy_limiter = RateLimiter(120, 3600, "empathy")
+ad_click_limiter = RateLimiter(60, 3600, "ad_click")  # 클릭 수 부풀리기 방지
 inquiry_limiter = RateLimiter(5, 3600, "inquiry")  # 광고 문의는 삭제·정정 요청 한도와 따로
 refresh_limiter = RateLimiter(120, 3600, "refresh")  # 광고 조회(페이지마다 1~2회) — 조회수 제한과 분리
 ALL_LIMITERS = [
     login_limiter, register_limiter, takedown_limiter, review_limiter, post_limiter, comment_limiter, vote_limiter,
     verify_limiter, reply_limiter, report_limiter, view_limiter, delete_account_limiter, case_limiter,
-    ad_limiter, scrap_limiter, follow_limiter, empathy_limiter, inquiry_limiter, refresh_limiter,
+    ad_limiter, ad_click_limiter, scrap_limiter, follow_limiter, empathy_limiter, inquiry_limiter, refresh_limiter,
 ]

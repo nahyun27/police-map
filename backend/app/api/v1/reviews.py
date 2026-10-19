@@ -15,10 +15,10 @@ from app.models import (
 )
 from app.models.officer import OfficerSource
 from app.models.review import case_type_label, role_label
-from app.services.names import mask_in_text
+from app.services.names import mask_in_text, mask_station_officers
 from app.schemas.community import CommentCreate, CommentOut, ScrapStatus, VoteIn, VoteSummary
 from app.schemas.public import Page, RecentReview
-from app.schemas.review import MyReviewOut, ReviewCreate, ReviewReceipt
+from app.schemas.review import MyReviewOut, MyReviewState, MyReviewStates, ReviewCreate, ReviewReceipt
 from app.schemas.verification import ReplyCreate, ReplyOut
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
@@ -195,6 +195,10 @@ def create_review(body: ReviewCreate, db: Session = Depends(get_db), user: User 
         body.body = mask_in_text(body.body, typed_name)
         body.role_other = mask_in_text(body.role_other, typed_name) if body.role_other else body.role_other
         body.case_type_other = mask_in_text(body.case_type_other, typed_name) if body.case_type_other else body.case_type_other
+    # 대상이 경찰서·부서여도 본문에 그 경찰서 수사관 실명을 적으면 가린다.
+    body.body, body.role_other, body.case_type_other = mask_station_officers(
+        db, station.id, body.body, body.role_other, body.case_type_other,
+    )
 
     # role_other/case_type_other 도 공개 화면에 그대로 노출되는 서술형 텍스트라 body 와
     # 동일하게 금칙어 필터를 거친다.
@@ -235,6 +239,34 @@ def _published_or_404(db: Session, review_id: int) -> Review:
     if not r or r.status != ReviewStatus.published:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "평가를 찾을 수 없습니다.")
     return r
+
+
+@router.get("/my-state", response_model=MyReviewStates)
+def my_review_states(
+    request: Request, ids: str = Query(max_length=600), db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
+    """경찰서 상세는 서버에서 쿠키 없이(캐시해서) 그리므로 내 추천·스크랩·해명 여부가 늘 비어 있다.
+    화면이 뜬 뒤 브라우저가 이 엔드포인트로 "내 상태"만 따로 받아 덮어쓴다(최대 50건).
+    공개된 평가만 돌려주므로 숨긴 글의 존재는 드러나지 않는다."""
+    try:
+        review_ids = list(dict.fromkeys(int(x) for x in ids.split(",") if x.strip()))[:50]
+    except ValueError:
+        raise HTTPException(422, "ids 는 쉼표로 구분한 숫자여야 합니다.")
+    review_ids = list(db.scalars(select(Review.id).where(
+        Review.id.in_(review_ids), Review.status == ReviewStatus.published,
+    )))
+    uid = user.id if user else None
+    votes = vote_summaries(db, ReviewVote, ReviewVote.review_id, review_ids, uid, None if uid else get_client_ip_hash(request))
+    scrapped = scrapped_set(db, ReviewScrap, ReviewScrap.review_id, review_ids, uid)
+    replies = reply_rows(db, review_ids)
+    return MyReviewStates(items=[
+        MyReviewState(
+            id=i, my_vote=votes[i].my_vote, is_scrapped=i in scrapped,
+            reply_is_mine=uid is not None and i in replies and replies[i][0].author_id == uid,
+        )
+        for i in review_ids
+    ])
 
 
 @router.get("/{review_id}", response_model=RecentReview)
@@ -288,7 +320,9 @@ def create_review_comment(
 ):
     """평가(리뷰)·게시글과 마찬가지로 로그인 없이도 익명으로 댓글을 달 수 있다(2026-10 결정) —
     추천/투표와 달리 댓글은 신뢰도 핵심 지표가 아니라서 글 작성과 같은 기준으로 맞췄다."""
-    _published_or_404(db, review_id)
+    review = _published_or_404(db, review_id)
+    # 평가에서 가린 수사관 이름을 댓글로 다시 적어("최지훈 수사관 맞습니다") 가림을 무력화하지 못하게 한다.
+    (body.body,) = mask_station_officers(db, review.station_id, body.body)
     banned = find_banned(body.body)
     if banned:
         raise HTTPException(422, {"message": "게시할 수 없는 표현이 포함되어 있습니다.", "banned": banned})

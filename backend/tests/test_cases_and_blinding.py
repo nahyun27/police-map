@@ -1,4 +1,6 @@
 """사건 공론화 + 게시물 블라인드(신고 누적 자동 / 관리자 수동) — 2026-10 의뢰인 결정."""
+from datetime import datetime, timedelta, timezone
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -17,10 +19,14 @@ def case_payload(**over):
     return body
 
 
-def reporters(db, n: int, prefix: str = "r"):
+def reporters(db, n: int, prefix: str = "r", aged: bool = True):
+    """aged=True 면 가입 이틀 지난 계정으로 만든다(자동 블라인드는 가입 24시간 지난 계정만 센다)."""
     clients = []
     for i in range(n):
-        make_user(db, f"{prefix}{i}@example.com")
+        u = make_user(db, f"{prefix}{i}@example.com")
+        if aged:
+            u.created_at = datetime.now(timezone.utc) - timedelta(days=2)
+            db.commit()
         clients.append(login(TestClient(app), f"{prefix}{i}@example.com"))
     return clients
 

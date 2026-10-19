@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
+import { MAX_SEARCH_LEN } from '@/lib/api';
 import { useSearchSuggestions } from '@/lib/useSearchSuggestions';
 
 export default function HeroSearch() {
@@ -66,8 +67,9 @@ export default function HeroSearch() {
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 120)}
           onKeyDown={onKeyDown}
-          placeholder="경찰서 또는 수사관 이름을 검색하세요"
-          aria-label="검색"
+          /* 검색은 경찰서 이름만 찾는다(수사관 이름은 검색되지 않음). 안내 문구를 실제 동작에 맞춘다. */
+          placeholder="경찰서 이름을 검색하세요"
+          aria-label="경찰서 검색" maxLength={MAX_SEARCH_LEN}
           role="combobox" aria-expanded={open && items.length > 0} aria-autocomplete="list"
           autoComplete="off"
         />

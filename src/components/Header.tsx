@@ -5,7 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ChevronDown, LogOut, Menu, Search, User, X } from 'lucide-react';
-import { getMe, logout, type UserOut } from '@/lib/api';
+import { resetAdminCheck } from '@/components/AdminBlindButton';
+import { MAX_SEARCH_LEN, getMe, logout, type UserOut } from '@/lib/api';
 import { useSearchSuggestions } from '@/lib/useSearchSuggestions';
 
 const NAV = [
@@ -41,8 +42,17 @@ export default function Header() {
   // 로그아웃이 마이페이지 안에만 있어 공용 PC 등에서 찾기 어려웠다. 상단·모바일 메뉴에서도 바로 할 수 있게 한다.
   const doLogout = async () => {
     await logout().catch(() => {});
+    resetAdminCheck();
     setUser(null);
     setOpen(false);
+    // 마이페이지·글쓰기처럼 로그인한 사람의 데이터를 브라우저에서 불러와 들고 있는 화면은
+    // router.refresh() 로는 서버 컴포넌트만 다시 그려지고 클라이언트 상태(내 글 목록, 작성 중인 폼 등)가
+    // 그대로 남는다. 공용 PC 에서 다음 사람이 그대로 볼 수 있으니 이런 화면에선 홈으로 새로 고침해 나간다.
+    const privatePage = /^\/(mypage|officer-verify|cases\/new|board\/write)(\/|$)|^\/station\/[^/]+\/write(\/|$)/;
+    if (privatePage.test(window.location.pathname)) {
+      window.location.href = '/';
+      return;
+    }
     router.refresh();
   };
 
@@ -115,7 +125,7 @@ export default function Header() {
                 onFocus={() => setSuggestOpen(true)}
                 onBlur={() => setTimeout(() => setSuggestOpen(false), 120)}
                 onKeyDown={onSearchKeyDown}
-                placeholder="경찰서·수사관 검색" aria-label="검색"
+                placeholder="경찰서 검색" aria-label="경찰서 검색" maxLength={MAX_SEARCH_LEN}
                 role="combobox" aria-expanded={suggestOpen && suggestions.length > 0} aria-autocomplete="list"
                 autoComplete="off"
               />

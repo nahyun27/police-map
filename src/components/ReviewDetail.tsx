@@ -39,7 +39,13 @@ export function ReviewDetail({ initial }: { initial: RecentReview }) {
       </div>
       <div className="head" style={{ marginTop: 10 }}><Score value={rv.overall} /></div>
       <p style={{ marginTop: 14, whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{rv.body || '(서술 없음, 별점만 등록)'}</p>
-      <ReplyBox reviewId={rv.id} initialReply={rv.reply} canWrite={canReply && !rv.reply} />
+      {/* ReplyBox 는 initialReply 를 첫 렌더에만 상태로 담는다. getReview 로 쿠키를 실어 다시 받은
+          해명(is_mine 이 이제 true 일 수 있음)이 반영되도록 key 로 다시 마운트한다. 이게 없으면
+          경찰관이 새로고침 후 자기 해명을 수정·삭제할 수 없었다. */}
+      <ReplyBox
+        key={`reply-${rv.id}-${rv.reply?.id ?? 0}-${rv.reply?.is_mine ? 1 : 0}-${rv.reply?.updated_at ?? ''}`}
+        reviewId={rv.id} initialReply={rv.reply} canWrite={canReply && !rv.reply}
+      />
       <Engagement
         key={`review-${rv.id}-${rv.my_vote}-${rv.is_scrapped}`}
         kind="review" targetId={rv.id}
@@ -47,7 +53,7 @@ export function ReviewDetail({ initial }: { initial: RecentReview }) {
         initialScrapped={rv.is_scrapped}
       />
       <div className="btn-row" style={{ marginTop: 8, alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href={`/takedown/review/${rv.id}?station=${encodeURIComponent(rv.station_name)}`} className="sub">
+        <Link href={`/takedown/review/${rv.id}`} className="sub">
           이 게시물 삭제·정정 요청
         </Link>
         <AdminBlindButton targetType="review" targetId={rv.id} />

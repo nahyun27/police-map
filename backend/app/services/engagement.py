@@ -107,7 +107,8 @@ def comment_tree(
     for c, nickname in rows:
         vote = votes.get(c.id, _EMPTY_VOTE)
         node = CommentOut(
-            id=c.id, author_nickname=nickname, body=REMOVED_BODY if c.is_removed else c.body,
+            # 삭제된 댓글은 화면에서 작성자를 숨기는데 API 응답엔 닉네임이 그대로 남아 있었다.
+            id=c.id, author_nickname=ANON_LABEL if c.is_removed else nickname, body=REMOVED_BODY if c.is_removed else c.body,
             is_removed=c.is_removed, is_mine=(user_id is not None and c.author_id == user_id),
             parent_id=c.parent_id, up=vote.up, down=vote.down, score=vote.score, my_vote=vote.my_vote,
             created_at=c.created_at.isoformat() if c.created_at else None,

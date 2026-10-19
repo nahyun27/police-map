@@ -11,6 +11,10 @@ from PIL import Image, UnidentifiedImageError
 from app.core.config import settings
 
 MAX_BYTES = 5 * 1024 * 1024
+# 5MB 안에 들어가는 압축 이미지라도 풀면 수 GB 메모리를 쓸 수 있다(Pillow 기본 한도는 경고만 내는 구간이 넓음).
+# 배너에 필요한 해상도보다 훨씬 큰 4천만 화소에서 끊는다.
+MAX_PIXELS = 40_000_000
+ALLOWED_FORMATS = ["PNG", "JPEG", "WEBP", "GIF"]
 MAX_SIZE = {"wide": (1600, 600), "side": (400, 1200)}  # (최대 가로, 최대 세로)
 
 
@@ -25,7 +29,10 @@ def save_ad_image(upload: UploadFile, kind: str) -> str:
     if len(data) > MAX_BYTES:
         raise HTTPException(413, "이미지는 5MB 이하만 올릴 수 있습니다.")
     try:
-        im = Image.open(BytesIO(data))
+        # formats= 로 처음부터 허용 형식만 해석한다(그 외 형식의 파서를 아예 거치지 않게).
+        im = Image.open(BytesIO(data), formats=ALLOWED_FORMATS)
+        if im.width * im.height > MAX_PIXELS:
+            raise Image.DecompressionBombError("too many pixels")
         im.load()
     except Image.DecompressionBombError:
         raise HTTPException(422, "이미지 해상도가 너무 큽니다. 2000px 안팎으로 줄여서 올려 주세요.")

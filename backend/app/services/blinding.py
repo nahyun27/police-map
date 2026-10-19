@@ -8,14 +8,19 @@
   마이페이지에서 "블라인드" 상태와 사유가 보인다.
 
 댓글·해명은 "게시물"이 아니라서 여기 포함하지 않는다 — 신고하면 관리자 큐로만 간다."""
+from datetime import timedelta
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import CaseStatus, Post, PublicCase, Report, ReportStatus, ReportTarget, Review, ReviewStatus
+from app.models import CaseStatus, Post, PublicCase, Report, ReportStatus, ReportTarget, Review, ReviewStatus, User
 from app.services.audit import log_action
 from app.services.takedown import utcnow
 
 AUTO_BLIND_THRESHOLD = 5
+# 자동 블라인드 인원수에는 가입한 지 이만큼 지난 계정만 센다. 가입에 이메일 인증이 없어 1분 만에 계정
+# 5개를 만들어 아무 글이나 내릴 수 있었다(2026-10 출시 전 점검). 새 계정의 신고도 접수·관리자 검토는 그대로 된다.
+AUTO_BLIND_MIN_ACCOUNT_AGE = timedelta(hours=24)
 REASON_AUTO = "신고가 누적되어 자동으로 블라인드되었습니다. 운영진이 검토합니다."
 REASON_ADMIN_DEFAULT = "운영진이 운영원칙 위반 소지가 있어 블라인드했습니다."
 
@@ -100,11 +105,21 @@ def pending_reporter_count(db: Session, target_type: ReportTarget, target_id: in
     ) or 0
 
 
+def _seasoned_reporter_count(db: Session, target_type: ReportTarget, target_id: int) -> int:
+    cutoff = utcnow() - AUTO_BLIND_MIN_ACCOUNT_AGE
+    return db.scalar(
+        select(func.count(func.distinct(Report.reporter_id))).join(User, User.id == Report.reporter_id).where(
+            Report.target_type == target_type, Report.target_id == target_id, Report.status == ReportStatus.pending,
+            User.is_active.is_(True), User.created_at <= cutoff,
+        )
+    ) or 0
+
+
 def maybe_auto_blind(db: Session, target_type: ReportTarget, target_id: int) -> bool:
-    """신고 접수 직후 호출. 미처리 신고자가 기준 이상이면 자동 블라인드."""
+    """신고 접수 직후 호출. 가입 24시간이 지난 미처리 신고자가 기준 이상이면 자동 블라인드."""
     if target_type not in BLINDABLE:
         return False
-    if pending_reporter_count(db, target_type, target_id) < AUTO_BLIND_THRESHOLD:
+    if _seasoned_reporter_count(db, target_type, target_id) < AUTO_BLIND_THRESHOLD:
         return False
     obj = get(db, target_type, target_id)
     return bool(obj) and blind(db, obj, REASON_AUTO, None)

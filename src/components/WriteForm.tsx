@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { BANNED } from '@/data/sample';
 import { apiErrorMessage, getStationTargets, submitReview, type ReviewRatingsIn, type TargetOption } from '@/lib/api';
+import { refreshStationCache } from '@/app/station/[id]/write/actions';
 
 const CRITERIA: [keyof ReviewRatingsIn, string][] = [
   ['fair', '공정성·중립성'],
@@ -85,6 +86,9 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
       alert('수사관 이름을 한글 2~5자로 입력하거나, 이미 등록된 수사관을 골라 주세요.');
       return;
     }
+    // 서버도 같은 규칙으로 422 를 주지만, 별점까지 다 고른 뒤에야 알게 되지 않도록 미리 막는다.
+    const caseLen = caseNo.trim().length;
+    if (caseLen > 0 && caseLen < 4) { alert('사건번호는 4자 이상으로 입력하거나 비워 주세요.'); return; }
     if (Object.values(pick).every((v) => v === 0)) {
       alert('별점 항목을 1개 이상 입력해 주세요.');
       return;
@@ -108,6 +112,9 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
         evidence_note: evidenceNote.trim() || null,
       });
       setDone(true);
+      // 경찰서 상세의 공유 캐시를 비워 "게시된 평가 보기"에서 방금 쓴 평가가 바로 보이게 한다.
+      // 캐시 비우기가 실패해도 평가는 이미 올라갔으니 조용히 넘어간다(최대 30초 뒤엔 어차피 보인다).
+      refreshStationCache(stationId).catch(() => {});
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -201,8 +208,11 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
       </div>
       <div className="field">
         <label htmlFor="wf-7">사건번호 <span className="tag">선택 · 비공개 · 경험 검증용</span></label>
-        <input id="wf-7" type="text" value={caseNo} onChange={(e) => setCaseNo(e.target.value)}
+        <input id="wf-7" type="text" value={caseNo} onChange={(e) => setCaseNo(e.target.value)} maxLength={100}
           placeholder="예: 2026-형제-00000 (입력하지 않아도 제출할 수 있습니다)" />
+        {caseNo.trim().length > 0 && caseNo.trim().length < 4 && (
+          <div className="sub">사건번호는 4자 이상으로 입력하거나 비워 주세요.</div>
+        )}
       </div>
       <div className="field">
         <label htmlFor="wf-8">증빙 자료 <span className="tag">선택 · 비공개</span></label>
@@ -224,7 +234,7 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
 
       <div className="form-section">4. 경험 서술 <span className="sub" style={{ fontWeight: 500 }}>(선택)</span></div>
       <div className="field">
-        <textarea value={text} onChange={(e) => setText(e.target.value)}
+        <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={2000}
           placeholder="직무수행과 관련하여 직접 경험한 사실을 구체적으로 작성해 주세요." />
         {hit.length > 0 && (
           <div className="warn">

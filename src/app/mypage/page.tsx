@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { resetAdminCheck } from '@/components/AdminBlindButton';
 import {
   Bookmark, Eye, EyeOff, FileText, Heart, Info, LogOut, MapPin, Megaphone, MessageSquare, PenLine, ShieldCheck, ThumbsDown,
   ThumbsUp, UserX, X,
@@ -328,6 +329,7 @@ export default function MyPage() {
 
   const doLogout = async () => {
     await logout().catch(() => {});
+    resetAdminCheck();
     router.replace('/');
   };
 

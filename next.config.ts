@@ -7,9 +7,13 @@ const SECURITY_HEADERS = [
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  // 한 번 HTTPS 로 접속한 브라우저는 1년간 http 로 내려가지 않게 한다. 하위 도메인은 아직
+  // 모두 HTTPS 인지 확인되지 않아 includeSubDomains 는 넣지 않았다.
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
 ];
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false, // X-Powered-By: Next.js 로 프레임워크를 알리지 않는다.
   async headers() {
     return [{ source: '/:path*', headers: SECURITY_HEADERS }];
   },

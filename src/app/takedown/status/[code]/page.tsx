@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: '삭제·정정 요청 처리 현황'
 const STATUS_LABEL: Record<string, string> = { pending: '재검토 대기', kept: '게시 유지 결정', removed: '삭제 확정' };
 const STATUS_ICON: Record<string, typeof Clock> = { pending: Clock, kept: XCircle, removed: CheckCircle2 };
 const REQUEST_TYPE_LABEL: Record<string, string> = { delete: '삭제 요청', correct: '정정 요청' };
-const TARGET_TYPE_LABEL: Record<string, string> = { review: '평가 게시물', officer: '수사관 프로필' };
+const TARGET_TYPE_LABEL: Record<string, string> = { review: '평가 게시물', officer: '수사관 프로필', public_case: '사건 공론화 글' };
 
 type Props = { params: Promise<{ code: string }> };
 

@@ -76,3 +76,60 @@ def test_refresh_fallback_respects_logout(db, user_client):
     thief = TestClient(app)
     thief.cookies.set("pm_refresh", stolen_refresh)
     assert thief.get(f"{API}/auth/me").status_code == 401
+
+
+# ---------- 2026-10 출시 전 점검 2차 ----------
+def test_officer_rank_must_be_from_list(db, client, world):
+    """계급 칸에 실명을 적어("김철수경위") 이름 가림을 우회할 수 없다."""
+    payload = review_payload(world["station"].id, officer_name="김철수", officer_rank="김철수경위")
+    assert client.post(f"{API}/reviews", json=payload).status_code == 422
+    ok = review_payload(world["station"].id, officer_name="김철수", officer_rank="경위", case_number=None)
+    assert client.post(f"{API}/reviews", json=ok).status_code == 201
+
+
+def test_officer_names_masked_in_comments_and_station_reviews(db, client, world):
+    sid = world["station"].id
+    rid = client.post(f"{API}/reviews", json=review_payload(sid, officer_name="최지훈", case_number=None)).json()["id"]
+    c = client.post(f"{API}/reviews/{rid}/comments", json={"body": "최.지.훈 수사관 맞습니다"}).json()
+    assert "최지훈" not in c["body"] and "최*훈" in c["body"]
+    # 경찰서 전체 평가 본문에 이미 등록된 수사관 실명을 적어도 가려진다(폭 없는 공백 우회 포함).
+    rid2 = client.post(f"{API}/reviews", json=review_payload(sid, body="담당은 최\u200b지훈 이었습니다", case_number=None)).json()["id"]
+    assert "최*훈" in client.get(f"{API}/reviews/{rid2}").json()["body"]
+
+
+def test_withdraw_reverts_post_score(db, user_client):
+    pid = user_client.post(f"{API}/posts", json={"title": "점수 테스트 글", "body": "본문"}).json()["id"]
+    voter = TestClient(app)
+    make_user(db, "voter@example.com")
+    login(voter, "voter@example.com")
+    voter.post(f"{API}/posts/{pid}/vote", json={"value": 1})
+    voter.request("DELETE", f"{API}/auth/me", json={"password": "password123"})
+    from app.models import Post
+    db.expire_all()
+    assert db.get(Post, pid).score == 0
+
+
+def test_new_accounts_cannot_auto_blind(db, user_client):
+    pid = user_client.post(f"{API}/posts", json={"title": "블라인드 테스트", "body": "본문"}).json()["id"]
+    for i in range(5):
+        c = TestClient(app)
+        make_user(db, f"fresh{i}@example.com")
+        login(c, f"fresh{i}@example.com")
+        assert c.post(f"{API}/reports", json={"target_type": "post", "target_id": pid, "reason": "부적절한 내용입니다"}).status_code == 201
+    assert user_client.get(f"{API}/posts/{pid}").status_code == 200
+
+
+def test_huge_ids_are_not_server_errors(client):
+    assert client.get(f"{API}/reviews/99999999999999999999").status_code in (404, 422)
+
+
+def test_my_review_states(db, user_client, client, world):
+    sid = world["station"].id
+    rid = user_client.post(f"{API}/reviews", json=review_payload(sid, case_number=None)).json()["id"]
+    user_client.post(f"{API}/reviews/{rid}/vote", json={"value": 1})
+    user_client.post(f"{API}/reviews/{rid}/scrap")
+    items = user_client.get(f"{API}/reviews/my-state", params={"ids": f"{rid},999"}).json()["items"]
+    assert items == [{"id": rid, "my_vote": 1, "is_scrapped": True, "reply_is_mine": False}]
+    anon = client.get(f"{API}/reviews/my-state", params={"ids": str(rid)}).json()["items"]
+    assert anon[0]["is_scrapped"] is False
+    assert client.get(f"{API}/reviews/my-state", params={"ids": "a,b"}).status_code == 422

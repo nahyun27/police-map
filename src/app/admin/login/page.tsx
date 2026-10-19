@@ -6,6 +6,7 @@ import { LogIn, MapPinned } from 'lucide-react';
 import { Card } from '@/components/ui';
 import { ApiError, login } from '@/lib/api';
 import { safeNext } from '@/lib/format';
+import { resetAdminCheck } from '@/components/AdminBlindButton';
 
 function LoginForm() {
   const router = useRouter();
@@ -21,6 +22,7 @@ function LoginForm() {
     setError(null);
     try {
       const user = await login(email.trim(), password);
+      resetAdminCheck(); // 공개 화면의 "관리자: 즉시 블라인드" 버튼이 비로그인 결과를 계속 들고 있지 않게
       if (user.role !== 'admin') {
         setError('관리자 계정이 아닙니다.');
         return;

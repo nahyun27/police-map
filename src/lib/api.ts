@@ -40,6 +40,13 @@ export function apiErrorMessage(
   if (detail && typeof detail === 'object' && !Array.isArray(detail) && 'message' in detail) {
     return String((detail as { message: unknown }).message);
   }
+  // FastAPI 422(Pydantic 검증 실패)는 detail 이 [{loc, msg, type}, ...] 배열로 온다. model_validator
+  // 에서 직접 던진 한국어 안내(예: "사건번호는 4자 이상...")도 여기 msg 로 실려 오는데, Pydantic 이
+  // 앞에 "Value error, " 를 붙이므로 떼고 보여준다. 첫 항목만 보여줘도 사용자가 고칠 곳은 알 수 있다.
+  if (Array.isArray(detail)) {
+    const msg = (detail[0] as { msg?: unknown } | undefined)?.msg;
+    if (typeof msg === 'string' && msg) return msg.replace(/^Value error, /, '');
+  }
   return opts.invalid ?? '입력값을 확인해 주세요.';
 }
 
@@ -49,16 +56,19 @@ interface ApiFetchInit extends RequestInit {
    * 기존처럼 항상 최신 데이터를 가져온다(no-store). 로그인 세션이 섞이는 관리자·쿠키 기반
    * 요청에는 쓰지 않는다 — Data Cache 는 요청자와 무관하게 서버 전체에서 공유된다. */
   revalidateSeconds?: number;
+  /** Data Cache 항목에 붙일 태그. 글을 올린 직후처럼 "내가 방금 쓴 게 바로 보여야" 하는 화면은
+   * 서버 액션에서 이 태그로 캐시를 비운다(app/station/[id]/write/actions.ts 참고). */
+  tags?: string[];
 }
 
 async function apiFetch<T>(path: string, init?: ApiFetchInit): Promise<T> {
-  const { revalidateSeconds, ...rest } = init ?? {};
+  const { revalidateSeconds, tags, ...rest } = init ?? {};
   let res: Response;
   try {
     res = await fetch(`${API_BASE}/api/v1${path}`, {
       ...rest,
       headers: { 'Content-Type': 'application/json', ...(rest.headers ?? {}) },
-      ...(revalidateSeconds !== undefined ? { next: { revalidate: revalidateSeconds } } : { cache: 'no-store' }),
+      ...(revalidateSeconds !== undefined ? { next: { revalidate: revalidateSeconds, ...(tags ? { tags } : {}) } } : { cache: 'no-store' }),
       // 관리자 세션 쿠키를 함께 보낸다. 공개 API 는 쿠키를 보지 않으므로 무해하다.
       // (서버 컴포넌트의 Node fetch 에는 브라우저 쿠키 저장소가 없어 이 옵션이 영향을 주지 않는다.)
       credentials: 'include',
@@ -263,14 +273,22 @@ export function getStation(
   if (opts?.departmentId) qs.set('department_id', String(opts.departmentId));
   if (opts?.officerId) qs.set('officer_id', String(opts.officerId));
   const suffix = qs.toString() ? `?${qs}` : '';
-  return apiFetch<StationDetail>(`/stations/${encodeURIComponent(String(id))}${suffix}`, { revalidateSeconds: 30 });
+  return apiFetch<StationDetail>(`/stations/${encodeURIComponent(String(id))}${suffix}`, {
+    revalidateSeconds: 30, tags: [stationCacheTag(id)],
+  });
 }
+
+/** 경찰서 상세 조회(getStation)의 Data Cache 태그. 페이지·필터 조합이 달라도 같은 관서면 같은
+ * 태그라, 평가를 올린 뒤 한 번에 전부 비울 수 있다. */
+export const stationCacheTag = (id: number | string) => `station-${id}`;
 
 export function getRecentReviews(limit = 3, regionIds?: string[]) {
   const qs = new URLSearchParams({ limit: String(limit) });
   if (regionIds?.length) qs.set('region', regionIds.join(','));
   return apiFetch<RecentReview[]>(`/reviews/recent?${qs}`, { revalidateSeconds: 30 });
 }
+/** 검색어 최대 길이. 백엔드 /search 의 q max_length 와 같다(넘으면 422 로 결과가 아예 안 나온다). */
+export const MAX_SEARCH_LEN = 50;
 export const search = (q: string) => apiFetch<SearchResult>(`/search?q=${encodeURIComponent(q)}`, { revalidateSeconds: 15 });
 export const getStats = () => apiFetch<StatsOverview>('/stats/overview', { revalidateSeconds: 60 });
 
@@ -513,6 +531,18 @@ export const createReport = (targetType: ReportTargetType, targetId: number, rea
   });
 
 export const getReview = (reviewId: number) => apiFetch<RecentReview>(`/reviews/${reviewId}`);
+
+/** 평가 목록에서 "나"에 따라 달라지는 값(내 추천/비추천, 스크랩, 내가 단 해명인지)만 따로 받는다.
+ * 경찰서 상세 페이지는 서버에서 쿠키 없이(그리고 30초 공유 캐시로) 렌더되므로 이 값들이 늘 비로그인
+ * 기준으로 나간다. 그래서 브라우저에서 마운트 후 이걸로 덮어쓴다. 한 번에 최대 50개. */
+export interface ReviewMyState {
+  id: number;
+  my_vote: -1 | 0 | 1;
+  is_scrapped: boolean;
+  reply_is_mine: boolean;
+}
+export const getMyReviewStates = (ids: number[]) =>
+  apiFetch<{ items: ReviewMyState[] }>(`/reviews/my-state?ids=${ids.slice(0, 50).join(',')}`);
 export const voteReview = (reviewId: number, value: 1 | -1 | 0) => vote(`/reviews/${reviewId}/vote`, value);
 export const getReviewComments = (reviewId: number, sort: 'new' | 'top' = 'new') =>
   apiFetch<CommentOut[]>(`/reviews/${reviewId}/comments?sort=${sort}`);
@@ -1010,6 +1040,7 @@ export interface AdminInquiry {
   admin_note: string | null;
   created_at: string | null;
 }
-export const listAdminInquiries = (status: 'new' | 'done') => apiFetch<Page<AdminInquiry>>(`/admin/inquiries?status=${status}`);
+export const listAdminInquiries = (status: 'new' | 'done', page = 1) =>
+  apiFetch<Page<AdminInquiry>>(`/admin/inquiries?status=${status}&page=${page}`);
 export const markInquiryDone = (id: number, note: string) =>
   apiFetch<void>(`/admin/inquiries/${id}/done`, { method: 'POST', body: JSON.stringify({ note }) });

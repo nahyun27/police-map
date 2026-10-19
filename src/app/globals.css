@@ -30,6 +30,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; height: 100%; scroll-behavior: smooth; }
 #report-form-card, #find-map { scroll-margin-top: 80px; }
+/* 풀블리드 히어로(.hero-bleed)가 width: 100vw 를 쓰는데, Windows 처럼 세로 스크롤바가 자리를
+   차지하는 환경에선 100vw 가 그 스크롤바 폭만큼 본문보다 넓어 가로 스크롤바가 생긴다. hidden 대신
+   clip 을 쓰는 이유는 clip 은 스크롤 컨테이너를 만들지 않아서 헤더의 position: sticky 가 그대로
+   동작하기 때문(hidden 이면 sticky 기준이 body 로 바뀌어 헤더가 안 붙는다). */
+html, body { overflow-x: clip; }
 body {
   font-family: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   background: var(--bg); color: var(--ink);
@@ -490,6 +495,8 @@ table.channel-table .pill {
 .review:first-of-type { border-top: none; padding-top: 6px; }
 .review .meta { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; }
 .review p { margin-top: 6px; color: var(--ink2); }
+/* 평가 본문은 작성자가 넣은 줄바꿈을 그대로 살린다(평가 상세 ReviewDetail 과 같은 처리). */
+.review p.review-body { white-space: pre-wrap; word-break: break-word; }
 .review .head { display: flex; align-items: center; gap: 8px; }
 
 /* ---------- Hero ---------- */

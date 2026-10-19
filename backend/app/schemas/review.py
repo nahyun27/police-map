@@ -3,6 +3,7 @@ import re
 from pydantic import BaseModel, Field, model_validator
 
 from app.models import CaseType, ReviewRole
+from app.services.names import OFFICER_RANKS
 from app.schemas.verification import ReplyOut
 
 
@@ -55,11 +56,25 @@ class ReviewCreate(BaseModel):
             self.case_type_other = None
         self.officer_name = re.sub(r"\s+", "", self.officer_name or "") or None
         self.officer_rank = (self.officer_rank or "").strip() or None
+        if self.officer_rank is not None and self.officer_rank not in OFFICER_RANKS:
+            raise ValueError("계급은 목록에서 골라 주세요.")
         if self.officer_id is not None:
             self.officer_name = None  # 기존 수사관을 골랐으면 이름 입력은 무시
         if self.officer_name is not None and not re.fullmatch(r"[가-힣]{2,5}", self.officer_name):
             raise ValueError("수사관 이름은 한글 2~5자로 입력해 주세요.")
         return self
+
+
+class MyReviewState(BaseModel):
+    """경찰서 상세의 평가 목록에 덧씌우는 "내 상태"(추천·스크랩·내 해명 여부)."""
+    id: int
+    my_vote: int
+    is_scrapped: bool
+    reply_is_mine: bool
+
+
+class MyReviewStates(BaseModel):
+    items: list[MyReviewState]
 
 
 class ReviewReceipt(BaseModel):
