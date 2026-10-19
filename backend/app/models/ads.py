@@ -67,4 +67,6 @@ class AdInquiry(Base):
         Enum(InquiryStatus, native_enum=False, length=20), default=InquiryStatus.new, index=True
     )
     admin_note: Mapped[str | None] = mapped_column(String(500))
+    # 처리 완료 시각. 이로부터 1년이 지나면 문의를 파기한다(개인정보처리방침 보관 기간, services/retention.py).
+    done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

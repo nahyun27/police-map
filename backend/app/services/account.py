@@ -10,6 +10,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
+from app.services.takedown import utcnow
 from app.models import (
     Post, PostComment, PostCommentVote, PostScrap, PostVote, PublicCase, PublicCaseEmpathy, RegionFollow, Review,
     ReviewComment, ReviewCommentVote, ReviewScrap, ReviewVote, User,
@@ -61,6 +62,7 @@ def delete_account(db: Session, user: User) -> None:
     # 추측 불가능한 값으로 덮어써서, is_active 검사가 어딘가 빠지더라도 로그인 자체가 막히게
     # 이중으로 막아 둔다.
     user.is_active = False
+    user.deleted_at = utcnow()
     user.email = f"deleted-user-{uid}@policemap.invalid"
     user.nickname = "탈퇴한 회원"
     user.password_hash = hash_password(secrets.token_urlsafe(32))

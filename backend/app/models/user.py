@@ -32,6 +32,8 @@ class User(Base):
     # 이 기능 이전 가입자는 None.
     terms_agreed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     terms_version: Mapped[str | None] = mapped_column(String(20))
+    # 탈퇴 시각. 탈퇴 후 1년이 지나면 수사관 인증 신청 기록을 파기한다(개인정보처리방침 보관 기간, services/retention.py).
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # 경찰관 신원 인증(OfficerVerification 승인) 결과 — 전부 None 이면 미인증 일반 회원이다.
     # officer_station_id 가 있어야만 그 경찰서 리뷰에 해명(ReviewReply)을 달 수 있다.

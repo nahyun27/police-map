@@ -166,7 +166,7 @@ export default function OfficerVerifyPage() {
               </label>
               <div className="consent-summary">
                 수집 항목: 성명, 계급, 소속 경찰서·부서, 연락처, 확인 방법 메모 · 목적: 본인 확인과 해명 작성 권한 부여 ·
-                보관: 인증 해제 또는 회원 탈퇴 후 1년. 동의하지 않으면 인증을 신청할 수 없습니다.
+                보관: 반려·인증 해제 또는 회원 탈퇴 후 1년. 동의하지 않으면 인증을 신청할 수 없습니다.
               </div>
             </div>
             {error && <div className="warn">{error}</div>}

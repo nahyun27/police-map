@@ -1,6 +1,10 @@
+import asyncio
+import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DataError
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,8 +28,41 @@ _IS_DEV = settings.ENVIRONMENT.strip().lower() in ("development", "dev", "test",
 
 # 운영에서는 API 문서(/docs, /openapi.json)를 끈다. 지금은 nginx 가 /api/ 만 넘겨 밖에서 안 보이지만,
 # 프록시 설정이 바뀌어도 전체 엔드포인트 목록이 노출되지 않도록 앱에서도 막아 둔다.
+log = logging.getLogger("uvicorn.error")  # uvicorn 이 출력하는 로거라 journalctl 에 남는다
+PURGE_INTERVAL_SECONDS = 24 * 60 * 60
+
+
+def _purge_once() -> None:
+    from app.core.database import SessionLocal
+    from app.services.retention import run_purge
+
+    with SessionLocal() as db:
+        counts = run_purge(db)
+    log.info("retention purge: %s", counts)
+
+
+async def _purge_loop() -> None:
+    """개인정보 보관 기간이 지난 기록을 서버 시작 시 한 번, 이후 하루마다 파기한다(services/retention.py).
+    별도 cron 없이 앱과 함께 돌게 해 배포 설정이 하나 줄도록 했다. uvicorn 워커가 1개라 중복 실행은 없다."""
+    while True:
+        try:
+            await run_in_threadpool(_purge_once)
+        except Exception:  # 파기 실패가 서버를 멈추면 안 된다. 다음 주기에 다시 시도한다.
+            log.exception("retention purge failed")
+        await asyncio.sleep(PURGE_INTERVAL_SECONDS)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    task = None if settings.ENVIRONMENT.strip().lower() == "test" else asyncio.create_task(_purge_loop())
+    yield
+    if task:
+        task.cancel()
+
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
+    lifespan=lifespan,
     docs_url="/docs" if _IS_DEV else None,
     redoc_url="/redoc" if _IS_DEV else None,
     openapi_url="/openapi.json" if _IS_DEV else None,

@@ -1,6 +1,6 @@
 """광고 노출·클릭 집계, 광고·제휴 문의(공개) + 광고·문의 관리(관리자). 규칙은 app/models/ads.py 참고."""
 import random
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import RedirectResponse
@@ -212,6 +212,6 @@ def admin_inquiry_done(inquiry_id: int, body: InquiryDoneIn, admin: User = Depen
     q = db.get(AdInquiry, inquiry_id)
     if not q:
         raise HTTPException(404, "문의를 찾을 수 없습니다.")
-    q.status, q.admin_note = InquiryStatus.done, (body.note or "").strip() or None
+    q.status, q.admin_note, q.done_at = InquiryStatus.done, (body.note or "").strip() or None, datetime.now(timezone.utc)
     log_action(db, admin.id, "inquiry.done", "ad_inquiry", q.id, {})
     db.commit()
