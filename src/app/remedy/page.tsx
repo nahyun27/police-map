@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { pageMeta } from '@/lib/seo';
 import { Suspense } from 'react';
 import RemedyNavigator from '@/components/RemedyNavigator';
+import { pageMeta } from '@/lib/seo';
 
 export const metadata: Metadata = pageMeta({
   title: '권리구제 내비게이터',

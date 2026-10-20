@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { pageMeta } from '@/lib/seo';
 import { Check, FileCheck2, Flag, Megaphone, Scale, ShieldCheck, UserRoundCheck, type LucideIcon } from 'lucide-react';
 import { Card, PageHead } from '@/components/ui';
+import { pageMeta } from '@/lib/seo';
 
 export const metadata: Metadata = pageMeta({
   title: '운영원칙',

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { pageMeta } from '@/lib/seo';
 import ReportPageBody from '@/components/ReportPageBody';
+import { pageMeta } from '@/lib/seo';
 
 export const metadata: Metadata = pageMeta({
   title: '언론·감독기관 제보 안내',

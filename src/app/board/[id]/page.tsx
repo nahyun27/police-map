@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { pageMeta } from '@/lib/seo';
 import { notFound } from 'next/navigation';
 import { PostDetail, PostDetailLoader } from '@/components/PostDetail';
 import { Card, Crumb } from '@/components/ui';
 import { ApiError, getPost } from '@/lib/api';
+import { pageMeta } from '@/lib/seo';
 
 type Props = { params: Promise<{ id: string }> };
 

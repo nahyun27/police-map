@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import { pageMeta } from '@/lib/seo';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ClickableRow from '@/components/ClickableRow';
 import RegionMiniMap from '@/components/RegionMiniMap';
 import { Card, Crumb, PageHead, Score, TableWrap } from '@/components/ui';
 import { ApiError, getRegion } from '@/lib/api';
+import { pageMeta } from '@/lib/seo';
 
 type Props = { params: Promise<{ id: string }> };
 

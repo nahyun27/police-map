@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
-import { pageMeta } from '@/lib/seo';
 import Link from 'next/link';
-import { Eye, MessageSquare, PenLine, Search, Star, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { Eye, PenLine, Search, Star, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { Card } from '@/components/ui';
 import { CategoryTabs } from '@/components/CategoryTabs';
 import { RegionFilterSelect } from '@/components/RegionFilterSelect';
 import { getRegions, listBoardFeed, type BoardFeedCategory, type PopularPeriod } from '@/lib/api';
 import { formatDate } from '@/lib/format';
+import { pageMeta } from '@/lib/seo';
 
 type Props = {
   searchParams: Promise<{ region?: string; category?: string; sort?: string; period?: string; q?: string; page?: string }>;
@@ -133,32 +133,29 @@ export default async function BoardPage({ searchParams }: Props) {
                   href={it.kind === 'review' ? `/board/review/${it.id}` : `/board/${it.id}`}
                   key={`${it.kind}-${it.id}`} className="post-row"
                 >
-                  <div className="post-row-top">
+                  {/* 일반 게시판처럼 "글머리 + 제목 + 댓글 수" 한 줄, 그 아래 작성자·날짜·통계 한 줄.
+                      평가는 제목 대신 별점과 본문 앞부분을 보여 준다. */}
+                  <div className="post-row-head">
                     <span className={`badge cat-${it.category}`}>{it.category_label}</span>
-                    <span className="sub">{it.region_name ?? '전체'}{it.station_name ? ` · ${it.station_name}` : ''}</span>
+                    {it.kind === 'review' && (
+                      <span className="post-row-star"><Star size={13} fill="var(--star)" style={{ color: 'var(--star)' }} />{it.overall?.toFixed(1) ?? '-'}</span>
+                    )}
+                    <span className="post-row-title">
+                      {it.kind === 'review'
+                        ? (it.body ? it.body.slice(0, 80) + (it.body.length > 80 ? '…' : '') : '(서술 없음, 별점만 등록)')
+                        : it.title}
+                    </span>
+                    {it.comment_count > 0 && <span className="post-row-cmt" aria-label={`댓글 ${it.comment_count}개`}>{it.comment_count}</span>}
                   </div>
-                  {it.kind === 'review' ? (
-                    <>
-                      {/* 별점·역할·대상 줄과 본문 줄을 나눠서, 한 덩어리로 길게 이어지지 않게 한다. */}
-                      <div className="post-row-rating">
-                        <Star size={13} fill="var(--star)" style={{ color: 'var(--star)' }} />
-                        <b>{it.overall?.toFixed(1) ?? '-'}</b>
-                        <span className="sub">{it.role_label}{it.target_label ? ` · ${it.target_label}` : ''}</span>
-                      </div>
-                      <div className="post-row-title">
-                        {it.body ? it.body.slice(0, 80) + (it.body.length > 80 ? '…' : '') : '(서술 없음, 별점만 등록)'}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="post-row-title">{it.title}</div>
-                  )}
                   <div className="post-row-meta">
                     <span className="who">{it.kind === 'review' ? it.role_label : it.author_nickname}</span>
-                    <span className="sub">{formatDate(it.created_at)}</span>
+                    <span>{formatDate(it.created_at)}</span>
+                    {(it.station_name || it.region_name || (it.kind === 'review' && it.target_label)) && (
+                      <span>{[it.region_name, it.station_name ?? (it.kind === 'review' ? it.target_label : null)].filter(Boolean).join(' · ')}</span>
+                    )}
                     {it.kind === 'post' && <span className="stat"><Eye size={12} />{it.view_count}</span>}
                     <span className="stat"><ThumbsUp size={12} />{it.up}</span>
-                    <span className="stat"><ThumbsDown size={12} />{it.down}</span>
-                    <span className="stat"><MessageSquare size={12} />{it.comment_count}</span>
+                    {it.down > 0 && <span className="stat"><ThumbsDown size={12} />{it.down}</span>}
                   </div>
                 </Link>
               ))}

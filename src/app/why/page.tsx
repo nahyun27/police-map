@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { pageMeta } from '@/lib/seo';
 import type { ComponentType, ReactNode } from 'react';
 import Link from 'next/link';
 import {
@@ -8,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui';
 import { getStats } from '@/lib/api';
+import { pageMeta } from '@/lib/seo';
 
 // getStats() 가 이미 60초 캐시돼 있어(src/lib/api.ts), force-dynamic 없이도 신선도는
 // 동일하게 유지된다 — ISR 로 바꿔 매 요청 재렌더링 비용만 없앤다.

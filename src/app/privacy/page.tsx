@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { pageMeta } from '@/lib/seo';
 import Link from 'next/link';
 import { LegalDoc, type LegalSection } from '@/components/LegalDoc';
 import { PageHead } from '@/components/ui';
 import { LEGAL } from '@/lib/legal';
+import { pageMeta } from '@/lib/seo';
 
 export const metadata: Metadata = pageMeta({
   title: '개인정보처리방침',

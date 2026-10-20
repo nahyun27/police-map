@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import { pageMeta } from '@/lib/seo';
 import Link from 'next/link';
 import { Eye, Heart, History, PenLine, Search } from 'lucide-react';
 import { CategoryTabs } from '@/components/CategoryTabs';
 import { Card } from '@/components/ui';
 import { CASE_CATEGORIES, listCases, type CaseCategory } from '@/lib/api';
 import { formatDate } from '@/lib/format';
+import { pageMeta } from '@/lib/seo';
 
 export const metadata: Metadata = pageMeta({
   title: '사건 공론화',

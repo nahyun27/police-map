@@ -1,6 +1,4 @@
 import type { Metadata } from 'next';
-import { pageMeta, SITE_URL } from '@/lib/seo';
-import { JsonLd } from '@/components/JsonLd';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Bars, Card, Crumb, Score, Stars } from '@/components/ui';
@@ -9,6 +7,8 @@ import { ExternalLink, ShieldCheck } from 'lucide-react';
 import { ApiError, getStation } from '@/lib/api';
 import stationJurisdiction from '@/data/stationJurisdiction.json';
 import { AdSlots } from '@/components/AdSlots';
+import { JsonLd } from '@/components/JsonLd';
+import { pageMeta, SITE_URL } from '@/lib/seo';
 
 type JurisdictionEntry = {
   text: string;
