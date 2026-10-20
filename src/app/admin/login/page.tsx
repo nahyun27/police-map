@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { LogIn, MapPinned } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { Card } from '@/components/ui';
 import { ApiError, login } from '@/lib/api';
 import { safeNext } from '@/lib/format';
@@ -60,7 +60,8 @@ export default function AdminLoginPage() {
   return (
     <div className="admin-login">
       <div className="admin-login-brand">
-        <span className="mark"><MapPinned size={18} /></span>
+        {/* eslint-disable-next-line @next/next/no-img-element -- 작은 고정 아이콘 */}
+        <span className="mark"><img src="/images/logo-mark.png" alt="" width={34} height={34} /></span>
         <b>폴리스맵 운영 콘솔</b>
         <p className="sub">평가 검수·삭제요청 처리 권한이 있는 관리자 계정으로 로그인하세요.</p>
       </div>

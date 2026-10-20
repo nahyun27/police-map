@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  BadgeCheck, ClipboardCheck, EyeOff, FileX, Flag, History, Image, LogOut, Mail, MapPinned, Megaphone, Menu,
+  BadgeCheck, ClipboardCheck, EyeOff, FileX, Flag, History, Image, LogOut, Mail, Megaphone, Menu,
 } from 'lucide-react';
 import { resetAdminCheck } from '@/components/AdminBlindButton';
 import { ApiError, getMe, logout, type UserOut } from '@/lib/api';
@@ -111,7 +111,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
       <aside className={`admin-sidebar${navOpen ? ' open' : ''}`}>
         <div className="admin-sidebar-brand">
-          <span className="mark"><MapPinned size={16} /></span>
+          {/* eslint-disable-next-line @next/next/no-img-element -- 작은 고정 아이콘 */}
+          <span className="mark"><img src="/images/logo-mark.png" alt="" width={22} height={22} /></span>
           <div>
             <b>폴리스맵</b>
             <span>운영 콘솔</span>
