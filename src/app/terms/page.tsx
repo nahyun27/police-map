@@ -1,13 +1,15 @@
 import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/seo';
 import Link from 'next/link';
 import { LegalDoc, type LegalSection } from '@/components/LegalDoc';
 import { PageHead } from '@/components/ui';
 import { LEGAL } from '@/lib/legal';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: '이용약관',
   description: '폴리스맵 서비스 이용 조건과 이용자·운영자의 권리와 의무.',
-};
+  path: '/terms',
+});
 
 // 운영 방식(작성 즉시 게시, 신고 누적 블라인드, 삭제·정정 요청 시 즉시 임시조치, 수사관 이름 일부 가림 등)은
 // 운영원칙(/policy)과 실제 동작에 맞춰 적었다. 동작을 바꾸면 이 문서도 함께 고친다.

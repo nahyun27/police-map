@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/seo';
 import Link from 'next/link';
 import { Eye, Heart, History, PenLine, Search } from 'lucide-react';
 import { CategoryTabs } from '@/components/CategoryTabs';
@@ -6,10 +7,12 @@ import { Card } from '@/components/ui';
 import { CASE_CATEGORIES, listCases, type CaseCategory } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: '사건 공론화',
-  description: '수사 과정에서 겪은 일을 기록하고, 시민들과 함께 살펴보세요.',
-};
+  description:
+    '수사 과정에서 겪은 부당한 일을 기록하고 시민들의 공감을 모으는 공간. 경찰 수사 지연·부실수사·강압수사 경험을 공유하세요.',
+  path: '/cases',
+});
 
 type Props = { searchParams: Promise<{ category?: string; sort?: string; q?: string; page?: string }> };
 type Filters = { category?: string; sort: string; q?: string; page?: number };

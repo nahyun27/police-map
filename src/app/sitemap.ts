@@ -7,7 +7,7 @@ import { SITE_URL } from '@/lib/seo';
 const MAX_POST_PAGES = 20;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const fixed = ['', '/board', '/why', '/stats', '/remedy', '/report', '/policy', '/terms', '/privacy'];
+  const fixed = ['', '/board', '/cases', '/why', '/stats', '/remedy', '/report', '/policy', '/advertise', '/terms', '/privacy'];
   const entries: MetadataRoute.Sitemap = fixed.map((p) => ({ url: `${SITE_URL}${p}` }));
   try {
     const regions = await getRegions();

@@ -1,13 +1,15 @@
 import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/seo';
 import Link from 'next/link';
 import { LegalDoc, type LegalSection } from '@/components/LegalDoc';
 import { PageHead } from '@/components/ui';
 import { LEGAL } from '@/lib/legal';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: '개인정보처리방침',
   description: '폴리스맵이 수집하는 개인정보의 항목, 이용 목적, 보관 기간과 이용자의 권리.',
-};
+  path: '/privacy',
+});
 
 // 수집 항목은 실제 저장하는 필드(backend/app/models)와 맞춰 적었다. 입력 항목을 늘리거나 보관 기간을
 // 바꾸면 이 표도 함께 고쳐야 한다.

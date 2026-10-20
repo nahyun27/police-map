@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { pageMeta, SITE_URL } from '@/lib/seo';
+import { JsonLd } from '@/components/JsonLd';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Bars, Card, Crumb, Score, Stars } from '@/components/ui';
@@ -28,10 +30,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const id = Number((await params).id);
     if (!Number.isInteger(id) || id <= 0) return {};
     const s = await getStation(id);
-    const ratingNote = s.rating.count ? `(평균 ${s.rating.overall?.toFixed(1)}점, ${s.rating.count}건)` : '';
-    const title = `${s.name} 수사 평가`;
-    const description = `${s.name}의 수사 절차 평가${ratingNote}와 수사부서 정보.`;
-    return { title, description, openGraph: { title, description } };
+    const ratingNote = s.rating.count ? ` 평균 ${s.rating.overall?.toFixed(1)}점(${s.rating.count}건).` : '';
+    // "OO경찰서 후기", "OO경찰서 수사과" 같은 검색어에 걸리도록 이름·주소·부서명을 설명에 넣는다.
+    const depts = s.departments.slice(0, 4).join('·');
+    const title = `${s.name} 수사 평가·후기`;
+    const description =
+      `${s.name}${s.address ? `(${s.address})` : ''} 수사 절차에 대한 이용자 평가와 후기.${ratingNote}` +
+      `${depts ? ` 수사부서(${depts} 등) 정보와` : ''} 민원·권리구제 방법 안내.`;
+    return pageMeta({ title, description, path: `/station/${id}` });
   } catch {
     return {};
   }
@@ -63,8 +69,23 @@ export default async function StationPage({ params, searchParams }: Props) {
   // 배정돼 있어서 환경마다 어긋난다 — scripts/build_station_jurisdiction.py 주석 참고).
   const jurisdiction = (stationJurisdiction as Record<string, JurisdictionEntry>)[`${s.name}:${s.region.id}`];
 
+  // 검색엔진용 경찰서 정보. 평가가 있을 때만 별점을 넣는다(0건 별점은 구글 지침 위반이라 아예 뺀다).
+  const stationLd = {
+    '@context': 'https://schema.org',
+    '@type': 'PoliceStation',
+    name: s.name,
+    url: `${SITE_URL}/station/${s.id}`,
+    ...(s.address ? { address: { '@type': 'PostalAddress', streetAddress: s.address, addressCountry: 'KR' } } : {}),
+    ...(s.lat !== null && s.lng !== null ? { geo: { '@type': 'GeoCoordinates', latitude: s.lat, longitude: s.lng } } : {}),
+    ...(s.website ? { sameAs: [s.website] } : {}),
+    ...(s.rating.count && s.rating.overall !== null
+      ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: s.rating.overall.toFixed(1), ratingCount: s.rating.count, bestRating: 5, worstRating: 1 } }
+      : {}),
+  };
+
   return (
     <>
+      <JsonLd data={stationLd} />
       <Crumb items={[{ label: '홈', to: '/' }, { label: s.region.full_name, to: `/region/${s.region.id}` }, { label: s.name }]} />
       <Card>
         <div className="flex">

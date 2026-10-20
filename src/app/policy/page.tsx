@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/seo';
 import { Check, FileCheck2, Flag, Megaphone, Scale, ShieldCheck, UserRoundCheck, type LucideIcon } from 'lucide-react';
 import { Card, PageHead } from '@/components/ui';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: '운영원칙',
-  description: '폴리스맵의 게시물·개인정보·당사자 보호·중립성 운영원칙.',
-};
+  description:
+    '폴리스맵의 게시물·개인정보·당사자 보호·중립성 운영원칙.',
+  path: '/policy',
+});
 
 const SECTIONS: { title: string; icon: LucideIcon; items: string[] }[] = [
   { title: '평가·게시판 원칙', icon: FileCheck2, items: [

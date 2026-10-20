@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/seo';
 import Link from 'next/link';
 import { Eye, MessageSquare, PenLine, Search, Star, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { Card } from '@/components/ui';
@@ -21,7 +22,11 @@ const PERIOD_OPTIONS: [PopularPeriod, string][] = [
   ['today', '오늘'], ['week', '주간'], ['month', '월간'], ['all', '전체'],
 ];
 
-export const metadata: Metadata = { title: '커뮤니티 게시판' };
+export const metadata: Metadata = pageMeta({
+  title: '커뮤니티 게시판',
+  description: '경찰 수사·민원 경험을 나누는 커뮤니티. 지역별 정보공유, 질문, 고소·고발 진행 경험담을 익명으로도 남길 수 있습니다.',
+  path: '/board',
+});
 
 type Filters = { region?: string; category?: string; sort: string; period: string; q?: string; page?: number };
 

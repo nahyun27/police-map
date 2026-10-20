@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/seo';
 import Link from 'next/link';
 import { BarChart3, FileCheck2, Percent, Scale, Star, TrendingUp, Trophy } from 'lucide-react';
 import ClickableRow from '@/components/ClickableRow';
@@ -9,10 +10,12 @@ import { getStats, getTransparencyReport, type StatsOverview, type TransparencyQ
 // 동일하게 유지된다 — ISR 로 바꿔 매 요청 재렌더링 비용만 없앤다.
 export const revalidate = 60;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: '전국 통계',
-  description: '이용자 평가 통계와 정보공개청구로 확보한 수사관 기피신청·수용률 공개통계.',
-};
+  description:
+    '이용자 평가 통계와 정보공개청구로 확보한 수사관 기피신청·수용률 공개통계.',
+  path: '/stats',
+});
 
 // 다른 주요 메뉴(커뮤니티·사건 공론화·권리구제·제보)와 같은 풀블리드 히어로.
 function StatsHero() {

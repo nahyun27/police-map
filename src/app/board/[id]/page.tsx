@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/seo';
 import { notFound } from 'next/navigation';
 import { PostDetail, PostDetailLoader } from '@/components/PostDetail';
 import { Card, Crumb } from '@/components/ui';
@@ -8,8 +9,9 @@ type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    const p = await getPost(Number((await params).id));
-    return { title: p.title, description: p.body.slice(0, 100), openGraph: { title: p.title, description: p.body.slice(0, 100) } };
+    const id = Number((await params).id);
+    const p = await getPost(id);
+    return pageMeta({ title: p.title, description: p.body.replace(/\s+/g, ' ').slice(0, 120), path: `/board/${id}` });
   } catch {
     return {};
   }

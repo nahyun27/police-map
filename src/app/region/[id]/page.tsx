@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/seo';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ClickableRow from '@/components/ClickableRow';
@@ -12,8 +13,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const rg = await getRegion((await params).id);
     const title = `${rg.full_name} 관할 경찰서 평가`;
-    const description = `${rg.full_name} 관할 경찰서 ${rg.station_count}곳의 수사 절차 평가와 공개정보.`;
-    return { title, description, openGraph: { title, description } };
+    const description = `${rg.full_name} 관할 경찰서 ${rg.station_count}곳의 수사 평가·후기와 공개정보. 지도에서 관할 경찰서를 찾고 평가를 비교해 보세요.`;
+    return pageMeta({ title, description, path: `/region/${(await params).id}` });
   } catch {
     return {};
   }

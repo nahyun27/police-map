@@ -5,20 +5,36 @@ import MainArea from '@/components/MainArea';
 import { ALLOW_INDEXING, NOINDEX, SITE_URL } from '@/lib/seo';
 import './globals.css';
 
-const TITLE = '폴리스맵: 국민 참여형 수사기관 평가 플랫폼';
+// 검색 결과 제목은 앞 30자 안팎만 보이므로 사람들이 실제로 검색하는 말(경찰서 평가·수사 후기)을 앞에 둔다.
+const TITLE = '폴리스맵: 경찰서·수사관 평가와 수사 후기';
 const DESCRIPTION =
-  '전국 경찰관서·수사부서의 공개정보와 수사 절차를 직접 경험한 국민의 사실 기반 평가, 그리고 권리구제 절차 안내를 한곳에서.';
+  '전국 경찰서·수사부서에 대한 국민 참여형 평가와 수사 경험 후기를 한곳에서. 고소·고발, 피해자·피의자로 겪은 수사 절차를 ' +
+  '공유하고, 기피신청·수사심의·국민신문고 등 권리구제 방법을 안내합니다.';
+
+// 구글 서치 콘솔·네이버 서치어드바이저 소유 확인 코드. 빌드할 때 환경변수로 넣는다(없으면 태그를 안 넣음).
+const GOOGLE_VERIFY = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
+const NAVER_VERIFY = process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: TITLE, template: '%s | 폴리스맵' },
   description: DESCRIPTION,
+  applicationName: '폴리스맵',
+  keywords: [
+    '폴리스맵', '경찰서 평가', '경찰서 후기', '수사관 평가', '수사 후기', '고소 후기', '경찰 수사', '경찰 민원',
+    '수사 이의신청', '기피신청', '수사심의', '국민신문고', '권리구제', '경찰서 수사과',
+  ],
   robots: ALLOW_INDEXING ? { index: true, follow: true } : NOINDEX,
+  verification: {
+    ...(GOOGLE_VERIFY ? { google: GOOGLE_VERIFY } : {}),
+    ...(NAVER_VERIFY ? { other: { 'naver-site-verification': NAVER_VERIFY } } : {}),
+  },
+  // og:url 은 여기서 정하지 않는다. 정해 두면 각자 설정이 없는 하위 페이지의 공유 주소가 전부 홈으로 나간다.
+  // 페이지별 대표 주소·공유 정보는 lib/seo.ts 의 pageMeta() 로 채운다.
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,
     siteName: '폴리스맵',
-    url: SITE_URL,
     locale: 'ko_KR',
     type: 'website',
   },

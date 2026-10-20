@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/seo';
 import type { ComponentType, ReactNode } from 'react';
 import Link from 'next/link';
 import {
@@ -12,10 +13,12 @@ import { getStats } from '@/lib/api';
 // 동일하게 유지된다 — ISR 로 바꿔 매 요청 재렌더링 비용만 없앤다.
 export const revalidate = 60;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: '폴리스맵 소개',
-  description: '수사의 실패는 언제나 있었습니다. 기록되지 않았을 뿐입니다. 법원 판결과 국정조사로 이미 확인된 사건들의 기록.',
-};
+  description:
+    '수사의 실패는 언제나 있었습니다. 기록되지 않았을 뿐입니다. 법원 판결과 국정조사로 이미 확인된 사건들의 기록.',
+  path: '/why',
+});
 
 type Tone = 'danger' | 'brand';
 

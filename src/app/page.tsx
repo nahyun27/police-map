@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Flame, Megaphone, MessagesSquare, Scale, Search, ShieldCheck, Star,
@@ -9,6 +10,32 @@ import RegionMapSwitcher from '@/components/RegionMapSwitcher';
 import { Bars, Card, Score, Stars } from '@/components/ui';
 import { getPopularPosts, getRecentReviews, getRegions, getStats, type StatsOverview } from '@/lib/api';
 import { formatDate } from '@/lib/format';
+import { LEGAL } from '@/lib/legal';
+import { SITE_NAME, SITE_URL } from '@/lib/seo';
+import { JsonLd } from '@/components/JsonLd';
+
+// 홈의 대표 주소. 제목·설명은 루트 layout 기본값을 그대로 쓴다.
+export const metadata: Metadata = { alternates: { canonical: '/' }, openGraph: { url: '/', siteName: SITE_NAME, locale: 'ko_KR', type: 'website' } };
+
+// 검색 결과에 사이트 이름·로고를 정확히 표시하고, 구글 "사이트 내 검색창"을 쓸 수 있게 하는 구조화 데이터.
+const SITE_JSONLD = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite', '@id': `${SITE_URL}/#website`, name: SITE_NAME, alternateName: ['PoliceMap', '폴리스 맵'], url: SITE_URL,
+      inLanguage: 'ko-KR',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/search?q={search_term_string}` },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+    {
+      '@type': 'Organization', '@id': `${SITE_URL}/#organization`, name: SITE_NAME, url: SITE_URL,
+      logo: `${SITE_URL}/icon.png`, email: LEGAL.contactEmail,
+    },
+  ],
+};
 
 // 여기서 쓰는 모든 fetch 가 이미 30~60초로 캐시돼 있으므로(src/lib/api.ts 의
 // revalidateSeconds), force-dynamic 으로 매 요청마다 새로 렌더링해도 데이터 신선도는
@@ -58,6 +85,7 @@ export default async function Home() {
 
   return (
     <>
+      <JsonLd data={SITE_JSONLD} />
       <section className="card hero">
         <div className="eyebrow">국민 참여형 수사기관 평가 플랫폼</div>
         <h1>수사 절차의 투명성,<br /><em>국민이 만듭니다</em></h1>
