@@ -33,36 +33,40 @@ export default function AdminInquiriesPage() {
   };
 
   return (
-    <Card>
-      <div className="seg">
-        <button type="button" className={status === 'new' ? 'active' : ''} onClick={() => changeStatus('new')}>새 문의</button>
-        <button type="button" className={status === 'done' ? 'active' : ''} onClick={() => changeStatus('done')}>처리 완료</button>
-      </div>
-      {error && <div className="warn" style={{ marginTop: 12 }}>{error}</div>}
-      <div style={{ marginTop: 16 }}>
-        {data?.items.length ? data.items.map((q) => (
-          <div className="review" key={q.id}>
-            <div className="meta">
-              <span className="badge brand">{q.inquiry_type_label}</span>
-              {q.region_interest && <span className="badge">{q.region_interest}</span>}
-              <span className="sub">{formatDate(q.created_at)}</span>
-            </div>
-            <b>{q.company}</b> <span className="sub">· {q.name} · {q.contact}</span>
-            <p style={{ whiteSpace: 'pre-wrap', fontSize: 14, marginTop: 6 }}>{q.message}</p>
-            {q.admin_note && <p className="sub" style={{ marginTop: 6 }}>메모: {q.admin_note}</p>}
-            {q.status === 'new' && (
-              <button className="btn sm" style={{ marginTop: 8 }} onClick={() => done(q)}><Check size={14} />처리 완료</button>
-            )}
-          </div>
-        )) : <p className="sub">{data ? '해당 문의가 없습니다.' : '불러오는 중…'}</p>}
-      </div>
-      {totalPages > 1 && (
-        <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>
-          {page > 1 && <button className="btn line sm" onClick={() => setPage((p) => p - 1)}>이전</button>}
-          <span className="sub">{page} / {totalPages} ({data?.total}건)</span>
-          {page < totalPages && <button className="btn line sm" onClick={() => setPage((p) => p + 1)}>다음</button>}
+    <>
+      <div className="admin-toolbar">
+        <div className="seg">
+          <button type="button" className={status === 'new' ? 'active' : ''} onClick={() => changeStatus('new')}>새 문의</button>
+          <button type="button" className={status === 'done' ? 'active' : ''} onClick={() => changeStatus('done')}>처리 완료</button>
         </div>
-      )}
-    </Card>
+      </div>
+      <Card>
+        {error && <div className="warn" style={{ marginTop: 12 }}>{error}</div>}
+        <div style={{ marginTop: 16 }}>
+          {data?.items.length ? data.items.map((q) => (
+            <div className="review" key={q.id}>
+              <div className="meta">
+                <span className="badge brand">{q.inquiry_type_label}</span>
+                {q.region_interest && <span className="badge">{q.region_interest}</span>}
+                <span className="sub">{formatDate(q.created_at)}</span>
+              </div>
+              <b>{q.company}</b> <span className="sub">· {q.name} · {q.contact}</span>
+              <p style={{ whiteSpace: 'pre-wrap', fontSize: 14, marginTop: 6 }}>{q.message}</p>
+              {q.admin_note && <p className="sub" style={{ marginTop: 6 }}>메모: {q.admin_note}</p>}
+              {q.status === 'new' && (
+                <button className="btn sm" style={{ marginTop: 8 }} onClick={() => done(q)}><Check size={14} />처리 완료</button>
+              )}
+            </div>
+          )) : <p className="sub">{data ? '해당 문의가 없습니다.' : '불러오는 중…'}</p>}
+        </div>
+        {totalPages > 1 && (
+          <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>
+            {page > 1 && <button className="btn line sm" onClick={() => setPage((p) => p - 1)}>이전</button>}
+            <span className="sub">{page} / {totalPages} ({data?.total}건)</span>
+            {page < totalPages && <button className="btn line sm" onClick={() => setPage((p) => p + 1)}>다음</button>}
+          </div>
+        )}
+      </Card>
+    </>
   );
 }

@@ -38,37 +38,41 @@ export default function AdminBlindedPage() {
   };
 
   return (
-    <Card>
-      <p className="sub" style={{ marginBottom: 12 }}>
-        서로 다른 회원 5명 이상이 신고하면 자동으로 블라인드되고, 신고 메뉴에서 즉시 블라인드할 수도 있습니다.
-        블라인드는 삭제가 아니라 공개만 멈춘 상태이며, 작성자에게는 마이페이지에서 사유가 보입니다.
-      </p>
-      {error && <div className="warn">{error}</div>}
-      <TableWrap>
-        <table className="list">
-          <thead><tr><th>종류</th><th>내용</th><th>사유</th><th>남은 신고</th><th>처리</th></tr></thead>
-          <tbody>
-            {items?.length ? items.map((it) => {
-              const href = hrefOf(it);
-              const key = `${it.target_type}-${it.target_id}`;
-              return (
-                <tr key={key}>
-                  <td style={{ whiteSpace: 'nowrap' }}>{TYPE_LABEL[it.target_type]} #{it.target_id}</td>
-                  <td style={{ maxWidth: 280 }}>{href ? <Link href={href} target="_blank">{it.title}</Link> : it.title}</td>
-                  <td style={{ maxWidth: 240 }}>
-                    <span className={`badge ${it.is_auto ? 'mid' : 'low'}`}>{it.is_auto ? '신고 누적 자동' : '운영진·요청 조치'}</span>
-                    <div className="sub" style={{ marginTop: 4 }}>{it.blind_reason}</div>
-                  </td>
-                  <td>{it.pending_reporters}명</td>
-                  <td><button className="btn line sm" disabled={busy === key} onClick={() => unblind(it)}><Eye size={14} />해제</button></td>
-                </tr>
-              );
-            }) : (
-              <tr><td colSpan={5} className="sub">{items ? '블라인드된 게시물이 없습니다.' : '불러오는 중…'}</td></tr>
-            )}
-          </tbody>
-        </table>
-      </TableWrap>
-    </Card>
+    <>
+      <div className="admin-toolbar">
+        <p className="sub">
+          서로 다른 회원 5명 이상이 신고하면 자동으로 블라인드되고, 신고 메뉴에서 즉시 블라인드할 수도 있습니다.
+          블라인드는 삭제가 아니라 공개만 멈춘 상태이며, 작성자에게는 마이페이지에서 사유가 보입니다.
+        </p>
+      </div>
+      <Card>
+        {error && <div className="warn">{error}</div>}
+        <TableWrap>
+          <table className="list">
+            <thead><tr><th>종류</th><th>내용</th><th>사유</th><th>남은 신고</th><th>처리</th></tr></thead>
+            <tbody>
+              {items?.length ? items.map((it) => {
+                const href = hrefOf(it);
+                const key = `${it.target_type}-${it.target_id}`;
+                return (
+                  <tr key={key}>
+                    <td style={{ whiteSpace: 'nowrap' }}>{TYPE_LABEL[it.target_type]} #{it.target_id}</td>
+                    <td style={{ maxWidth: 280 }}>{href ? <Link href={href} target="_blank">{it.title}</Link> : it.title}</td>
+                    <td style={{ maxWidth: 240 }}>
+                      <span className={`badge ${it.is_auto ? 'mid' : 'low'}`}>{it.is_auto ? '신고 누적 자동' : '운영진·요청 조치'}</span>
+                      <div className="sub" style={{ marginTop: 4 }}>{it.blind_reason}</div>
+                    </td>
+                    <td>{it.pending_reporters}명</td>
+                    <td><button className="btn line sm" disabled={busy === key} onClick={() => unblind(it)}><Eye size={14} />해제</button></td>
+                  </tr>
+                );
+              }) : (
+                <tr><td colSpan={5} className="sub">{items ? '블라인드된 게시물이 없습니다.' : '불러오는 중…'}</td></tr>
+              )}
+            </tbody>
+          </table>
+        </TableWrap>
+      </Card>
+    </>
   );
 }

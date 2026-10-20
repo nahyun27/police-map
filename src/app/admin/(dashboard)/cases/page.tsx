@@ -49,50 +49,54 @@ export default function AdminCasesPage() {
   };
 
   return (
-    <Card>
-      <div className="seg">
-        {STATUS_TABS.map(([v, l]) => (
-          <button key={v} type="button" className={status === v ? 'active' : ''} onClick={() => changeStatus(v)}>{l}</button>
-        ))}
-      </div>
-      {error && <div className="warn" style={{ marginTop: 16 }}>{error}</div>}
-
-      <div style={{ marginTop: 16 }}>
-        {data?.items.length ? data.items.map((c) => (
-          <div className="review" key={c.id}>
-            <div className="meta">
-              <span className="badge">{c.category_label}</span>
-              {c.station_name && <span className="badge">{c.station_name}</span>}
-              <span className="sub">#{c.id} · {c.author_nickname ?? '탈퇴 회원'} · {formatDate(c.created_at)} · 공감 {c.empathy_count} · 신고 {c.pending_reporters}명</span>
-            </div>
-            <h3 style={{ margin: '8px 0 6px' }}>
-              {status === 'removed' ? c.title : <Link href={`/cases/${c.id}`} target="_blank">{c.title}</Link>}
-            </h3>
-            {c.hold_reason && <div className="warn" style={{ margin: '6px 0' }}>{c.hold_reason}</div>}
-            {c.blind_reason && <p className="sub">블라인드 사유: {c.blind_reason}</p>}
-            <p style={{ whiteSpace: 'pre-wrap', fontSize: 14 }}>{c.body}</p>
-            {c.desired_action && <p className="sub" style={{ marginTop: 6 }}>원하는 조치: {c.desired_action}</p>}
-            {status !== 'removed' && (
-              <div className="btn-row" style={{ marginTop: 10 }}>
-                {status === 'held' && (
-                  <button className="btn sm" disabled={busy === c.id} onClick={() => run(c.id, () => approveCase(c.id))}><Check size={14} />확인 후 공개</button>
-                )}
-                {status === 'published' && (
-                  <button className="btn line sm danger" disabled={busy === c.id} onClick={() => blind(c)}><EyeOff size={14} />즉시 블라인드</button>
-                )}
-                <button className="btn line sm" disabled={busy === c.id} onClick={() => remove(c)}><Trash2 size={14} />삭제</button>
-              </div>
-            )}
-          </div>
-        )) : <p className="sub">{data ? '해당 상태의 사건이 없습니다.' : '불러오는 중…'}</p>}
-      </div>
-      {totalPages > 1 && (
-        <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>
-          {page > 1 && <button className="btn line sm" onClick={() => setPage((p) => p - 1)}>이전</button>}
-          <span className="sub">{page} / {totalPages} ({data?.total}건)</span>
-          {page < totalPages && <button className="btn line sm" onClick={() => setPage((p) => p + 1)}>다음</button>}
+    <>
+      <div className="admin-toolbar">
+        <div className="seg">
+          {STATUS_TABS.map(([v, l]) => (
+            <button key={v} type="button" className={status === v ? 'active' : ''} onClick={() => changeStatus(v)}>{l}</button>
+          ))}
         </div>
-      )}
-    </Card>
+      </div>
+      <Card>
+        {error && <div className="warn" style={{ marginBottom: 16 }}>{error}</div>}
+
+        <div style={{ marginTop: 16 }}>
+          {data?.items.length ? data.items.map((c) => (
+            <div className="review" key={c.id}>
+              <div className="meta">
+                <span className="badge">{c.category_label}</span>
+                {c.station_name && <span className="badge">{c.station_name}</span>}
+                <span className="sub">#{c.id} · {c.author_nickname ?? '탈퇴 회원'} · {formatDate(c.created_at)} · 공감 {c.empathy_count} · 신고 {c.pending_reporters}명</span>
+              </div>
+              <h3 style={{ margin: '8px 0 6px' }}>
+                {status === 'removed' ? c.title : <Link href={`/cases/${c.id}`} target="_blank">{c.title}</Link>}
+              </h3>
+              {c.hold_reason && <div className="warn" style={{ margin: '6px 0' }}>{c.hold_reason}</div>}
+              {c.blind_reason && <p className="sub">블라인드 사유: {c.blind_reason}</p>}
+              <p style={{ whiteSpace: 'pre-wrap', fontSize: 14 }}>{c.body}</p>
+              {c.desired_action && <p className="sub" style={{ marginTop: 6 }}>원하는 조치: {c.desired_action}</p>}
+              {status !== 'removed' && (
+                <div className="btn-row" style={{ marginTop: 10 }}>
+                  {status === 'held' && (
+                    <button className="btn sm" disabled={busy === c.id} onClick={() => run(c.id, () => approveCase(c.id))}><Check size={14} />확인 후 공개</button>
+                  )}
+                  {status === 'published' && (
+                    <button className="btn line sm danger" disabled={busy === c.id} onClick={() => blind(c)}><EyeOff size={14} />즉시 블라인드</button>
+                  )}
+                  <button className="btn line sm" disabled={busy === c.id} onClick={() => remove(c)}><Trash2 size={14} />삭제</button>
+                </div>
+              )}
+            </div>
+          )) : <p className="sub">{data ? '해당 상태의 사건이 없습니다.' : '불러오는 중…'}</p>}
+        </div>
+        {totalPages > 1 && (
+          <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>
+            {page > 1 && <button className="btn line sm" onClick={() => setPage((p) => p - 1)}>이전</button>}
+            <span className="sub">{page} / {totalPages} ({data?.total}건)</span>
+            {page < totalPages && <button className="btn line sm" onClick={() => setPage((p) => p + 1)}>다음</button>}
+          </div>
+        )}
+      </Card>
+    </>
   );
 }

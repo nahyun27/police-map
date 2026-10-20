@@ -207,6 +207,11 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 .admin-main { flex: 1; min-width: 0; margin-left: 240px; }
 .admin-topbar { display: none; }
 .admin-content { max-width: 1280px; margin: 0 auto; padding: 30px 28px 64px; }
+/* 관리자 목록 페이지: 상태 필터·검색은 표 카드 밖 위쪽 줄에 둔다(카드 안에 같이 있으면 표의 일부처럼 보인다는 의견). */
+.admin-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.admin-toolbar .seg { background: #fff; border: 1px solid var(--line); }
+.admin-toolbar .seg button.active, .admin-toolbar .seg a.active { background: var(--brand-soft); color: var(--brand-ink); box-shadow: none; }
+.admin-toolbar > .sub, .admin-toolbar .sub { margin: 0; }
 .admin-pagehead { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
 .admin-pagehead h1 { font-size: 23px; }
 .admin-pagehead .crumb { margin-bottom: 4px; }

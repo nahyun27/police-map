@@ -60,91 +60,94 @@ export default function AdminReportsPage() {
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.size)) : 1;
 
   return (
-    <Card>
-      <div className="seg">
-        {STATUS_TABS.map(([v, l]) => (
-          <button key={v} type="button" className={status === v ? 'active' : ''} onClick={() => setStatus(v)}>{l}</button>
-        ))}
-      </div>
-
-      {error && <div className="warn" style={{ marginTop: 16 }}>{error}</div>}
-
-      <TableWrap>
-        <table className="list">
-          <thead>
-            <tr>
-              <th>대상</th><th>미리보기</th><th>신고자</th><th>신고 사유</th><th>접수일</th>
-              {status === 'pending' && <th>처리</th>}
-              {status === 'resolved' && <th>처리 결과</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {data?.items.length ? data.items.map((r) => (
-              <tr key={r.id}>
-                <td>
-                  {TARGET_LABEL[r.target_type] ?? r.target_type} #{r.target_id}
-                  <div className="sub" style={{ marginTop: 4 }}>신고자 {r.pending_reporters}명</div>
-                  {r.target_blinded && <span className="badge low" style={{ marginTop: 4 }}><EyeOff size={11} />블라인드됨</span>}
-                </td>
-                <td style={{ maxWidth: 240, whiteSpace: 'pre-wrap' }}>{r.target_preview}</td>
-                <td className="sub">{r.reporter_nickname}</td>
-                <td style={{ maxWidth: 220, whiteSpace: 'pre-wrap' }}>{r.reason}</td>
-                <td className="sub" style={{ whiteSpace: 'nowrap' }}>{formatDate(r.created_at)}</td>
-                {status === 'pending' && (
-                  <td style={{ minWidth: 180 }}>
-                    {actioningId?.id === r.id ? (
-                      <div>
-                        <p className="sub" style={{ marginBottom: 4 }}>{actioningId.action === 'remove' ? '삭제 조치' : '기각(그대로 둠)'}</p>
-                        {actioningId.action === 'dismiss' && r.target_blind_auto && (
-                          <div className="warn" style={{ margin: '4px 0 6px', fontSize: 12.5 }}>
-                            기각하면 같은 게시물의 신고 {r.pending_reporters}건이 함께 종결되고, 신고 누적으로 걸린 블라인드가 풀려 <b>다시 공개</b>됩니다.
-                            개인정보·명예훼손 우려가 남아 있다면 기각하지 말고 블라인드를 유지하거나 삭제해 주세요.
-                          </div>
-                        )}
-                        <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="처리 메모(5자 이상)"
-                          style={{ minHeight: 60, width: '100%', border: '1px solid var(--line)', borderRadius: 8, padding: 8, fontSize: 13 }} />
-                        <div className="btn-row" style={{ marginTop: 6 }}>
-                          <button className="btn sm" disabled={note.trim().length < 5 || busyId === r.id} onClick={() => submitResolve(r.id, actioningId.action)}>확정</button>
-                          <button className="btn line sm" onClick={() => { setActioningId(null); setNote(''); }}>취소</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="btn-row">
-                        <button className="btn sm" disabled={busyId === r.id} onClick={() => { setActioningId({ id: r.id, action: 'remove' }); setNote(''); }}><Trash2 size={14} />삭제</button>
-                        <button className="btn line sm" disabled={busyId === r.id} onClick={() => { setActioningId({ id: r.id, action: 'dismiss' }); setNote(''); }}><X size={14} />기각</button>
-                        {r.target_blinded !== null && (
-                          <button className="btn line sm danger" disabled={busyId === r.id} onClick={() => toggleBlind(r)}>
-                            {r.target_blinded ? <><Eye size={14} />블라인드 해제</> : <><EyeOff size={14} />즉시 블라인드</>}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                )}
-                {status === 'resolved' && (
-                  <td className="sub" style={{ maxWidth: 200 }}>
-                    <span className={`badge ${r.resolution_action === 'removed' ? 'low' : 'mid'}`}>
-                      {r.resolution_action === 'removed' ? <Check size={11} /> : <X size={11} />}
-                      {r.resolution_action === 'removed' ? '삭제됨' : '기각됨'}
-                    </span>
-                    <p style={{ marginTop: 4 }}>{r.resolution_note}</p>
-                  </td>
-                )}
-              </tr>
-            )) : (
-              <tr><td colSpan={6} className="sub">해당 상태의 신고가 없습니다.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </TableWrap>
-
-      {totalPages > 1 && (
-        <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>
-          {page > 1 && <button className="btn line sm" onClick={() => setPage((p) => p - 1)}>이전</button>}
-          <span className="sub">{page} / {totalPages} ({data?.total}건)</span>
-          {page < totalPages && <button className="btn line sm" onClick={() => setPage((p) => p + 1)}>다음</button>}
+    <>
+      <div className="admin-toolbar">
+        <div className="seg">
+          {STATUS_TABS.map(([v, l]) => (
+            <button key={v} type="button" className={status === v ? 'active' : ''} onClick={() => setStatus(v)}>{l}</button>
+          ))}
         </div>
-      )}
-    </Card>
+      </div>
+      <Card>
+        {error && <div className="warn" style={{ marginBottom: 16 }}>{error}</div>}
+
+        <TableWrap>
+          <table className="list">
+            <thead>
+              <tr>
+                <th>대상</th><th>미리보기</th><th>신고자</th><th>신고 사유</th><th>접수일</th>
+                {status === 'pending' && <th>처리</th>}
+                {status === 'resolved' && <th>처리 결과</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {data?.items.length ? data.items.map((r) => (
+                <tr key={r.id}>
+                  <td>
+                    {TARGET_LABEL[r.target_type] ?? r.target_type} #{r.target_id}
+                    <div className="sub" style={{ marginTop: 4 }}>신고자 {r.pending_reporters}명</div>
+                    {r.target_blinded && <span className="badge low" style={{ marginTop: 4 }}><EyeOff size={11} />블라인드됨</span>}
+                  </td>
+                  <td style={{ maxWidth: 240, whiteSpace: 'pre-wrap' }}>{r.target_preview}</td>
+                  <td className="sub">{r.reporter_nickname}</td>
+                  <td style={{ maxWidth: 220, whiteSpace: 'pre-wrap' }}>{r.reason}</td>
+                  <td className="sub" style={{ whiteSpace: 'nowrap' }}>{formatDate(r.created_at)}</td>
+                  {status === 'pending' && (
+                    <td style={{ minWidth: 180 }}>
+                      {actioningId?.id === r.id ? (
+                        <div>
+                          <p className="sub" style={{ marginBottom: 4 }}>{actioningId.action === 'remove' ? '삭제 조치' : '기각(그대로 둠)'}</p>
+                          {actioningId.action === 'dismiss' && r.target_blind_auto && (
+                            <div className="warn" style={{ margin: '4px 0 6px', fontSize: 12.5 }}>
+                              기각하면 같은 게시물의 신고 {r.pending_reporters}건이 함께 종결되고, 신고 누적으로 걸린 블라인드가 풀려 <b>다시 공개</b>됩니다.
+                              개인정보·명예훼손 우려가 남아 있다면 기각하지 말고 블라인드를 유지하거나 삭제해 주세요.
+                            </div>
+                          )}
+                          <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="처리 메모(5자 이상)"
+                            style={{ minHeight: 60, width: '100%', border: '1px solid var(--line)', borderRadius: 8, padding: 8, fontSize: 13 }} />
+                          <div className="btn-row" style={{ marginTop: 6 }}>
+                            <button className="btn sm" disabled={note.trim().length < 5 || busyId === r.id} onClick={() => submitResolve(r.id, actioningId.action)}>확정</button>
+                            <button className="btn line sm" onClick={() => { setActioningId(null); setNote(''); }}>취소</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="btn-row">
+                          <button className="btn sm" disabled={busyId === r.id} onClick={() => { setActioningId({ id: r.id, action: 'remove' }); setNote(''); }}><Trash2 size={14} />삭제</button>
+                          <button className="btn line sm" disabled={busyId === r.id} onClick={() => { setActioningId({ id: r.id, action: 'dismiss' }); setNote(''); }}><X size={14} />기각</button>
+                          {r.target_blinded !== null && (
+                            <button className="btn line sm danger" disabled={busyId === r.id} onClick={() => toggleBlind(r)}>
+                              {r.target_blinded ? <><Eye size={14} />블라인드 해제</> : <><EyeOff size={14} />즉시 블라인드</>}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  )}
+                  {status === 'resolved' && (
+                    <td className="sub" style={{ maxWidth: 200 }}>
+                      <span className={`badge ${r.resolution_action === 'removed' ? 'low' : 'mid'}`}>
+                        {r.resolution_action === 'removed' ? <Check size={11} /> : <X size={11} />}
+                        {r.resolution_action === 'removed' ? '삭제됨' : '기각됨'}
+                      </span>
+                      <p style={{ marginTop: 4 }}>{r.resolution_note}</p>
+                    </td>
+                  )}
+                </tr>
+              )) : (
+                <tr><td colSpan={6} className="sub">해당 상태의 신고가 없습니다.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </TableWrap>
+
+        {totalPages > 1 && (
+          <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>
+            {page > 1 && <button className="btn line sm" onClick={() => setPage((p) => p - 1)}>이전</button>}
+            <span className="sub">{page} / {totalPages} ({data?.total}건)</span>
+            {page < totalPages && <button className="btn line sm" onClick={() => setPage((p) => p + 1)}>다음</button>}
+          </div>
+        )}
+      </Card>
+    </>
   );
 }
