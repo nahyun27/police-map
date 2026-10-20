@@ -12,14 +12,14 @@ from app.api.v1._present import iso, ratings_dict
 from app.core.database import get_db
 from app.core.deps import require_admin
 from app.models import (
-    CASE_CATEGORY_LABELS, AuditLog, CaseStatus, Department, Officer, OfficerAssignment, OfficerVerification, Post,
+    CASE_CATEGORY_LABELS, AdInquiry, AuditLog, CaseStatus, Department, Officer, OfficerAssignment, OfficerVerification, Post,
     PostComment, PublicCase, Region, Report, ReportStatus, ReportTarget, Review, ReviewComment, ReviewReply, ReviewStatus,
-    Station, TakedownRequest, TakedownStatus, User, UserRole, VerificationStatus,
+    InquiryStatus, Station, TakedownRequest, TakedownStatus, User, UserRole, VerificationStatus,
 )
 from app.models.officer import SOURCE_LABELS
 from app.models.review import case_type_label, role_label
 from app.schemas.admin import (
-    AdminUserContentItem, AdminUserOut, EvidenceVerifyIn, OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate,
+    AdminUserContentItem, AdminUserOut, DashboardActivity, DashboardOut, DashboardPending, EvidenceVerifyIn, OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate,
     SuspendIn, UserStatsOut,
 )
 from app.schemas.public import Page
@@ -32,6 +32,63 @@ from app.services import blinding
 from app.services.reports import batch_target_previews, remove_target, target_preview
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+
+
+# ---------- 대시보드 ----------
+@router.get("/dashboard", response_model=DashboardOut)
+def admin_dashboard(db: Session = Depends(get_db)):
+    """관리자 첫 화면. 처리 대기 건수와 최근 활동(평가·게시글·사건·가입·신고)을 한 번에 준다."""
+    now = takedown_svc.utcnow()
+    count = lambda stmt: db.scalar(stmt) or 0  # noqa: E731
+    pending_takedown = TakedownRequest.status == TakedownStatus.pending
+    pending = DashboardPending(
+        reports=count(select(func.count(Report.id)).where(Report.status == ReportStatus.pending)),
+        takedowns=count(select(func.count(TakedownRequest.id)).where(pending_takedown)),
+        takedowns_overdue=count(select(func.count(TakedownRequest.id)).where(pending_takedown, TakedownRequest.due_at < now)),
+        verifications=count(select(func.count(OfficerVerification.id)).where(OfficerVerification.status == VerificationStatus.pending)),
+        cases_held=count(select(func.count(PublicCase.id)).where(PublicCase.status == CaseStatus.held)),
+        inquiries=count(select(func.count(AdInquiry.id)).where(AdInquiry.status == InquiryStatus.new)),
+        reviews=count(select(func.count(Review.id)).where(Review.status == ReviewStatus.pending)),
+    )
+    totals = {
+        "reviews": count(select(func.count(Review.id)).where(Review.status == ReviewStatus.published)),
+        "posts": count(select(func.count(Post.id)).where(Post.is_removed.is_(False))),
+        "cases": count(select(func.count(PublicCase.id)).where(PublicCase.status == CaseStatus.published)),
+        "users": count(select(func.count(User.id)).where(User.deleted_at.is_(None))),
+    }
+
+    def short(t: str | None) -> str:
+        t = " ".join((t or "").split())
+        return t[:60] + ("…" if len(t) > 60 else "")
+
+    recent: list[DashboardActivity] = []
+    for r, station in db.execute(
+        select(Review, Station.name).join(Station, Station.id == Review.station_id).order_by(Review.id.desc()).limit(8)
+    ).all():
+        recent.append(DashboardActivity(
+            kind="review", kind_label="평가", text=f"{station} · {short(r.body) or '별점만 등록'}", created_at=iso(r.created_at),
+            link=f"/board/review/{r.id}" if r.status == ReviewStatus.published else None,
+        ))
+    for p in db.scalars(select(Post).order_by(Post.id.desc()).limit(8)):
+        recent.append(DashboardActivity(
+            kind="post", kind_label="게시글", text=short(p.title), created_at=iso(p.created_at),
+            link=None if p.is_removed else f"/board/{p.id}",
+        ))
+    for c in db.scalars(select(PublicCase).order_by(PublicCase.id.desc()).limit(8)):
+        recent.append(DashboardActivity(
+            kind="case", kind_label="사건 공론화", text=short(c.title) + (" (보류)" if c.status == CaseStatus.held else ""),
+            created_at=iso(c.created_at), link="/admin/cases" if c.status == CaseStatus.held else f"/cases/{c.id}",
+        ))
+    for u in db.scalars(select(User).order_by(User.id.desc()).limit(8)):
+        recent.append(DashboardActivity(
+            kind="signup", kind_label="가입", text=u.nickname, created_at=iso(u.created_at), link="/admin/users",
+        ))
+    for rp in db.scalars(select(Report).order_by(Report.id.desc()).limit(8)):
+        recent.append(DashboardActivity(
+            kind="report", kind_label="신고", text=short(rp.reason), created_at=iso(rp.created_at), link="/admin/reports",
+        ))
+    recent.sort(key=lambda a: a.created_at or "", reverse=True)
+    return DashboardOut(pending=pending, totals=totals, recent=recent[:20])
 
 
 # ---------- 가입 회원 통계 ----------

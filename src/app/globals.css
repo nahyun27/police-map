@@ -1015,3 +1015,19 @@ select:not([multiple]):not([size]):disabled { cursor: default; opacity: .7; }
 .review.row-link { display: block; color: inherit; border-radius: 12px; margin: 0 -10px; padding-left: 10px; padding-right: 10px; transition: background .12s; }
 .review.row-link:hover { background: #f8f9fc; color: inherit; }
 .row-link-title { font-weight: 650; color: var(--ink); margin: 4px 0 0; }
+
+/* 관리자 대시보드 */
+.admin-tasks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.admin-task { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; color: var(--muted); background: #fff; }
+.admin-task .lbl { flex: 1; font-size: 14px; }
+.admin-task b { color: var(--muted); font-size: 15px; }
+.admin-task.has { border-color: #cfd9ff; background: var(--brand-soft); color: var(--brand-ink); }
+.admin-task.has b { color: var(--brand); font-size: 17px; }
+.admin-task:hover { border-color: var(--brand); color: inherit; }
+.admin-content .card { min-width: 0; }
+.admin-activity { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.admin-activity li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line2); font-size: 13.5px; }
+.admin-activity li:first-child { border-top: none; }
+.admin-activity li a, .admin-activity li .txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+.admin-activity li .badge { flex-shrink: 0; }
+.admin-activity li .sub { flex-shrink: 0; font-size: 12px; }

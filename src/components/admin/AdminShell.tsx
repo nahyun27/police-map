@@ -4,13 +4,14 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  BadgeCheck, ClipboardCheck, EyeOff, FileX, Flag, History, Image, LogOut, Mail, Megaphone, Menu, Users,
+  BadgeCheck, ClipboardCheck, EyeOff, FileX, Flag, History, Image, LayoutDashboard, LogOut, Mail, Megaphone, Menu, Users,
 } from 'lucide-react';
 import { resetAdminCheck } from '@/components/AdminBlindButton';
 import { ApiError, getMe, logout, type UserOut } from '@/lib/api';
 
 const NAV = [
-  { href: '/admin', label: '평가 검수', icon: ClipboardCheck },
+  { href: '/admin', label: '대시보드', icon: LayoutDashboard },
+  { href: '/admin/reviews', label: '평가 검수', icon: ClipboardCheck },
   { href: '/admin/reports', label: '신고', icon: Flag },
   { href: '/admin/blinded', label: '블라인드 게시물', icon: EyeOff },
   { href: '/admin/cases', label: '사건 공론화', icon: Megaphone },

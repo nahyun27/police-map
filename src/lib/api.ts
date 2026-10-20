@@ -1107,3 +1107,14 @@ export const suspendAdminUser = (id: number, reason: string) =>
   apiFetch<AdminUser>(`/admin/users/${id}/suspend`, { method: 'POST', body: JSON.stringify({ reason }) });
 export const unsuspendAdminUser = (id: number) => apiFetch<AdminUser>(`/admin/users/${id}/unsuspend`, { method: 'POST' });
 export const getAdminUserContent = (id: number) => apiFetch<AdminUserContentItem[]>(`/admin/users/${id}/content`);
+
+/* ===================== 관리자: 대시보드 ===================== */
+export interface DashboardOut {
+  pending: {
+    reports: number; takedowns: number; takedowns_overdue: number; verifications: number;
+    cases_held: number; inquiries: number; reviews: number;
+  };
+  totals: { reviews: number; posts: number; cases: number; users: number };
+  recent: { kind: string; kind_label: string; text: string; created_at: string | null; link: string | null }[];
+}
+export const getAdminDashboard = () => apiFetch<DashboardOut>('/admin/dashboard');

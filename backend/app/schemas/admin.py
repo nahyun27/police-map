@@ -90,3 +90,28 @@ class AdminUserContentItem(BaseModel):
     state: str
     created_at: str | None
     link: str | None
+
+
+class DashboardPending(BaseModel):
+    """처리를 기다리는 일. 0 이 아니면 대시보드에서 해당 메뉴로 안내한다."""
+    reports: int
+    takedowns: int
+    takedowns_overdue: int  # 10일 재검토 기한을 넘긴 삭제·정정 요청
+    verifications: int
+    cases_held: int
+    inquiries: int
+    reviews: int  # 2026-10 이전 검수 대기열(신규 평가는 바로 게시)
+
+
+class DashboardActivity(BaseModel):
+    kind: str
+    kind_label: str
+    text: str
+    created_at: str | None
+    link: str | None  # 공개 화면 또는 관리자 화면 경로
+
+
+class DashboardOut(BaseModel):
+    pending: DashboardPending
+    totals: dict[str, int]  # 누적 평가·게시글·사건·회원 수
+    recent: list[DashboardActivity]

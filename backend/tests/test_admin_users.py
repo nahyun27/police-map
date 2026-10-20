@@ -55,3 +55,13 @@ def test_user_content_lists_items_and_is_logged(db, user_client, admin_client, w
     items = admin_client.get(f"{API}/admin/users/{uid}/content").json()
     assert any(i["kind"] == "post" and i["text"] == "열람 테스트 글" for i in items)
     assert db.query(AuditLog).filter_by(action="user.view_content", target_id=uid).count() == 1
+
+
+def test_dashboard_counts_and_recent(db, user_client, admin_client, world):
+    pid = user_client.post(f"{API}/posts", json={"title": "대시보드 테스트 글", "body": "본문"}).json()["id"]
+    admin_client.post(f"{API}/reports", json={"target_type": "post", "target_id": pid, "reason": "부적절한 내용입니다"})
+    assert user_client.get(f"{API}/admin/dashboard").status_code == 403
+    d = admin_client.get(f"{API}/admin/dashboard").json()
+    assert d["pending"]["reports"] == 1 and d["totals"]["posts"] == 1
+    kinds = {a["kind"] for a in d["recent"]}
+    assert {"post", "report", "signup"} <= kinds
