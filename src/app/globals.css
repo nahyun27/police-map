@@ -862,7 +862,7 @@ table.channel-table .pill {
 /* ---------- 홈 진입 경로 카드(PURPOSES) ---------- */
 .purpose-section { margin-bottom: 20px; }
 .purpose-title { font-size: 18px; margin-bottom: 14px; }
-.purpose-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.purpose-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
 .purpose-card {
   display: flex; flex-direction: column; gap: 10px; padding: 20px; border: 1px solid var(--line);
   border-radius: var(--radius); background: var(--surface); color: inherit; transition: .15s;
@@ -871,7 +871,10 @@ table.channel-table .pill {
 .purpose-card .ico { width: 40px; height: 40px; border-radius: 12px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; }
 .purpose-card b { font-size: 15px; font-weight: 700; color: var(--ink); }
 .purpose-card .sub { font-size: 13px; }
+@media (max-width: 1080px) { .purpose-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 860px) { .purpose-grid { grid-template-columns: 1fr 1fr; } }
+/* 2칸 배치에서 카드 수가 홀수면 마지막 카드가 혼자 반쪽만 차지하지 않게 한 줄을 다 쓴다. */
+@media (max-width: 860px) { .purpose-card:last-child:nth-child(odd) { grid-column: 1 / -1; } }
 @media (max-width: 480px) { .purpose-card { padding: 16px; } }
 
 /* ---------- 사건 공론화 ---------- */

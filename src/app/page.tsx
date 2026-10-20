@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import {
-  ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Flame, Megaphone, Scale, Search, ShieldCheck, Star,
+  ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Flame, Megaphone, MessagesSquare, Scale, Search, ShieldCheck, Star,
   ThumbsDown, ThumbsUp,
 } from 'lucide-react';
 import HeroSearch from '@/components/HeroSearch';
@@ -27,6 +27,7 @@ const FEATURES = [
 const PURPOSES = [
   { to: '#find-map', icon: Search, title: '경찰서 찾기', body: '관할 경찰서와 부서 확인' },
   { to: '/search?intent=write', icon: Star, title: '평가 바로 작성하기', body: '경찰서를 선택하고 바로 작성' },
+  { to: '/cases', icon: MessagesSquare, title: '사건 공론화하기', body: '겪은 일을 기록하고 공감 모으기' },
   { to: '/remedy', icon: Scale, title: '권리구제 방법 찾기', body: '내 상황에 맞는 공식 절차' },
   { to: '/report', icon: Megaphone, title: '문제 제보하기', body: '감독기관·언론 제보 안내' },
 ];
