@@ -991,3 +991,15 @@ select:not([multiple]):not([size]) {
   cursor: pointer;
 }
 select:not([multiple]):not([size]):disabled { cursor: default; opacity: .7; }
+
+/* 관리자 광고 폼의 배너 미리보기 */
+.banner-preview { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 8px; }
+.banner-preview img { border-radius: 8px; border: 1px solid var(--line); display: block; }
+.banner-preview img.wide { width: 240px; height: auto; }
+.banner-preview img.side { width: 60px; height: auto; max-height: 220px; object-fit: contain; }
+.banner-preview .sub { font-size: 12.5px; }
+
+/* 관리자 회원 관리: 펼친 "작성 글" 목록 */
+.admin-user-content { list-style: none; margin: 0; padding: 4px 0; display: flex; flex-direction: column; gap: 8px; }
+.admin-user-content li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; }
+.admin-user-content li a, .admin-user-content li > span:not(.badge):not(.sub) { flex: 1; min-width: 200px; color: var(--ink); }

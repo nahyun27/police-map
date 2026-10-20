@@ -34,6 +34,10 @@ class User(Base):
     terms_version: Mapped[str | None] = mapped_column(String(20))
     # 탈퇴 시각. 탈퇴 후 1년이 지나면 수사관 인증 신청 기록을 파기한다(개인정보처리방침 보관 기간, services/retention.py).
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 관리자 이용 정지(이용약관 제6조). 정지 중에는 is_active 도 False 라 로그인·작성이 막히고,
+    # 탈퇴(deleted_at)와는 이 칸으로 구분한다. 사유는 회원 관리 화면에 보이고 처리 기록에도 남는다.
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    suspend_reason: Mapped[str | None] = mapped_column(String(300))
 
     # 경찰관 신원 인증(OfficerVerification 승인) 결과 — 전부 None 이면 미인증 일반 회원이다.
     # officer_station_id 가 있어야만 그 경찰서 리뷰에 해명(ReviewReply)을 달 수 있다.

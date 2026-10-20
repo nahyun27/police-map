@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui';
 import {
@@ -14,6 +14,41 @@ function errMsg(e: unknown) {
     if (typeof d === 'string') return d;
   }
   return '처리하지 못했습니다. 입력값을 확인해 주세요.';
+}
+
+/** 배너 파일 칸. 수정 모드에서는 지금 등록된 배너를, 새 파일을 고르면 그 파일을 미리 보여 줘서
+ * "비워 두면 유지, 고르면 교체"가 화면만 보고도 드러나게 한다. */
+function BannerField({ name, label, currentUrl, required, removable }: {
+  name: 'image_wide' | 'image_side'; label: string; currentUrl?: string | null; required?: boolean; removable?: boolean;
+}) {
+  const [picked, setPicked] = useState<string | null>(null);
+  const [remove, setRemove] = useState(false);
+  useEffect(() => () => { if (picked) URL.revokeObjectURL(picked); }, [picked]);
+  const onPick = (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    setPicked(f ? URL.createObjectURL(f) : null);
+  };
+  const preview = picked ?? (remove ? null : currentUrl ? apiAsset(currentUrl) : null);
+  const caption = picked ? '새 파일로 교체됩니다' : remove ? '저장하면 세로 배너가 없어집니다' : currentUrl ? '지금 등록된 배너(파일을 고르지 않으면 그대로 유지)' : null;
+  return (
+    <div className="field">
+      <label>{label}</label>
+      {(preview || caption) && (
+        <div className="banner-preview">
+          {/* eslint-disable-next-line @next/next/no-img-element -- 관리자 미리보기 */}
+          {preview && <img src={preview} alt="" className={name === 'image_side' ? 'side' : 'wide'} />}
+          {caption && <span className="sub">{caption}</span>}
+        </div>
+      )}
+      <input type="file" name={name} accept="image/png,image/jpeg,image/webp" required={required} onChange={onPick} />
+      {removable && currentUrl && (
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontWeight: 500, fontSize: 13, marginTop: 6 }}>
+          <input type="checkbox" name="remove_side" value="true" style={{ width: 'auto' }} checked={remove} onChange={(e) => setRemove(e.target.checked)} />
+          세로 배너 없애기(넓은 PC 화면 양옆에 표시 안 함, 가로 배너만 노출)
+        </label>
+      )}
+    </div>
+  );
 }
 
 /** 등록·수정 공용 폼. ad 를 주면 수정 모드: 현재 값을 채워 두고, 배너는 새 파일을 고른 것만 교체한다. */
@@ -46,19 +81,11 @@ function AdForm({ ad, regions, onSubmit, onCancel, busy }: {
         </div>
         <div className="field"><label>시작일 <span className="tag">선택</span></label><input type="date" name="starts_on" defaultValue={ad?.starts_on ?? ''} /></div>
         <div className="field"><label>종료일 <span className="tag">선택</span></label><input type="date" name="ends_on" defaultValue={ad?.ends_on ?? ''} /></div>
-        <div className="field">
-          <label>가로 배너({editing ? '바꿀 때만 선택' : '필수'}, 권장 1200×300)</label>
-          <input type="file" name="image_wide" accept="image/png,image/jpeg,image/webp" required={!editing} />
-        </div>
-        <div className="field">
-          <label>세로 배너(선택, 권장 160×600)</label>
-          <input type="file" name="image_side" accept="image/png,image/jpeg,image/webp" />
-          {ad?.image_side_url && (
-            <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontWeight: 500, fontSize: 13, marginTop: 6 }}>
-              <input type="checkbox" name="remove_side" value="true" style={{ width: 'auto' }} />기존 세로 배너 빼기
-            </label>
-          )}
-        </div>
+        <BannerField
+          name="image_wide" label={`가로 배너(${editing ? '바꿀 때만 선택' : '필수'}, 권장 1200×300)`}
+          currentUrl={ad?.image_wide_url} required={!editing}
+        />
+        <BannerField name="image_side" label="세로 배너(선택, 권장 160×600)" currentUrl={ad?.image_side_url} removable />
       </div>
       <div className="btn-row">
         <button className="btn" type="submit" disabled={busy}>{busy ? '저장 중…' : editing ? '수정 저장' : '등록'}</button>

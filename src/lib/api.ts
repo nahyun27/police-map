@@ -1057,3 +1057,40 @@ export const listAdminInquiries = (status: 'new' | 'done', page = 1) =>
   apiFetch<Page<AdminInquiry>>(`/admin/inquiries?status=${status}&page=${page}`);
 export const markInquiryDone = (id: number, note: string) =>
   apiFetch<void>(`/admin/inquiries/${id}/done`, { method: 'POST', body: JSON.stringify({ note }) });
+
+/* ===================== 관리자: 회원 관리 ===================== */
+export type AdminUserStatus = 'active' | 'suspended' | 'withdrawn';
+export interface AdminUser {
+  id: number;
+  email: string;
+  nickname: string;
+  role: string;
+  status: AdminUserStatus;
+  created_at: string | null;
+  suspended_at: string | null;
+  suspend_reason: string | null;
+  officer_verified: boolean;
+  review_count: number;
+  post_count: number;
+  comment_count: number;
+  case_count: number;
+  reports_received: number;
+}
+export interface AdminUserContentItem {
+  kind: string;
+  kind_label: string;
+  id: number;
+  text: string;
+  state: string;
+  created_at: string | null;
+  link: string | null;
+}
+export const listAdminUsers = (opts: { q?: string; status?: 'all' | AdminUserStatus; page?: number }) => {
+  const qs = new URLSearchParams({ status: opts.status ?? 'all', page: String(opts.page ?? 1) });
+  if (opts.q?.trim()) qs.set('q', opts.q.trim());
+  return apiFetch<Page<AdminUser>>(`/admin/users?${qs}`);
+};
+export const suspendAdminUser = (id: number, reason: string) =>
+  apiFetch<AdminUser>(`/admin/users/${id}/suspend`, { method: 'POST', body: JSON.stringify({ reason }) });
+export const unsuspendAdminUser = (id: number) => apiFetch<AdminUser>(`/admin/users/${id}/unsuspend`, { method: 'POST' });
+export const getAdminUserContent = (id: number) => apiFetch<AdminUserContentItem[]>(`/admin/users/${id}/content`);

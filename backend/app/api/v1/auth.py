@@ -55,6 +55,9 @@ def register(body: RegisterIn, response: Response, db: Session = Depends(get_db)
 def login(body: LoginIn, response: Response, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.email == body.email.lower()))
     ok = verify_password(body.password, user.password_hash if user else _DUMMY_HASH)
+    if user and ok and user.suspended_at is not None and user.deleted_at is None:
+        # 비밀번호가 맞을 때만 정지 사실을 알린다(틀린 비밀번호로는 계정 상태를 알아낼 수 없게).
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "이용이 정지된 계정입니다. 문의: admin@policemap.kr")
     if not user or not ok or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다.")
     _issue(response, user)

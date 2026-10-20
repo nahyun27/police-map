@@ -58,3 +58,35 @@ class UserStatsOut(BaseModel):
     new_30d: int
     officer_verified: int
     daily_signups: list[tuple[str, int]]  # 최근 14일, (날짜, 가입 수)
+
+
+class AdminUserOut(BaseModel):
+    """회원 관리 목록 한 줄. 이메일은 회원 관리 목적(개인정보처리방침의 수집 목적) 안에서 관리자에게만 보인다."""
+    id: int
+    email: str
+    nickname: str
+    role: str
+    status: str  # active | suspended | withdrawn
+    created_at: str | None
+    suspended_at: str | None
+    suspend_reason: str | None
+    officer_verified: bool
+    review_count: int
+    post_count: int
+    comment_count: int
+    case_count: int
+    reports_received: int
+
+
+class SuspendIn(BaseModel):
+    reason: str = Field(min_length=2, max_length=300)
+
+
+class AdminUserContentItem(BaseModel):
+    kind: str  # review | post | review_comment | post_comment | public_case
+    kind_label: str
+    id: int
+    text: str
+    state: str
+    created_at: str | None
+    link: str | None

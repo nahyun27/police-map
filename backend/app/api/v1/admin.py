@@ -13,12 +13,15 @@ from app.core.database import get_db
 from app.core.deps import require_admin
 from app.models import (
     CASE_CATEGORY_LABELS, AuditLog, CaseStatus, Department, Officer, OfficerAssignment, OfficerVerification, Post,
-    PublicCase, Region, Report, ReportStatus, ReportTarget, Review, ReviewReply, ReviewStatus, Station, TakedownRequest,
-    TakedownStatus, User, VerificationStatus,
+    PostComment, PublicCase, Region, Report, ReportStatus, ReportTarget, Review, ReviewComment, ReviewReply, ReviewStatus,
+    Station, TakedownRequest, TakedownStatus, User, UserRole, VerificationStatus,
 )
 from app.models.officer import SOURCE_LABELS
 from app.models.review import case_type_label, role_label
-from app.schemas.admin import EvidenceVerifyIn, OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate, UserStatsOut
+from app.schemas.admin import (
+    AdminUserContentItem, AdminUserOut, EvidenceVerifyIn, OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate,
+    SuspendIn, UserStatsOut,
+)
 from app.schemas.public import Page
 from app.schemas.public_case import AdminCaseOut
 from app.schemas.report import AdminReportOut, BlindedItemOut, BlindIn, ResolveReportIn
@@ -54,6 +57,133 @@ def user_stats(db: Session = Depends(get_db)):
         daily_signups.append((day.isoformat(), int(count)))
 
     return UserStatsOut(total_users=total, new_7d=new_7d, new_30d=new_30d, officer_verified=officer_verified, daily_signups=daily_signups)
+
+
+# ---------- 회원 관리 ----------
+# 회원이 쓴 것과, 그 글에 들어온 신고를 셀 때 쓰는 (모델, 신고 대상 종류) 짝.
+_AUTHORED = (
+    (Review, ReportTarget.review), (Post, ReportTarget.post), (ReviewComment, ReportTarget.review_comment),
+    (PostComment, ReportTarget.post_comment), (PublicCase, ReportTarget.public_case),
+)
+
+
+def _user_status(u: User) -> str:
+    if u.deleted_at is not None:
+        return "withdrawn"
+    return "suspended" if u.suspended_at is not None else "active"
+
+
+def _admin_user(db: Session, u: User) -> AdminUserOut:
+    count = lambda model: db.scalar(select(func.count(model.id)).where(model.author_id == u.id)) or 0  # noqa: E731
+    reports = sum(
+        db.scalar(select(func.count(Report.id)).where(
+            Report.target_type == target, Report.target_id.in_(select(model.id).where(model.author_id == u.id)),
+        )) or 0
+        for model, target in _AUTHORED
+    )
+    return AdminUserOut(
+        id=u.id, email=u.email, nickname=u.nickname, role=u.role.value, status=_user_status(u),
+        created_at=iso(u.created_at), suspended_at=iso(u.suspended_at), suspend_reason=u.suspend_reason,
+        officer_verified=u.officer_station_id is not None,
+        review_count=count(Review), post_count=count(Post), comment_count=count(ReviewComment) + count(PostComment),
+        case_count=count(PublicCase), reports_received=reports,
+    )
+
+
+@router.get("/users", response_model=Page[AdminUserOut])
+def admin_list_users(
+    q: str | None = Query(None, max_length=100), status_filter: str = Query("all", alias="status", pattern="^(all|active|suspended|withdrawn)$"),
+    page: int = Query(1, ge=1, le=100000), size: int = Query(20, ge=1, le=100), db: Session = Depends(get_db),
+):
+    """가입 회원 목록(최근 가입 순). 닉네임·이메일로 검색하고 상태로 거른다."""
+    stmt = select(User)
+    if q and q.strip():
+        term = q.strip()
+        stmt = stmt.where(User.nickname.contains(term, autoescape=True) | User.email.contains(term.lower(), autoescape=True))
+    if status_filter == "withdrawn":
+        stmt = stmt.where(User.deleted_at.is_not(None))
+    elif status_filter == "suspended":
+        stmt = stmt.where(User.deleted_at.is_(None), User.suspended_at.is_not(None))
+    elif status_filter == "active":
+        stmt = stmt.where(User.deleted_at.is_(None), User.suspended_at.is_(None))
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    users = db.scalars(stmt.order_by(User.id.desc()).offset((page - 1) * size).limit(size)).all()
+    return Page(items=[_admin_user(db, u) for u in users], total=total, page=page, size=size)
+
+
+def _get_user_or_404(db: Session, user_id: int) -> User:
+    u = db.get(User, user_id)
+    if not u:
+        raise HTTPException(404, "회원을 찾을 수 없습니다.")
+    return u
+
+
+@router.post("/users/{user_id}/suspend", response_model=AdminUserOut)
+def admin_suspend_user(user_id: int, body: SuspendIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """이용 정지. 바로 로그아웃되고(토큰 무효화) 로그인할 수 없다. 이미 쓴 글은 그대로 두며,
+    문제 글은 신고·블라인드 메뉴에서 따로 처리한다. 관리자 계정은 정지할 수 없다(운영자가 스스로 잠기지 않게)."""
+    u = _get_user_or_404(db, user_id)
+    if u.role == UserRole.admin:
+        raise HTTPException(422, "관리자 계정은 정지할 수 없습니다.")
+    if u.deleted_at is not None:
+        raise HTTPException(422, "탈퇴한 회원입니다.")
+    u.suspended_at, u.suspend_reason, u.is_active = takedown_svc.utcnow(), body.reason.strip(), False
+    u.token_version += 1
+    log_action(db, admin.id, "user.suspend", "user", u.id, {"reason": u.suspend_reason})
+    db.commit()
+    return _admin_user(db, u)
+
+
+@router.post("/users/{user_id}/unsuspend", response_model=AdminUserOut)
+def admin_unsuspend_user(user_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    u = _get_user_or_404(db, user_id)
+    if u.suspended_at is None or u.deleted_at is not None:
+        raise HTTPException(422, "정지된 회원이 아닙니다.")
+    u.suspended_at, u.suspend_reason, u.is_active = None, None, True
+    log_action(db, admin.id, "user.unsuspend", "user", u.id, {})
+    db.commit()
+    return _admin_user(db, u)
+
+
+@router.get("/users/{user_id}/content", response_model=list[AdminUserContentItem])
+def admin_user_content(user_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """그 회원이 쓴 평가·글·댓글·사건(종류별 최근 20개). 누가 어떤 회원의 글을 열람했는지 처리 기록에 남긴다."""
+    u = _get_user_or_404(db, user_id)
+    items: list[AdminUserContentItem] = []
+
+    def short(t: str | None) -> str:
+        t = " ".join((t or "").split())
+        return t[:80] + ("…" if len(t) > 80 else "")
+
+    for r in db.scalars(select(Review).where(Review.author_id == u.id).order_by(Review.id.desc()).limit(20)):
+        items.append(AdminUserContentItem(
+            kind="review", kind_label="평가", id=r.id, text=short(r.body) or "(별점만 등록)", state=r.status.value,
+            created_at=iso(r.created_at), link=f"/board/review/{r.id}" if r.status == ReviewStatus.published else None,
+        ))
+    for p in db.scalars(select(Post).where(Post.author_id == u.id).order_by(Post.id.desc()).limit(20)):
+        state = "removed" if p.is_removed else "blinded" if p.is_blinded else "published"
+        items.append(AdminUserContentItem(
+            kind="post", kind_label="게시글", id=p.id, text=short(p.title), state=state,
+            created_at=iso(p.created_at), link=f"/board/{p.id}" if state == "published" else None,
+        ))
+    for c in db.scalars(select(PublicCase).where(PublicCase.author_id == u.id).order_by(PublicCase.id.desc()).limit(20)):
+        items.append(AdminUserContentItem(
+            kind="public_case", kind_label="사건 공론화", id=c.id, text=short(c.title), state=c.status.value,
+            created_at=iso(c.created_at), link=f"/cases/{c.id}" if c.status == CaseStatus.published else None,
+        ))
+    for model, kind, label, parent in (
+        (ReviewComment, "review_comment", "평가 댓글", "/board/review/"), (PostComment, "post_comment", "게시글 댓글", "/board/"),
+    ):
+        for c in db.scalars(select(model).where(model.author_id == u.id).order_by(model.id.desc()).limit(20)):
+            pid = c.review_id if kind == "review_comment" else c.post_id
+            items.append(AdminUserContentItem(
+                kind=kind, kind_label=label, id=c.id, text=short(c.body), state="removed" if c.is_removed else "published",
+                created_at=iso(c.created_at), link=None if c.is_removed else f"{parent}{pid}",
+            ))
+    items.sort(key=lambda i: i.created_at or "", reverse=True)
+    log_action(db, admin.id, "user.view_content", "user", u.id, {})
+    db.commit()
+    return items
 
 
 # ---------- 평가 검수 ----------
