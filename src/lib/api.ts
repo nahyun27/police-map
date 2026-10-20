@@ -715,6 +715,19 @@ export interface UserStatsOut {
 }
 export const getAdminUserStats = () => apiFetch<UserStatsOut>('/admin/stats/users');
 
+export interface TrafficSummary { visitors: number; pageviews: number }
+export interface TrafficOut {
+  today: TrafficSummary;
+  yesterday: TrafficSummary;
+  last_7d: TrafficSummary;
+  last_30d: TrafficSummary;
+  daily: { day: string; visitors: number; pageviews: number }[];
+  top_pages: [string, number][];
+  top_referrers: [string, number][];
+  mobile_ratio: number;
+}
+export const getAdminTraffic = () => apiFetch<TrafficOut>('/admin/stats/traffic');
+
 export interface AdminReview {
   id: number;
   station_id: number;

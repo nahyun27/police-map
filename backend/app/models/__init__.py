@@ -1,4 +1,5 @@
 from app.models.ads import INQUIRY_TYPE_LABELS, Ad, AdInquiry, InquiryStatus, InquiryType
+from app.models.analytics import PageView
 from app.models.audit import AuditLog
 from app.models.community import (
     Post, PostCategory, PostComment, PostCommentVote, PostScrap, PostVote, RegionFollow, ReviewComment,
@@ -17,7 +18,7 @@ from app.models.user import User, UserRole
 from app.models.verification import OfficerVerification, ReviewReply, VerificationStatus
 
 __all__ = [
-    "INQUIRY_TYPE_LABELS", "Ad", "AdInquiry", "InquiryStatus", "InquiryType", "AuditLog", "CASE_CATEGORY_LABELS", "CaseCategory", "CaseStatus", "CaseType", "PublicCase",
+    "INQUIRY_TYPE_LABELS", "Ad", "AdInquiry", "InquiryStatus", "InquiryType", "PageView", "AuditLog", "CASE_CATEGORY_LABELS", "CaseCategory", "CaseStatus", "CaseType", "PublicCase",
     "PublicCaseEmpathy", "PublicCaseUpdate", "Department", "Officer", "OfficerAssignment", "OfficerSource", "OfficerVerification",
     "Post", "PostCategory", "PostComment", "PostCommentVote", "PostScrap", "PostVote", "PublicStatistic", "Region",
     "RegionFollow", "Report", "ReportStatus", "ReportTarget", "Review", "ReviewComment", "ReviewCommentVote",

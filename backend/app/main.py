@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1 import admin as admin_v1
+from app.api.v1 import analytics as analytics_v1
 from app.api.v1 import ads as ads_v1
 from app.api.v1 import auth as auth_v1
 from app.api.v1 import cases as cases_v1
@@ -100,6 +101,7 @@ app.add_middleware(
 for r in (
     public_v1.router, auth_v1.router, reviews_v1.router, community_v1.router, verification_v1.router,
     reports_v1.router, takedown_v1.router, cases_v1.router, ads_v1.router, admin_v1.router, ads_v1.admin_router,
+    analytics_v1.router, analytics_v1.admin_router,
 ):
     app.include_router(r, prefix=settings.API_V1_PREFIX)
 

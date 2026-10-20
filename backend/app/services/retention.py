@@ -5,6 +5,7 @@
 - 삭제·정정 요청: 처리 완료 후 3년 (요청 기록 자체는 게시물 비공개 상태의 근거라 남기고, 요청인 정보만 지운다)
 - 광고·제휴 문의: 처리 완료 후 1년
 - 평가의 사건번호: 평가가 삭제되면 바로
+- 방문 통계 기록: 1년
 
 회원 정보는 탈퇴 즉시 파기한다(services/account.py). 서버 접속 기록(nginx·journald)은 서버 설정으로 관리한다.
 main.py 가 서버 시작 시와 이후 하루마다 run_purge() 를 부른다. 수동 실행: python -m scripts.purge_expired
@@ -15,7 +16,8 @@ from sqlalchemy import delete, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.models import (
-    AdInquiry, InquiryStatus, OfficerVerification, Review, ReviewStatus, TakedownRequest, User, VerificationStatus,
+    AdInquiry, InquiryStatus, OfficerVerification, PageView, Review, ReviewStatus, TakedownRequest, User,
+    VerificationStatus,
 )
 from app.services.audit import log_action
 from app.services.takedown import utcnow
@@ -23,6 +25,7 @@ from app.services.takedown import utcnow
 VERIFICATION_RETENTION = timedelta(days=365)
 TAKEDOWN_RETENTION = timedelta(days=365 * 3)
 INQUIRY_RETENTION = timedelta(days=365)
+PAGE_VIEW_RETENTION = timedelta(days=365)
 
 PURGED = "(보관 기간 경과로 파기)"
 
@@ -68,6 +71,10 @@ def run_purge(db: Session) -> dict[str, int]:
             or_(Review.case_number.is_not(None), Review.case_number_hash.is_not(None)),
         ).values(case_number=None, case_number_hash=None)
         .execution_options(synchronize_session=False)
+    ).rowcount or 0
+
+    counts["page_views"] = db.execute(
+        delete(PageView).where(PageView.created_at < now - PAGE_VIEW_RETENTION).execution_options(synchronize_session=False)
     ).rowcount or 0
 
     if any(counts.values()):

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
 import MainArea from '@/components/MainArea';
+import PageViewTracker from '@/components/PageViewTracker';
 import { ALLOW_INDEXING, NOINDEX, SITE_URL } from '@/lib/seo';
 import './globals.css';
 
@@ -59,6 +60,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <Header />
         <MainArea>{children}</MainArea>
         <Footer />
+        <PageViewTracker />
       </body>
     </html>
   );

@@ -1,12 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Check, ShieldCheck, ShieldPlus, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { Activity, Check, Eye, ShieldCheck, ShieldPlus, Smartphone, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { Card, TableWrap } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import {
-  approveReview, getAdminUserStats, listAdminReviews, rejectReview, removeReview, setReviewEvidence,
-  type AdminReview, type Page, type UserStatsOut,
+  approveReview, getAdminTraffic, getAdminUserStats, listAdminReviews, rejectReview, removeReview, setReviewEvidence,
+  type AdminReview, type Page, type TrafficOut, type UserStatsOut,
 } from '@/lib/api';
 
 const STATUS_TABS: [string, string][] = [
@@ -24,8 +24,59 @@ function ratingSummary(r: AdminReview): string {
     .join(' · ') || '-';
 }
 
-/** 가입 회원 현황. 방문자(트래픽) 통계는 아직 수집하는 인프라가 없어서(비로그인으로도
- * 다 쓸 수 있는 사이트라 방문자 추적 도구를 넣을지는 별도로 정할 문제) 여기엔 없다. */
+/** 방문 통계(자체 수집, 쿠키·외부 도구 없음). 방문자는 "날마다 서로 다른 사람 수"의 합이라, 같은 사람이 이틀 오면 2명으로 센다. */
+function TrafficPanel() {
+  const [t, setT] = useState<TrafficOut | null>(null);
+  useEffect(() => { getAdminTraffic().then(setT).catch(() => {}); }, []);
+  if (!t) return null;
+  const max = Math.max(1, ...t.daily.map((d) => d.visitors));
+  const kpi = (label: string, s: { visitors: number; pageviews: number }) => (
+    <Card className="kpi stat flat">
+      <div className="ico"><Eye size={19} /></div>
+      <div>
+        <div className="num">{s.visitors.toLocaleString()}</div>
+        <div className="lbl">{label} 방문자 · 페이지뷰 {s.pageviews.toLocaleString()}</div>
+      </div>
+    </Card>
+  );
+  return (
+    <Card>
+      <h2><Activity size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />방문 통계</h2>
+      <div className="grid3" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+        {kpi('오늘', t.today)}
+        {kpi('어제', t.yesterday)}
+        {kpi('최근 7일', t.last_7d)}
+        {kpi('최근 30일', t.last_30d)}
+      </div>
+      <p className="sub" style={{ marginTop: 18, marginBottom: 8 }}>최근 14일 일별 방문자</p>
+      <div className="admin-spark">
+        {t.daily.map((d) => (
+          <div key={d.day} className="admin-spark-bar" title={`${d.day} · 방문자 ${d.visitors}명 · 페이지뷰 ${d.pageviews}`}>
+            <i style={{ height: `${Math.max(4, (d.visitors / max) * 100)}%` }} />
+          </div>
+        ))}
+      </div>
+      <div className="grid2" style={{ marginTop: 18, marginBottom: 0 }}>
+        <div>
+          <p className="sub" style={{ marginBottom: 6 }}>많이 본 페이지(최근 7일)</p>
+          {t.top_pages.length ? (
+            <ol className="admin-rank">{t.top_pages.map(([p, n]) => <li key={p}><span>{p}</span><b>{n.toLocaleString()}</b></li>)}</ol>
+          ) : <p className="sub">아직 기록이 없습니다.</p>}
+        </div>
+        <div>
+          <p className="sub" style={{ marginBottom: 6 }}>
+            들어온 경로(최근 7일) · <Smartphone size={12} style={{ verticalAlign: -1 }} /> 모바일 {Math.round(t.mobile_ratio * 100)}%
+          </p>
+          {t.top_referrers.length ? (
+            <ol className="admin-rank">{t.top_referrers.map(([h, n]) => <li key={h}><span>{h}</span><b>{n.toLocaleString()}</b></li>)}</ol>
+          ) : <p className="sub">외부 사이트에서 들어온 기록이 아직 없습니다(주소 직접 입력·즐겨찾기는 집계되지 않음).</p>}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/** 가입 회원 현황. */
 function UserStatsPanel() {
   const [stats, setStats] = useState<UserStatsOut | null>(null);
 
@@ -125,6 +176,7 @@ export default function AdminReviewQueuePage() {
 
   return (
     <>
+      <TrafficPanel />
       <UserStatsPanel />
       <Card>
       <div className="seg">
