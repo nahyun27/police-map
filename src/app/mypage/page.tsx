@@ -52,16 +52,17 @@ function MyPosts() {
     <Card>
       <h2><PenLine size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />내가 쓴 게시글</h2>
       {data === null ? <p className="sub">불러오는 중…</p> : data.length ? data.map((p) => (
-        <div className="review" key={p.id}>
+        // 제목 글자만 링크면 누르기 어렵다는 의견으로 항목 전체를 누를 수 있게 했다.
+        <Link href={`/board/${p.id}`} className="review row-link" key={p.id}>
           <div className="meta"><span className="badge">{p.category_label}</span>{formatDate(p.created_at)}</div>
-          <p><Link href={`/board/${p.id}`}>{p.title}</Link></p>
+          <p className="row-link-title">{p.title}</p>
           <div className="post-row-meta sub" style={{ marginTop: 6 }}>
             {p.is_blinded ? <span className="badge low"><EyeOff size={11} />블라인드</span> : <span className="badge good">게시됨</span>}
             <span className="stat"><ThumbsUp size={12} />{p.up}</span>
             <span>댓글 {p.comment_count}</span>
           </div>
           {p.is_blinded && <ReasonBox title="블라인드 사유" text={`${sentence(p.blind_reason)} 다른 이용자에게는 보이지 않습니다. 이의가 있으면 게시판 건의로 알려 주세요.`} />}
-        </div>
+        </Link>
       )) : <p className="sub">아직 작성한 게시글이 없습니다.</p>}
     </Card>
   );
@@ -77,10 +78,10 @@ function MyCases() {
       <h2><Megaphone size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />내가 기록한 사건</h2>
       {data === null ? <p className="sub">불러오는 중…</p> : data.map((c) => {
         const st = CASE_STATUS[c.status];
-        return (
-          <div className="review" key={c.id}>
+        const body = (
+          <>
             <div className="meta"><span className="badge">{c.category_label}</span>{formatDate(c.created_at)}</div>
-            <p>{c.status === 'removed' ? c.title : <Link href={`/cases/${c.id}`}>{c.title}</Link>}</p>
+            <p className="row-link-title">{c.title}</p>
             <div className="post-row-meta sub" style={{ marginTop: 6 }}>
               <span className={`badge ${st.tone}`}>{st.label}</span>
               <span className="stat"><Heart size={12} />공감 {c.empathy_count}</span>
@@ -88,8 +89,12 @@ function MyCases() {
             {c.status === 'held' && c.hold_reason && <ReasonBox title="공개 보류 사유" text={`${c.hold_reason}. 운영진 확인 후 공개됩니다.`} />}
             {c.status === 'blinded' && c.blind_reason && <ReasonBox title="블라인드 사유" text={c.blind_reason} />}
             {c.status === 'removed' && c.removed_reason && <ReasonBox title="삭제 사유" text={c.removed_reason} />}
-          </div>
+          </>
         );
+        // 삭제된 사건은 열어 볼 페이지가 없으니 누를 수 없게 둔다.
+        return c.status === 'removed'
+          ? <div className="review" key={c.id}>{body}</div>
+          : <Link href={`/cases/${c.id}`} className="review row-link" key={c.id}>{body}</Link>;
       })}
     </Card>
   );

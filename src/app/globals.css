@@ -1010,3 +1010,8 @@ select:not([multiple]):not([size]):disabled { cursor: default; opacity: .7; }
 .admin-rank li span { display: inline-block; max-width: calc(100% - 60px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 .admin-rank li b { float: right; }
 @media (max-width: 860px) { .admin-content .grid3[style] { grid-template-columns: 1fr 1fr !important; } }
+
+/* 항목 전체를 누르는 목록(마이페이지 내가 쓴 글 등) */
+.review.row-link { display: block; color: inherit; border-radius: 12px; margin: 0 -10px; padding-left: 10px; padding-right: 10px; transition: background .12s; }
+.review.row-link:hover { background: #f8f9fc; color: inherit; }
+.row-link-title { font-weight: 650; color: var(--ink); margin: 4px 0 0; }
