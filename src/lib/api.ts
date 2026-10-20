@@ -1029,6 +1029,13 @@ export async function createAdminAd(form: FormData): Promise<AdminAd> {
   if (!res.ok) throw new ApiError(res.status, body);
   return body as AdminAd;
 }
+// 등록 폼과 같은 항목 전체 수정(배너 교체 포함). 이미지 파일을 안 넣으면 기존 배너가 유지된다.
+export async function editAdminAd(id: number, form: FormData): Promise<AdminAd> {
+  const res = await fetch(apiAsset(`/api/v1/admin/ads/${id}`), { method: 'PUT', body: form, credentials: 'include' });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new ApiError(res.status, body);
+  return body as AdminAd;
+}
 export const updateAdminAd = (id: number, patch: Partial<Pick<AdminAd, 'title' | 'advertiser' | 'link_url' | 'starts_on' | 'ends_on' | 'is_active'>>) =>
   apiFetch<AdminAd>(`/admin/ads/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
 export const deleteAdminAd = (id: number) => apiFetch<void>(`/admin/ads/${id}`, { method: 'DELETE' });

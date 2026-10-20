@@ -85,6 +85,29 @@ def test_delete_ad_removes_it(client, admin_client, world):
     assert client.get(f"{API}/ads").json() == []
 
 
+
+def test_edit_ad_changes_fields_and_replaces_images(client, user_client, admin_client, world):
+    ad = create_ad(admin_client, side=True, region_id="seoul", ends_on=str(date.today() + timedelta(days=30))).json()
+    base = {"title": "수정된 광고", "advertiser": "새 광고주", "link_url": "https://example.com/new"}
+    assert user_client.put(f"{API}/admin/ads/{ad['id']}", data=base).status_code == 403
+    # 이미지 없이 보내면 배너는 그대로, 지역·기간을 비우면 전국·무기한으로 바뀐다.
+    r = admin_client.put(f"{API}/admin/ads/{ad['id']}", data=base)
+    assert r.status_code == 200, r.text
+    e = r.json()
+    assert (e["title"], e["advertiser"], e["link_url"]) == ("수정된 광고", "새 광고주", "https://example.com/new")
+    assert e["region_id"] is None and e["ends_on"] is None
+    assert e["image_wide_url"] == ad["image_wide_url"] and e["image_side_url"] == ad["image_side_url"]
+    # 새 가로 배너를 올리면 교체되고 예전 파일은 지워진다. 세로 배너는 빼기만 할 수도 있다.
+    r = admin_client.put(f"{API}/admin/ads/{ad['id']}", data={**base, "remove_side": "true"},
+                         files={"image_wide": ("new.png", png(), "image/png")})
+    e = r.json()
+    assert e["image_wide_url"] != ad["image_wide_url"] and e["image_side_url"] is None
+    assert client.get(ad["image_wide_url"]).status_code == 404 and client.get(ad["image_side_url"]).status_code == 404
+    assert client.get(e["image_wide_url"]).status_code == 200
+    assert admin_client.put(f"{API}/admin/ads/{ad['id']}", data={**base, "link_url": "javascript:alert(1)"}).status_code == 422
+    bad_dates = {**base, "starts_on": str(date.today()), "ends_on": str(date.today() - timedelta(days=1))}
+    assert admin_client.put(f"{API}/admin/ads/{ad['id']}", data=bad_dates).status_code == 422
+
 # ---------- 문의 ----------
 def inquiry(**over):
     body = {"inquiry_type": "ad", "company": "제주갈치상회", "name": "홍길동", "contact": "010-0000-0000",

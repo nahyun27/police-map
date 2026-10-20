@@ -177,6 +177,50 @@ def admin_update_ad(ad_id: int, body: AdUpdate, admin: User = Depends(require_ad
     return _admin_ad(a, date.today())
 
 
+@admin_router.put("/ads/{ad_id}", response_model=AdminAdOut)
+def admin_edit_ad(
+    ad_id: int,
+    title: str = Form(..., max_length=100), advertiser: str = Form(..., max_length=100),
+    link_url: str = Form(..., max_length=500), region_id: str | None = Form(None),
+    starts_on: date | None = Form(None), ends_on: date | None = Form(None),
+    image_wide: UploadFile | None = File(None), image_side: UploadFile | None = File(None),
+    remove_side: bool = Form(False),
+    admin: User = Depends(require_admin), db: Session = Depends(get_db),
+):
+    """관리자 화면의 "수정". 등록 폼과 같은 항목을 통째로 바꾼다(비워 보낸 지역·기간은 전국·무기한으로).
+    배너 이미지는 새 파일을 올린 것만 교체하고, 세로 배너는 remove_side 로 뺄 수 있다.
+    노출 수·클릭 수와 중지 여부는 그대로 둔다(중지·재개는 PATCH 로)."""
+    a = db.get(Ad, ad_id)
+    if not a:
+        raise HTTPException(404, "광고를 찾을 수 없습니다.")
+    region_id = region_id or None
+    if region_id and not db.get(Region, region_id):
+        raise HTTPException(404, "지역을 찾을 수 없습니다.")
+    if starts_on and ends_on and ends_on < starts_on:
+        raise HTTPException(422, "종료일이 시작일보다 빠릅니다.")
+    link = _check_link(link_url)
+    old_files: list[str | None] = []
+    if image_wide and image_wide.filename:
+        old_files.append(a.image_wide)
+        a.image_wide = save_ad_image(image_wide, "wide")
+    if image_side and image_side.filename:
+        old_files.append(a.image_side)
+        a.image_side = save_ad_image(image_side, "side")
+    elif remove_side and a.image_side:
+        old_files.append(a.image_side)
+        a.image_side = None
+    a.title, a.advertiser, a.link_url, a.region_id = title.strip(), advertiser.strip(), link, region_id
+    a.starts_on, a.ends_on = starts_on, ends_on
+    log_action(db, admin.id, "ad.edit", "ad", a.id, {
+        "region_id": region_id, "images_replaced": len(old_files), "starts_on": str(starts_on), "ends_on": str(ends_on),
+    })
+    db.commit()
+    for f in old_files:  # 저장이 끝난 뒤에 예전 파일을 지운다(중간에 실패하면 예전 배너가 그대로 남도록)
+        delete_ad_image(f)
+    db.refresh(a)
+    return _admin_ad(a, date.today())
+
+
 @admin_router.delete("/ads/{ad_id}", status_code=status.HTTP_204_NO_CONTENT)
 def admin_delete_ad(ad_id: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     a = db.get(Ad, ad_id)
