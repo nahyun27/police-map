@@ -105,9 +105,20 @@ export interface RegionOut {
   hq_website: string | null;
 }
 
+/** 관서 종류. station=경찰서, provincial=시·도경찰청, national=경찰청 본청·국가수사본부(2026-10 추가). */
+export type StationKind = 'station' | 'provincial' | 'national';
+
+/** 화면에 쓰는 관서 종류 이름. 본청 지역의 두 기관은 이름 자체가 종류라 이름으로 구분한다. */
+export function stationKindLabel(kind: StationKind | undefined, name: string): string {
+  if (kind === 'provincial') return '시·도경찰청';
+  if (kind === 'national') return name.includes('국가수사본부') ? '국가수사본부' : '경찰청';
+  return '경찰서';
+}
+
 export interface StationItem {
   id: number;
   name: string;
+  kind?: StationKind;
   address: string | null;
   website: string | null;
   department_count: number;
@@ -204,6 +215,7 @@ export interface NearbyStation {
 export interface StationDetail {
   id: number;
   name: string;
+  kind?: StationKind;
   address: string | null;
   website: string | null;
   source: string | null;

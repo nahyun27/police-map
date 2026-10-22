@@ -21,15 +21,29 @@ DEFAULT_FILE = Path(__file__).resolve().parent.parent / "data" / "police_station
 
 # 데이터의 지역명(한글) → 우리 DB 의 Region.id(슬러그). REGIONS 개수·구성은 scripts/seed.py 와 동일해야 한다.
 REGION_SLUG = {
+    "본청": "national",
     "서울": "seoul", "부산": "busan", "대구": "daegu", "인천": "incheon", "광주": "gwangju",
     "대전": "daejeon", "울산": "ulsan", "세종": "sejong", "경기남부": "ggs", "경기북부": "ggn",
     "강원": "gangwon", "충북": "chungbuk", "충남": "chungnam", "전북": "jeonbuk", "전남": "jeonnam",
     "경북": "gyeongbuk", "경남": "gyeongnam", "제주": "jeju",
 }
 
-# 이 구분만 Station 으로 들여온다. 시·도경찰청(본청)은 각 관서를 관할하는 상위 조직으로,
-# 국민이 평가하는 "관서" 단위가 아니므로 Region.hq_* 필드에만 반영한다.
-STATION_TYPES = {"경찰서", "경찰단"}
+# 데이터의 구분 → Station.kind. 2026-10 부터 시·도경찰청과 경찰청 본청·국가수사본부도 직속 수사부서를 두고
+# 평가할 수 있게 Station 으로 들여온다(의뢰인 요청: "서울청 같은 상급 경찰청이 없다").
+KIND_BY_TYPE = {"경찰서": "station", "경찰단": "station", "시도경찰청": "provincial", "경찰청": "national", "국가수사본부": "national"}
+# 경찰청 본청·국가수사본부를 담는 지역. 지도에는 없는 지역이라 seed.py 대신 여기서 만든다.
+NATIONAL_REGION = ("national", "본청", "경찰청 본청")
+
+
+def _alias(item: dict, region_name: str) -> str | None:
+    """사람들이 실제로 검색하는 이름. 공식 명칭(서울특별시경찰청)으로는 "서울청"이 검색되지 않는다."""
+    if item["type"] == "시도경찰청":
+        return f"{region_name}경찰청 {region_name}청"
+    if item["type"] == "국가수사본부":
+        return "국수본 국가수사본부"
+    if item["type"] == "경찰청":
+        return "경찰청 본청"
+    return None
 
 
 def import_data(db: Session, payload: dict) -> dict[str, int]:
@@ -44,15 +58,23 @@ def import_data(db: Session, payload: dict) -> dict[str, int]:
         if not slug:
             raise SystemExit(f"알 수 없는 지역명: {region_name!r} (REGION_SLUG 매핑을 추가하세요)")
         region = db.get(Region, slug)
+        if not region and slug == NATIONAL_REGION[0]:
+            region = Region(id=slug, name=NATIONAL_REGION[1], full_name=NATIONAL_REGION[2])
+            db.add(region)
         if not region:
             raise SystemExit(f"Region '{slug}' 이 DB 에 없습니다. 먼저 python -m scripts.seed 를 실행하세요.")
 
         hq = next((s for s in items if s["type"] == "시도경찰청"), None)
         if hq:
             region.hq_address, region.hq_website = hq["address"], hq["website"]
-        station_items = [s for s in items if s["type"] in STATION_TYPES]
-        if region.station_total != len(station_items):
-            region.station_total = len(station_items)
+        unknown = {s["type"] for s in items} - set(KIND_BY_TYPE)
+        if unknown:
+            raise SystemExit(f"알 수 없는 관서 구분: {unknown} (KIND_BY_TYPE 매핑을 추가하세요)")
+        station_items = items
+        # "관할 경찰서 N곳"은 경찰서만 센다(시·도경찰청 자신이나 본청 기관은 빼고).
+        police_station_count = sum(1 for s in items if KIND_BY_TYPE[s["type"]] == "station")
+        if region.station_total != police_station_count:
+            region.station_total = police_station_count
         stats["region_updated"] += 1
 
         for item in station_items:
@@ -65,7 +87,10 @@ def import_data(db: Session, payload: dict) -> dict[str, int]:
                 stats["station_created"] += 1
             else:
                 stats["station_updated"] += 1
-            station.address, station.website, station.source = item["address"], item["website"], payload["meta"]["source"]
+            station.address, station.website = item["address"], item["website"]
+            # 부서 목록 출처가 따로 있으면(시·도경찰청·본청) 그걸, 아니면 전체 데이터 출처를 쓴다.
+            station.source = item.get("dept_source") or payload["meta"]["source"]
+            station.kind, station.search_alias = KIND_BY_TYPE[item["type"]], _alias(item, region_name)
             db.flush()  # station.id 확보(신규 생성분 포함)
 
             existing = {d.name: d for d in db.scalars(select(Department).where(Department.station_id == station.id))}

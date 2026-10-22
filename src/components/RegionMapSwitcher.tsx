@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import KoreaMap from '@/components/KoreaMap';
 import RegionGridMap from '@/components/RegionGridMap';
 import type { RegionOut } from '@/lib/api';
@@ -11,8 +12,16 @@ import type { RegionOut } from '@/lib/api';
 export default function RegionMapSwitcher({ regions }: { regions: RegionOut[] }) {
   const [mode, setMode] = useState<'real' | 'grid'>('real');
 
+  // 경찰청 본청·국가수사본부는 지도 위 지역이 아니라서, 지도 왼쪽 위에 따로 바로가기를 둔다(의뢰인 시안과 같은 위치).
+  const national = regions.find((r) => r.id === 'national');
+
   return (
     <div className="region-map-switcher">
+      {national && (
+        <Link href="/region/national" className="map-national-chip">
+          <b>본청</b><span>경찰청·국가수사본부</span>
+        </Link>
+      )}
       <div className="map-toggle" role="tablist" aria-label="지도 보기 방식">
         <button
           type="button" role="tab" aria-selected={mode === 'real'}

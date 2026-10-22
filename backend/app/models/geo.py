@@ -42,6 +42,12 @@ class Station(Base):
     lat: Mapped[float | None] = mapped_column()
     lng: Mapped[float | None] = mapped_column()
     is_sample: Mapped[bool] = mapped_column(default=False)
+    # 관서 종류. station=경찰서(경찰단 포함), provincial=시·도경찰청, national=경찰청 본청·국가수사본부.
+    # 2026-10 의뢰인 요청으로 시·도경찰청과 본청도 직속 수사부서를 두고 평가할 수 있게 같은 테이블에 넣었다.
+    # 관할구역 지도·인근 경찰서·"관할 경찰서 N곳" 같은 경찰서 전용 표시는 kind 로 구분한다.
+    kind: Mapped[str] = mapped_column(String(20), default="station", server_default="station", index=True)
+    # 검색용 별칭. 공식 이름(서울특별시경찰청)과 사람들이 실제로 치는 말(서울청, 서울경찰청)이 달라서 둔다.
+    search_alias: Mapped[str | None] = mapped_column(String(100))
 
     region: Mapped[Region] = relationship(back_populates="stations")
     departments: Mapped[list["Department"]] = relationship(back_populates="station", order_by="Department.id")

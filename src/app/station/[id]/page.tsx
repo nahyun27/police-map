@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { Bars, Card, Crumb, Score, Stars } from '@/components/ui';
 import { ReviewList } from '@/components/ReviewList';
 import { ExternalLink, ShieldCheck } from 'lucide-react';
-import { ApiError, getStation } from '@/lib/api';
+import { ApiError, getStation, stationKindLabel } from '@/lib/api';
 import stationJurisdiction from '@/data/stationJurisdiction.json';
 import { AdSlots } from '@/components/AdSlots';
 import { JsonLd } from '@/components/JsonLd';
@@ -68,11 +68,14 @@ export default async function StationPage({ params, searchParams }: Props) {
   // 이름+지역을 키로 쓴다(숫자 id 는 로컬 개발 DB와 운영 DB에서 같은 관서라도 다르게
   // 배정돼 있어서 환경마다 어긋난다 — scripts/build_station_jurisdiction.py 주석 참고).
   const jurisdiction = (stationJurisdiction as Record<string, JurisdictionEntry>)[`${s.name}:${s.region.id}`];
+  // 시·도경찰청·본청 기관은 경찰서와 같은 화면을 쓰되, 관할구역 지도·인근 경찰서가 없고 부서는 "직속 수사부서"다.
+  const isAgency = !!s.kind && s.kind !== 'station';
+  const kindLabel = stationKindLabel(s.kind, s.name);
 
   // 검색엔진용 경찰서 정보. 평가가 있을 때만 별점을 넣는다(0건 별점은 구글 지침 위반이라 아예 뺀다).
   const stationLd = {
     '@context': 'https://schema.org',
-    '@type': 'PoliceStation',
+    '@type': isAgency ? 'GovernmentOrganization' : 'PoliceStation',
     name: s.name,
     url: `${SITE_URL}/station/${s.id}`,
     ...(s.address ? { address: { '@type': 'PostalAddress', streetAddress: s.address, addressCountry: 'KR' } } : {}),
@@ -90,7 +93,7 @@ export default async function StationPage({ params, searchParams }: Props) {
       <Card>
         <div className="flex">
           <div className="grow">
-            <div className="eyebrow">경찰서</div>
+            <div className="eyebrow">{kindLabel}</div>
             <h1>{s.name}</h1>
             <p className="sub" style={{ marginTop: 8 }}>{s.address ?? '주소 정보 없음'}</p>
           </div>
@@ -107,12 +110,12 @@ export default async function StationPage({ params, searchParams }: Props) {
           )}
         </div>
         <div className="btn-row" style={{ marginTop: 24 }}>
-          <Link href={`/station/${s.id}/write`} className="btn">이 경찰서 평가 작성</Link>
+          <Link href={`/station/${s.id}/write`} className="btn">이 {isAgency ? '기관' : '경찰서'} 평가 작성</Link>
           <Link href={`/remedy/${s.id}`} className="btn line">민원·권리구제 안내</Link>
           <Link href={`/report/${s.id}`} className="btn line">언론·기관 제보</Link>
           {s.website && (
             <a href={s.website} target="_blank" rel="noopener noreferrer" className="btn line">
-              경찰서 홈페이지<ExternalLink size={14} />
+              {isAgency ? '기관' : '경찰서'} 홈페이지<ExternalLink size={14} />
             </a>
           )}
         </div>
@@ -138,7 +141,7 @@ export default async function StationPage({ params, searchParams }: Props) {
               )}
             </>
           ) : (
-            <p className="sub">아직 등록된 평가가 없습니다. 이 경찰서의 첫 평가를 남겨 주세요.</p>
+            <p className="sub">아직 등록된 평가가 없습니다. 이 {isAgency ? '기관' : '경찰서'}의 첫 평가를 남겨 주세요.</p>
           )}
       </Card>
 
@@ -159,7 +162,7 @@ export default async function StationPage({ params, searchParams }: Props) {
       )}
 
       <Card>
-        <h2>수사부서 <span className="tag">홈페이지 공개 기준</span></h2>
+        <h2>{isAgency ? '직속 수사부서' : '수사부서'} <span className="tag">{s.source?.includes('표준 편제') ? '표준 편제 기준' : '홈페이지 공개 기준'}</span></h2>
         {s.departments.length ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {(s.department_items ?? s.departments.map((name, i) => ({ id: -i, label: name }))).map((d) => (
@@ -288,7 +291,7 @@ export default async function StationPage({ params, searchParams }: Props) {
         )}
       </Card>
       <p className="sub" style={{ fontSize: 12, textAlign: 'center', marginTop: 4 }}>
-        경찰서 정보 출처: {s.source ?? '경찰청 전국경찰관서안내 공개자료'}
+        {isAgency ? '기관' : '경찰서'} 정보 출처: {s.source ?? '경찰청 전국경찰관서안내 공개자료'}
       </p>
       <AdSlots stationId={s.id} />
     </>

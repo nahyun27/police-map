@@ -37,6 +37,7 @@ class RegionOut(BaseModel):
 class StationItem(BaseModel):
     id: int
     name: str
+    kind: str = "station"  # station | provincial(시·도경찰청) | national(경찰청 본청·국가수사본부)
     address: str | None
     website: str | None
     department_count: int
@@ -120,6 +121,7 @@ class StationTargets(BaseModel):
 class StationDetail(BaseModel):
     id: int
     name: str
+    kind: str = "station"
     address: str | None
     website: str | None
     source: str | None

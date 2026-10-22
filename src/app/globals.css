@@ -1031,3 +1031,15 @@ select:not([multiple]):not([size]):disabled { cursor: default; opacity: .7; }
 .admin-activity li a, .admin-activity li .txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
 .admin-activity li .badge { flex-shrink: 0; }
 .admin-activity li .sub { flex-shrink: 0; font-size: 12px; }
+
+/* 홈 지도 왼쪽 위 "본청"(경찰청·국가수사본부) 바로가기. 지도 위 지역이 아니라서 바다 쪽 빈 공간에 띄운다. */
+.region-map-switcher { position: relative; }
+.map-national-chip {
+  position: absolute; top: 52px; left: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 9px 12px; border-radius: 12px; border: 1px solid #cfd9ff; background: var(--brand-soft); color: var(--brand-ink);
+  line-height: 1.25; text-align: center;
+}
+.map-national-chip b { font-size: 14px; }
+.map-national-chip span { font-size: 11px; color: var(--muted); }
+.map-national-chip:hover { border-color: var(--brand); color: var(--brand-ink); }

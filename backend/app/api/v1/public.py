@@ -44,7 +44,7 @@ def _station_items(db: Session, stations: list[Station]) -> list[StationItem]:
     sums = station_summaries(db, [s.id for s in stations])
     return [
         StationItem(
-            id=s.id, name=s.name, address=s.address, website=s.website,
+            id=s.id, name=s.name, kind=s.kind, address=s.address, website=s.website,
             department_count=len(s.departments), rating=sums.get(s.id, EMPTY),
             lat=s.lat, lng=s.lng,
         )
@@ -54,7 +54,10 @@ def _station_items(db: Session, stations: list[Station]) -> list[StationItem]:
 
 @router.get("/regions", response_model=list[RegionOut])
 def list_regions(db: Session = Depends(get_db)):
-    counts = dict(db.execute(select(Station.region_id, func.count(Station.id)).group_by(Station.region_id)).all())
+    # station_count 는 경찰서 수(지도 색칠·"관할 경찰서 N곳" 기준). 시·도경찰청·본청 기관은 세지 않는다.
+    counts = dict(db.execute(
+        select(Station.region_id, func.count(Station.id)).where(Station.kind == "station").group_by(Station.region_id)
+    ).all())
     regions = db.scalars(select(Region).order_by(Region.id)).all()
     return [
         RegionOut(
@@ -73,9 +76,11 @@ def get_region(region_id: str, db: Session = Depends(get_db)):
     stations = db.scalars(
         select(Station).where(Station.region_id == r.id).options(joinedload(Station.departments)).order_by(Station.name)
     ).unique().all()
+    # 시·도경찰청(·본청 기관)을 목록 맨 위에 두고, 그 아래 경찰서를 이름순으로.
+    stations = sorted(stations, key=lambda s: s.kind == "station")
     return RegionDetail(
         id=r.id, name=r.name, full_name=r.full_name, station_total=r.station_total,
-        station_count=len(stations), hq_address=r.hq_address, hq_website=r.hq_website,
+        station_count=sum(1 for s in stations if s.kind == "station"), hq_address=r.hq_address, hq_website=r.hq_website,
         stations=_station_items(db, list(stations)),
     )
 
@@ -127,9 +132,13 @@ def get_station(
         for ct, summary in sorted(station_case_type_summaries(db, s.id).items(), key=lambda kv: -kv[1].count)
     ]
     nearby: list[NearbyStation] = []
-    if s.lat is not None and s.lng is not None:
+    # 인근 경찰서는 경찰서끼리만(시·도경찰청·본청은 관할 지역이 넓어 "가까운 곳" 비교가 의미 없다).
+    if s.kind == "station" and s.lat is not None and s.lng is not None:
         others = db.scalars(
-            select(Station).where(Station.id != s.id, Station.lat.is_not(None), Station.lng.is_not(None), Station.is_sample.is_(False))
+            select(Station).where(
+                Station.id != s.id, Station.lat.is_not(None), Station.lng.is_not(None), Station.is_sample.is_(False),
+                Station.kind == "station",
+            )
         ).all()
         sums = station_summaries(db, [o.id for o in others])
         nearby = sorted(
@@ -153,7 +162,7 @@ def get_station(
         key=lambda t: -t.rating.count,
     )
     return StationDetail(
-        id=s.id, name=s.name, address=s.address, website=s.website, source=s.source,
+        id=s.id, name=s.name, kind=s.kind, address=s.address, website=s.website, source=s.source,
         region=_region_ref(s.region), departments=[d.name for d in s.departments],
         rating=station_summaries(db, [s.id]).get(s.id, EMPTY), by_case_type=by_case_type, nearby=nearby,
         reviews=Page(items=items, total=total, page=page, size=size),
@@ -222,7 +231,8 @@ def search(q: str = Query(..., min_length=1, max_length=50), db: Session = Depen
     if not q:
         raise HTTPException(422, "검색어를 입력해 주세요.")
     stations = db.scalars(
-        select(Station).where(Station.name.contains(q, autoescape=True)).options(joinedload(Station.departments)).order_by(Station.name).limit(20)
+        select(Station).where(Station.name.contains(q, autoescape=True) | Station.search_alias.contains(q, autoescape=True))
+        .options(joinedload(Station.departments)).order_by(Station.name).limit(20)
     ).unique().all()
     return SearchResult(query=q, stations=_station_items(db, list(stations)))
 
@@ -241,7 +251,7 @@ def stats_overview(db: Session = Depends(get_db)):
     )
     return StatsOverview(
         totals=Totals(
-            stations=len(stations), departments=db.scalar(select(func.count(Department.id))) or 0,
+            stations=sum(1 for s in stations if s.kind == "station"), departments=db.scalar(select(func.count(Department.id))) or 0,
             reviews=db.execute(visible_reviews(func.count(Review.id))).scalar_one(),
         ),
         national=national_summary(db),
