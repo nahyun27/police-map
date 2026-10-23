@@ -33,7 +33,8 @@ const SITE_JSONLD = {
     },
     {
       '@type': 'Organization', '@id': `${SITE_URL}/#organization`, name: SITE_NAME, url: SITE_URL,
-      logo: `${SITE_URL}/icon.png`, email: LEGAL.contactEmail,
+      // 투명 배경 아이콘은 구글 이미지 검색에서 배경이 검게 나와, 흰 배경 정사각 로고를 따로 둔다.
+      logo: `${SITE_URL}/images/logo-square.png`, email: LEGAL.contactEmail,
     },
   ],
 };
