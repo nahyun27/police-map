@@ -3,7 +3,7 @@
 import { Suspense, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { UserPlus } from 'lucide-react';
+import { ShieldCheck, UserPlus } from 'lucide-react';
 import { Card, PageHead } from '@/components/ui';
 import { ApiError, apiErrorMessage, register } from '@/lib/api';
 import { safeNext } from '@/lib/format';
@@ -109,6 +109,7 @@ export default function SignupPage() {
   return (
     <>
       <PageHead
+        center
         eyebrow="회원가입"
         title="폴리스맵 계정 만들기"
         sub="계정 없이도 평가·제보 작성은 그대로 가능합니다. 로그인하면 내가 쓴 글을 모아볼 수 있어요."
@@ -116,6 +117,11 @@ export default function SignupPage() {
       <Suspense>
         <SignupForm />
       </Suspense>
+      {/* 가입·로그인 화면 아래 짧은 보안 안내(신뢰감). 자세한 내용은 개인정보처리방침. */}
+      <p className="auth-trust">
+        <ShieldCheck size={14} />비밀번호는 복원할 수 없게 암호화해 저장하며, 이메일은 회원 관리에만 씁니다.{' '}
+        <Link href="/privacy">개인정보처리방침</Link>
+      </p>
     </>
   );
 }

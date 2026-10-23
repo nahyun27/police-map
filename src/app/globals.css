@@ -1256,3 +1256,35 @@ footer.site { padding: 52px 0 36px; }
   .starpick button.on { animation: none; }
   .board-ui .post-row::before { transition: none; }
 }
+
+/* ---------- 디자인 정비 4단계: 통계·권리구제·로그인 ---------- */
+.stats-basis {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 18px; margin: -4px 0 20px; padding: 14px 20px;
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius); font-size: 14px;
+}
+.stats-basis > span:first-child { font-size: 12px; font-weight: 700; color: var(--brand); background: var(--brand-soft); border-radius: 999px; padding: 2px 10px; }
+.stats-basis b { color: var(--ink); font-weight: 700; }
+.stats-basis .sub { margin-left: auto; font-size: 12px; }
+.kpi .num.muted { font-size: 22px; }
+
+.pagehead.center { text-align: center; }
+.pagehead.center .pagehead-title-row { justify-content: center; }
+.pagehead.center .lead { margin-left: auto; margin-right: auto; max-width: 520px; }
+.auth-trust { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 16px auto 0; max-width: 460px; font-size: 12.5px; color: var(--muted); text-align: center; }
+.auth-trust svg { color: var(--good); }
+
+/* 모바일: 권리구제 채널 표를 줄마다 쌓아 가로 스크롤 없이 접수처·처리 특성까지 보이게 */
+@media (max-width: 640px) {
+  table.list.channel-table { min-width: 0; }
+  table.list.channel-table thead { display: none; }
+  table.list.channel-table tr { display: grid; gap: 4px; padding: 14px 4px; border-bottom: 1px solid var(--line2); }
+  table.list.channel-table td { padding: 0; border: none; }
+  table.list.channel-table td:first-child { font-weight: 700; font-size: 15px; }
+  table.list.channel-table td[data-label]::before { content: attr(data-label) " · "; color: var(--muted); font-size: 12.5px; }
+  .stats-basis .sub { margin-left: 0; }
+}
+@media (max-width: 640px) {
+  table.list.channel-table tr, table.list.channel-table td { background: transparent !important; }
+}
+.auth-trust { display: block; }
+.auth-trust svg { vertical-align: -2px; margin-right: 4px; }

@@ -80,10 +80,10 @@ export function Card({ children, className = '', style, id }: { children: ReactN
 }
 
 export function PageHead({
-  title, sub, actions, children,
-}: { eyebrow?: string; title: string; sub?: string; actions?: ReactNode; children?: ReactNode }) {
+  title, sub, actions, children, center,
+}: { eyebrow?: string; title: string; sub?: string; actions?: ReactNode; children?: ReactNode; center?: boolean }) {
   return (
-    <header className="pagehead">
+    <header className={`pagehead${center ? ' center' : ''}`}>
       <div className="pagehead-title-row">
         <h1>{title}</h1>
         {actions}

@@ -195,9 +195,9 @@ export default function RemedyNavigator({ contextLabel, stationId }: { contextLa
               {CHANNELS.map((c) => (
                 <tr key={c[0]}>
                   <td>{c[0]}</td>
-                  <td>{c[1]}</td>
-                  <td><span className="pill">{c[2]}</span></td>
-                  <td className="muted">{c[3]}</td>
+                  <td data-label="대상 사안">{c[1]}</td>
+                  <td data-label="접수처"><span className="pill">{c[2]}</span></td>
+                  <td className="muted" data-label="처리 특성">{c[3]}</td>
                 </tr>
               ))}
             </tbody>

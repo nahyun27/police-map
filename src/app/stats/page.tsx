@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BarChart3, FileCheck2, Percent, Scale, Star, TrendingUp, Trophy } from 'lucide-react';
 import ClickableRow from '@/components/ClickableRow';
+import { CountUp } from '@/components/CountUp';
 import { Bars, Card, EmptyState, Score } from '@/components/ui';
 import { getStats, getTransparencyReport, type StatsOverview, type TransparencyQuarter } from '@/lib/api';
 import { pageMeta } from '@/lib/seo';
@@ -78,6 +79,15 @@ export default async function StatsPage() {
         </Card>
       </div>
 
+      {/* 평가가 쌓이기 전에도 비어 보이지 않도록, 집계 대상(등록 관서·수사부서)을 먼저 보여 준다. */}
+      <div className="stats-basis">
+        <span>집계 대상</span>
+        <b>경찰서 <CountUp value={stats.totals.stations} />곳</b>
+        <b>수사부서 <CountUp value={stats.totals.departments} />개</b>
+        <b>게시된 평가 <CountUp value={stats.totals.reviews} />건</b>
+        <span className="sub">관서 정보 출처: 경찰청 전국경찰관서안내 및 각 관서 홈페이지 공개자료</span>
+      </div>
+
       <div className="grid2">
         <Card>
           <h2><BarChart3 size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />항목별 전국 평균</h2>
@@ -98,10 +108,10 @@ export default async function StatsPage() {
                   <div className="vl" style={{ width: 52 }}>{a.value.toLocaleString()}</div>
                 </div>
               ))}
-              <p className="sub" style={{ marginTop: 14 }}>실서비스에서는 정보공개청구 원자료를 게재합니다.</p>
+              <p className="sub" style={{ marginTop: 14 }}>정보공개청구로 확보한 원자료를 순차적으로 게재합니다.</p>
             </>
           ) : (
-            <EmptyState icon={<TrendingUp size={20} />}>등록된 공개통계가 없습니다. 실서비스에서는 정보공개청구로 확보한 원자료를 게재합니다.</EmptyState>
+            <EmptyState icon={<TrendingUp size={20} />}>아직 등록된 공개통계가 없습니다. 정보공개청구로 확보한 원자료를 순차적으로 게재합니다.</EmptyState>
           )}
         </Card>
       </div>

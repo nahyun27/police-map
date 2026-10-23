@@ -3,7 +3,7 @@
 import { Suspense, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { LogIn } from 'lucide-react';
+import { LogIn, ShieldCheck } from 'lucide-react';
 import { Card, PageHead } from '@/components/ui';
 import { resetAdminCheck } from '@/components/AdminBlindButton';
 import { apiErrorMessage, login } from '@/lib/api';
@@ -66,10 +66,15 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <>
-      <PageHead eyebrow="로그인" title="로그인" sub="로그인하지 않아도 평가·제보 작성은 그대로 가능합니다." />
+      <PageHead center eyebrow="로그인" title="로그인" sub="로그인하지 않아도 평가·제보 작성은 그대로 가능합니다." />
       <Suspense>
         <LoginForm />
       </Suspense>
+      {/* 가입·로그인 화면 아래 짧은 보안 안내(신뢰감). 자세한 내용은 개인정보처리방침. */}
+      <p className="auth-trust">
+        <ShieldCheck size={14} />비밀번호는 복원할 수 없게 암호화해 저장하며, 이메일은 회원 관리에만 씁니다.{' '}
+        <Link href="/privacy">개인정보처리방침</Link>
+      </p>
     </>
   );
 }
