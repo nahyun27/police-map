@@ -1222,3 +1222,37 @@ footer.site { padding: 52px 0 36px; }
   table.list.region-list td[data-label="평균 평가"] { justify-self: end; }
   .station-head .bigscore-empty { min-height: 0; padding: 10px 14px; }
 }
+
+/* ---------- 디자인 정비 3단계: 글쓰기·평가 작성 폼, 게시판 목록 ---------- */
+/* 폼 단계 제목("1. 평가 대상" 등)을 작은 파란 글씨 대신 왼쪽 막대가 있는 소제목으로 */
+.form-section {
+  display: flex; align-items: center; gap: 10px; font-size: 15.5px; font-weight: 750; color: var(--ink);
+  letter-spacing: -0.02em; margin: 34px 0 16px; padding-top: 26px;
+}
+.form-section::before { content: ""; width: 4px; height: 18px; border-radius: 4px; background: var(--brand); flex-shrink: 0; }
+.form-section .sub { font-weight: 500; }
+
+/* 입력칸: 마우스를 올리면 테두리가 살짝 진해지고, 포커스는 기존 파란 링 */
+.field input, .field select, .field textarea { transition: border-color .15s, box-shadow .15s; }
+.field input:hover:not(:focus), .field select:hover:not(:focus), .field textarea:hover:not(:focus) { border-color: #cdd4e2; }
+
+/* 별점: 고르는 순간 살짝 튀어 오르는 반응 */
+@keyframes pm-star-pop { 0% { transform: scale(1); } 40% { transform: scale(1.32); } 100% { transform: scale(1); } }
+.starpick button.on { animation: pm-star-pop .28s var(--ease); }
+.starpick button { font-size: 32px; }
+
+/* 게시판·사건 목록: 마우스를 올린 줄에 왼쪽 파란 표시 */
+.board-ui .post-row { position: relative; }
+.board-ui .post-row::before {
+  content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 3px;
+  background: var(--brand); opacity: 0; transition: opacity .15s;
+}
+.board-ui .post-row:hover::before { opacity: 1; }
+
+/* 안내 상자(평가 작성 전 읽어 주세요 등): 왼쪽 강조선 */
+.card.tint { border-left: 4px solid var(--brand); }
+
+@media (prefers-reduced-motion: reduce) {
+  .starpick button.on { animation: none; }
+  .board-ui .post-row::before { transition: none; }
+}
