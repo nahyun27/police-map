@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import ClickableRow from '@/components/ClickableRow';
 import RegionMiniMap from '@/components/RegionMiniMap';
-import { Card, Crumb, PageHead, Score, TableWrap } from '@/components/ui';
-import { ApiError, getRegion, stationKindLabel } from '@/lib/api';
+import { RegionStationTable } from '@/components/RegionStationTable';
+import { Card, Crumb, PageHead } from '@/components/ui';
+import { ApiError, getRegion } from '@/lib/api';
 import { pageMeta } from '@/lib/seo';
 
 type Props = { params: Promise<{ id: string }> };
@@ -37,6 +37,7 @@ export default async function RegionPage({ params }: Props) {
   const national = rg.id === 'national';
   // 시·도경찰청 자체도 직속 수사부서 평가 대상이라(2026-10) 목록 맨 위 행으로 들어와 있다. 있으면 본청 주소 카드는 생략.
   const hasAgencyRow = rg.stations.some((s) => s.kind && s.kind !== 'station');
+  const agency = rg.stations.find((s) => s.kind === 'provincial');
 
   return (
     <>
@@ -48,40 +49,31 @@ export default async function RegionPage({ params }: Props) {
           ? '경찰청 본청과 국가수사본부 직속 수사부서를 평가할 수 있습니다.'
           : `${rg.full_name}와 관할 경찰서 ${rg.station_count}곳 · 평가 데이터는 관서 상세에서 확인할 수 있습니다.`}
       />
-      {rg.hq_address && !hasAgencyRow && (
-        <Card className="flat">
-          <p className="sub">
-            본청 · {rg.hq_address}
-            {rg.hq_website && <> · <a href={rg.hq_website} target="_blank" rel="noopener noreferrer">공식 홈페이지 ↗</a></>}
-          </p>
+      {/* 디자인 정비 2단계: 지도와 요약(관서 수·평가 있는 곳·본청 주소)을 나란히, 목록은 이름·주소로 거를 수 있게. */}
+      <div className="region-top">
+        <RegionMiniMap regionId={id} stations={rg.stations} />
+        <Card className="region-summary">
+          <h2>한눈에 보기</h2>
+          <dl>
+            {!national && <div><dt>관할 경찰서</dt><dd>{rg.station_count}곳</dd></div>}
+            <div><dt>평가가 있는 관서</dt><dd>{rg.stations.filter((s) => s.rating.count > 0).length}곳</dd></div>
+            {hasAgencyRow && agency && (
+              <div>
+                <dt>{national ? '기관' : '시·도경찰청 직속 수사부서'}</dt>
+                <dd>{national ? `${rg.stations.length}곳` : <Link href={`/station/${agency.id}`}>{agency.department_count}개 →</Link>}</dd>
+              </div>
+            )}
+          </dl>
+          {rg.hq_address && (
+            <p className="sub region-hq">
+              본청 · {rg.hq_address}
+              {rg.hq_website && <> · <a href={rg.hq_website} target="_blank" rel="noopener noreferrer">공식 홈페이지 ↗</a></>}
+            </p>
+          )}
         </Card>
-      )}
-      <RegionMiniMap regionId={id} stations={rg.stations} />
+      </div>
       <Card>
-        <TableWrap>
-          <table className="list">
-            <thead>
-              <tr><th>관서</th><th>주소</th><th>수사부서</th><th>평균 평가</th></tr>
-            </thead>
-            <tbody>
-              {rg.stations.length ? (
-                rg.stations.map((s) => (
-                  <ClickableRow key={s.id} href={`/station/${s.id}`}>
-                    <td>
-                      <Link href={`/station/${s.id}`}>{s.name}</Link>
-                      {s.kind && s.kind !== 'station' && <span className="badge brand" style={{ marginLeft: 6 }}>{stationKindLabel(s.kind, s.name)}</span>}
-                    </td>
-                    <td className="sub">{s.address ?? '-'}</td>
-                    <td>{s.department_count ? `${s.department_count}개` : <span className="sub">-</span>}</td>
-                    <td><Score value={s.rating.overall} /></td>
-                  </ClickableRow>
-                ))
-              ) : (
-                <tr><td colSpan={4} className="sub">등록된 경찰서가 없습니다.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </TableWrap>
+        <RegionStationTable stations={rg.stations} />
       </Card>
     </>
   );

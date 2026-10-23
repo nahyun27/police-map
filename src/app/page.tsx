@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
-  ArrowRight, ArrowUpRight, BarChart3, ChevronRight, Flame, Megaphone, MessagesSquare, Scale, Search, ShieldCheck, Star,
+  ArrowRight, ArrowUpRight, BarChart3, Building2, ChevronRight, EyeOff, Flame, Megaphone, MessagesSquare, Scale, Search, ShieldCheck, Star,
   ThumbsDown, ThumbsUp,
 } from 'lucide-react';
+import { CountUp } from '@/components/CountUp';
 import HeroSearch from '@/components/HeroSearch';
 import { MyRegionFeed } from '@/components/MyRegionFeed';
 import RegionMapSwitcher from '@/components/RegionMapSwitcher';
@@ -110,10 +111,23 @@ export default async function Home() {
         </div>
 
         <div className="hero-stats">
-          <div><div className="num">{stats.totals.stations.toLocaleString()}</div><div className="lbl">등록 경찰서</div></div>
-          <div><div className="num">{stats.totals.departments.toLocaleString()}</div><div className="lbl">등록 수사부서</div></div>
-          <div><div className="num">{stats.totals.reviews.toLocaleString()}</div><div className="lbl">누적 평가</div></div>
+          <div><div className="num"><CountUp value={stats.totals.stations} /></div><div className="lbl">등록 경찰서</div></div>
+          <div><div className="num"><CountUp value={stats.totals.departments} /></div><div className="lbl">등록 수사부서</div></div>
+          {/* 오픈 직후 "누적 평가 0"이 크게 보이면 빈 사이트처럼 보여서, 0 일 때만 접수 중이라는 안내로 바꾼다. */}
+          <div>
+            {stats.totals.reviews > 0
+              ? <><div className="num"><CountUp value={stats.totals.reviews} /></div><div className="lbl">누적 평가</div></>
+              : <><div className="num num-text">평가 접수 중</div><div className="lbl">누적 평가 · 첫 평가를 기다리고 있어요</div></>}
+          </div>
         </div>
+      </section>
+
+      {/* 운영 원칙을 한 줄로 보여 주는 신뢰 띠. 자세한 내용은 운영원칙 페이지에 있다. */}
+      <section className="trust-band" aria-label="운영 원칙">
+        <div><ShieldCheck size={18} /><span><b>실명 보호</b>수사관 이름은 일부 가려 표시</span></div>
+        <div><EyeOff size={18} /><span><b>즉시 임시조치</b>당사자 삭제·정정 요청 시 바로 비공개</span></div>
+        <div><Building2 size={18} /><span><b>공개자료 기반</b>경찰청 관서 안내·홈페이지 기준</span></div>
+        <div><Scale size={18} /><span><b>사실 중심</b>금칙어 자동 필터, 인신공격 금지</span></div>
       </section>
 
       <section className="purpose-section">
@@ -170,10 +184,12 @@ export default async function Home() {
               </p>
             </div>
           )) : (
-            <>
-              <p className="sub">아직 등록된 평가가 없습니다. 첫 평가의 주인공이 되어 주세요.</p>
-              <Link href="/search?intent=write" className="btn sm" style={{ marginTop: 12 }}>첫 평가 작성하기</Link>
-            </>
+            <div className="first-review">
+              <span className="first-review-ico"><Star size={20} /></span>
+              <b>아직 등록된 평가가 없습니다</b>
+              <span className="sub">첫 평가의 주인공이 되어 주세요.</span>
+              <Link href="/search?intent=write" className="btn sm">첫 평가 작성하기</Link>
+            </div>
           )}
         </Card>
         </div>
@@ -220,7 +236,7 @@ export default async function Home() {
         ))}
       </div>
 
-      <Card style={{ borderColor: '#f0c9c7', background: 'var(--low-soft)' }}>
+      <Card className="failure-records">
         <div className="eyebrow" style={{ color: 'var(--low)' }}>왜 폴리스맵인가</div>
         <h2>기록되지 않은 실패는 반복됩니다</h2>
         <p className="sub" style={{ maxWidth: 720, marginBottom: 18 }}>
@@ -229,7 +245,7 @@ export default async function Home() {
         </p>
         <div className="grid3">
           {WHY_CASES.map((c) => (
-            <Link key={c.title} href="/why" className="card clickable-card" style={{ background: '#fff' }}>
+            <Link key={c.title} href="/why" className="card clickable-card flat">
               <span className="badge" style={{ background: '#fff', color: 'var(--low)', border: '1px solid #f0c9c7' }}>{c.tag}</span>
               <h3 style={{ marginTop: 10, fontSize: 15 }}>{c.title}</h3>
               <p className="sub" style={{ fontSize: 13 }}>{c.body}</p>

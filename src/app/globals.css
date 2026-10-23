@@ -1117,3 +1117,108 @@ footer.site { padding: 52px 0 36px; }
   .card, .btn, .site-header { transition: none !important; }
   .card.clickable-card:hover { transform: none; }
 }
+
+/* ---------- 디자인 정비 2단계: 경찰서·기관 상세 ---------- */
+.station-head { padding: 30px; position: relative; overflow: hidden; }
+.station-head::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 4px;
+  background: linear-gradient(90deg, var(--navy), var(--brand) 60%, #7aa2ff);
+}
+.station-head-main { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.station-head h1 { font-size: clamp(26px, 3.2vw, 34px); margin-top: 8px; }
+.station-kicker { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.station-kicker .badge { margin-right: 0; }
+.station-kicker a.sub:hover { color: var(--ink); }
+.station-addr { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 14px; margin-top: 8px; }
+.station-addr svg { color: #8a96ad; }
+.trust-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.trust-chips span {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--ink2);
+  background: #f5f7fb; border: 1px solid var(--line2); border-radius: 999px; padding: 4px 10px;
+}
+.trust-chips svg { color: var(--brand); }
+.station-head .bigscore { background: #f7f9fd; border: 1px solid var(--line2); border-radius: 14px; padding: 16px 20px; min-width: 150px; text-align: center; }
+.station-head .bigscore .num { font-size: 46px; color: var(--navy); }
+.station-head .bigscore-empty { display: grid; place-items: center; min-height: 86px; }
+.station-head .btn-row { margin-top: 22px !important; padding-top: 20px; border-top: 1px solid var(--line2); }
+
+.station-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+.station-main > .card:last-child, .station-aside > .card:last-child { margin-bottom: 0; }
+.station-layout { margin-bottom: 20px; }
+.station-aside .card { padding: 22px; }
+.station-aside h2 { font-size: 16px; }
+.aside-list { display: flex; flex-direction: column; }
+.aside-row { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; margin: 0 -8px; border-radius: 10px; color: inherit; transition: background .15s; }
+.aside-row + .aside-row { border-top: 1px solid var(--line2); }
+.aside-row:hover { background: #f5f7fb; color: inherit; }
+.aside-row .nm { font-weight: 650; color: var(--ink); font-size: 14.5px; }
+@media (max-width: 960px) {
+  .station-layout { grid-template-columns: 1fr; gap: 0; }
+  .station-main > .card:last-child { margin-bottom: 20px; }
+  .station-head { padding: 22px; }
+  .station-head .bigscore { width: 100%; text-align: left; display: flex; align-items: baseline; gap: 12px; }
+  .station-head .bigscore .num { font-size: 36px; }
+}
+@media (prefers-reduced-motion: reduce) { .aside-row { transition: none; } }
+.first-review { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 26px 12px 10px; }
+.first-review b { color: var(--ink); font-size: 15.5px; }
+.first-review > span:not(.first-review-ico) { max-width: 420px; }
+.first-review-ico { width: 44px; height: 44px; border-radius: 14px; background: #fff6e0; color: var(--star); display: grid; place-items: center; }
+.first-review .btn { margin-top: 6px; }
+.first-review { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 26px 12px 10px; }
+.first-review b { color: var(--ink); font-size: 15.5px; }
+.first-review > span:not(.first-review-ico) { max-width: 420px; }
+.first-review-ico { width: 44px; height: 44px; border-radius: 14px; background: #fff6e0; color: var(--star); display: grid; place-items: center; }
+.first-review .btn { margin-top: 6px; }
+
+/* ---------- 디자인 정비 2단계: 홈 ---------- */
+.hero-stats .num-text { font-size: 22px; letter-spacing: -0.02em; }
+.trust-band {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: -4px 0 26px;
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.trust-band > div { display: flex; align-items: flex-start; gap: 10px; padding: 16px 18px; }
+.trust-band > div + div { border-left: 1px solid var(--line2); }
+.trust-band svg { color: var(--brand); margin-top: 2px; }
+.trust-band span { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.trust-band b { display: block; font-size: 13.5px; color: var(--ink); font-weight: 700; }
+@media (max-width: 860px) {
+  .trust-band { grid-template-columns: 1fr 1fr; }
+  .trust-band > div:nth-child(3) { border-left: none; }
+  .trust-band > div:nth-child(n+3) { border-top: 1px solid var(--line2); }
+}
+.failure-records { background: #fff; border-color: var(--line); position: relative; overflow: hidden; }
+.failure-records::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--low); }
+.failure-records .card { background: #fbfcfe; border-color: var(--line2); }
+.failure-records .card .badge { background: var(--low-soft) !important; border: none !important; }
+
+/* ---------- 디자인 정비 2단계: 지역 ---------- */
+.region-top { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: stretch; margin-bottom: 20px; }
+.region-top > .card { margin-bottom: 0; }
+.region-top > .card:only-child { grid-column: 1 / -1; }
+.region-top .region-mini-map { max-width: 520px; }
+.region-summary dl { display: flex; flex-direction: column; }
+.region-summary dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line2); }
+.region-summary dt { color: var(--muted); font-size: 13.5px; }
+.region-summary dd { font-weight: 750; font-size: 18px; color: var(--navy); }
+.region-summary dd a { font-size: 15px; }
+.region-hq { margin-top: 14px; line-height: 1.6; }
+.region-table-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.region-filter input { background: #fff; width: 240px; }
+.region-filter input:focus { width: 240px; }
+@media (max-width: 960px) {
+  .region-top { grid-template-columns: 1fr; }
+  .region-filter, .region-filter input, .region-filter input:focus { width: 100%; }
+}
+/* 모바일: 관서 목록 표를 줄마다 카드처럼 쌓아 가로 스크롤 없이 모든 칸(주소·수사부서·평가)을 보이게 */
+@media (max-width: 640px) {
+  table.list.region-list { min-width: 0; }
+  table.list.region-list thead { display: none; }
+  table.list.region-list tr { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 14px 4px; border-bottom: 1px solid var(--line2); }
+  table.list.region-list td { padding: 0; border: none; }
+  table.list.region-list td:first-child { grid-column: 1 / -1; font-weight: 650; }
+  table.list.region-list td[data-label="주소"] { grid-column: 1 / -1; }
+  table.list.region-list td[data-label="수사부서"]::before { content: "수사부서 "; color: var(--muted); font-size: 12.5px; }
+  table.list.region-list td[data-label="평균 평가"] { justify-self: end; }
+  .station-head .bigscore-empty { min-height: 0; padding: 10px 14px; }
+}

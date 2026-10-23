@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Bars, Card, Crumb, Score, Stars } from '@/components/ui';
 import { ReviewList } from '@/components/ReviewList';
-import { ExternalLink, ShieldCheck } from 'lucide-react';
+import { Building2, ExternalLink, MapPin, ShieldCheck, Star, Users } from 'lucide-react';
 import { ApiError, getStation, stationKindLabel } from '@/lib/api';
 import stationJurisdiction from '@/data/stationJurisdiction.json';
 import { AdSlots } from '@/components/AdSlots';
@@ -90,12 +90,22 @@ export default async function StationPage({ params, searchParams }: Props) {
     <>
       <JsonLd data={stationLd} />
       <Crumb items={[{ label: '홈', to: '/' }, { label: s.region.full_name, to: `/region/${s.region.id}` }, { label: s.name }]} />
-      <Card>
-        <div className="flex">
+      {/* 디자인 정비 2단계: 머리 카드(이름·주소·점수·신뢰 정보) + 넓은 화면에선 왼쪽 평가 / 오른쪽 참고 정보 2단.
+          모바일에선 평가가 먼저 오고 참고 정보가 뒤에 온다. 내용은 이전과 같고 배치만 바뀌었다. */}
+      <Card className="station-head">
+        <div className="station-head-main">
           <div className="grow">
-            <div className="eyebrow">{kindLabel}</div>
+            <div className="station-kicker">
+              <span className="badge brand">{kindLabel}</span>
+              <Link href={`/region/${s.region.id}`} className="sub">{s.region.full_name}</Link>
+            </div>
             <h1>{s.name}</h1>
-            <p className="sub" style={{ marginTop: 8 }}>{s.address ?? '주소 정보 없음'}</p>
+            <p className="station-addr"><MapPin size={15} />{s.address ?? '주소 정보 없음'}</p>
+            <div className="trust-chips">
+              <span><Building2 size={13} />경찰청 공개자료 기준</span>
+              <span><Users size={13} />{isAgency ? '직속 ' : ''}수사부서 {s.departments.length}개</span>
+              <span><ShieldCheck size={13} />실명 일부 가림 · 금칙어 필터</span>
+            </div>
           </div>
           {s.rating.count ? (
             <div className="bigscore">
@@ -121,10 +131,11 @@ export default async function StationPage({ params, searchParams }: Props) {
         </div>
       </Card>
 
-      <Card>
-          <h2>평가 요약</h2>
-          {s.rating.count ? (
-            <>
+      <div className="station-layout">
+        <div className="station-main">
+          {s.rating.count > 0 && (
+            <Card>
+              <h2>평가 요약</h2>
               <Bars rating={s.rating} />
               <p className="sub" style={{ marginTop: 14 }}>항목: 공정성 / 절차 준수 / 조사 태도 / 소통·응대 / 신속성 (각 5점)</p>
               {s.by_case_type.length > 1 && (
@@ -139,157 +150,159 @@ export default async function StationPage({ params, searchParams }: Props) {
                   ))}
                 </div>
               )}
-            </>
-          ) : (
-            <p className="sub">아직 등록된 평가가 없습니다. 이 {isAgency ? '기관' : '경찰서'}의 첫 평가를 남겨 주세요.</p>
+            </Card>
           )}
-      </Card>
-
-      {s.nearby.length > 0 && (
-        <Card>
-          <h2>인근 경찰서</h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {s.nearby.map((n) => (
-              <Link key={n.id} href={`/station/${n.id}`} className="card clickable-card flat" style={{ flex: '1 1 180px', margin: 0, padding: 14 }}>
-                <p style={{ fontWeight: 700 }}>{n.name}</p>
-                <p className="sub" style={{ marginTop: 4 }}>
-                  {n.distance_km}km · {n.rating.overall !== null ? `평균 ${n.rating.overall.toFixed(1)}점` : '평가 없음'}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      <Card>
-        <h2>{isAgency ? '직속 수사부서' : '수사부서'} <span className="tag">{s.source?.includes('표준 편제') ? '표준 편제 기준' : '홈페이지 공개 기준'}</span></h2>
-        {s.departments.length ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {(s.department_items ?? s.departments.map((name, i) => ({ id: -i, label: name }))).map((d) => (
-              d.id > 0 ? (
-                // 누르면 그 부서 대상 평가만 모아 본다(부서별 평가, 2026-10).
-                <Link key={d.id} href={`/station/${s.id}?dept=${d.id}#reviews`} className={`badge dept-badge${deptFilter === d.id ? ' on' : ''}`}>{d.label}</Link>
-              ) : <span key={d.id} className="badge">{d.label}</span>
-            ))}
-          </div>
-        ) : (
-          <p className="sub">공개된 부서 정보가 없습니다.</p>
+        {(deptRatings.length > 0 || officerRatings.length > 0) && (
+          <Card id="target-ratings">
+            <h2>부서·수사관별 평가</h2>
+            <p className="sub" style={{ marginBottom: 12 }}>
+              누르면 해당 평가만 모아 볼 수 있어요. 수사관 이름은 일부 가려서 표시하며, 이용자가 입력한 미검증 정보입니다.
+            </p>
+            <div className="grid2" style={{ marginBottom: 0 }}>
+              {deptRatings.length > 0 && (
+                <div>
+                  <h3 style={{ fontSize: 15, marginBottom: 8 }}>부서</h3>
+                  {deptRatings.map((t) => (
+                    <Link key={`d${t.id}`} href={`/station/${s.id}?dept=${t.id}#reviews`} className="target-row">
+                      <span>{t.label}</span>
+                      <span className="sub"><Score value={t.rating.overall} /> · {t.rating.count}건</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {officerRatings.length > 0 && (
+                <div>
+                  <h3 style={{ fontSize: 15, marginBottom: 8 }}>수사관</h3>
+                  {officerRatings.map((t) => (
+                    <div key={`o${t.id}`} className="target-row">
+                      <Link href={`/station/${s.id}?officer=${t.id}#reviews`}>
+                        {t.label}{t.rank ? ` ${t.rank}` : ''}{t.department_name ? <span className="sub"> · {t.department_name}</span> : null}
+                      </Link>
+                      <span className="sub"><Score value={t.rating.overall} /> · {t.rating.count}건</span>
+                    </div>
+                  ))}
+                  <p className="sub" style={{ fontSize: 12, marginTop: 8 }}>
+                    본인 정보가 잘못 올라갔거나 게시를 원하지 않으면, 이름을 눌러 나오는 &quot;이 수사관 정보 삭제·정정 요청&quot;으로
+                    요청할 수 있습니다. 접수 즉시 비공개 처리됩니다.
+                  </p>
+                </div>
+              )}
+            </div>
+          </Card>
         )}
-      </Card>
-
-      {jurisdiction && (
+        <Card id="reviews">
+          {s.filter_label && (
+            <div className="guidebox" style={{ marginTop: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span><b>{s.filter_label}</b> 대상 평가만 보는 중</span>
+              <span className="btn-row" style={{ alignItems: 'center' }}>
+                {officerFilter && <Link href={`/takedown/officer/${officerFilter}`} className="sub">이 수사관 정보 삭제·정정 요청</Link>}
+                <Link href={`/station/${s.id}#reviews`} className="btn line sm">전체 보기</Link>
+              </span>
+            </div>
+          )}
+          <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+            <h2 style={{ marginBottom: 0 }}>평가 후기 <span className="sub" style={{ fontWeight: 500 }}>{s.reviews.total}건</span></h2>
+            <Link href={`/station/${s.id}${evidenceOnly ? '' : '?evidence=1'}`} className={`link-btn ${evidenceOnly ? 'on' : ''}`}>
+              <ShieldCheck size={13} />증빙확인된 평가만 보기
+            </Link>
+          </div>
+          {s.reviews.items.length ? (
+            <ReviewList stationId={s.id} items={s.reviews.items} />
+          ) : (
+            <p className="sub">
+              {evidenceOnly ? '증빙확인된 평가가 아직 없습니다.'
+                : deptFilter ? <>이 부서에 대한 평가가 아직 없습니다. <Link href={`/station/${s.id}/write?dept=${deptFilter}`}>이 부서 평가 작성하기</Link></>
+                : s.rating.count ? '등록된 평가가 없습니다.'
+                : (
+                  <span className="first-review">
+                    <span className="first-review-ico"><Star size={20} /></span>
+                    <b>아직 등록된 평가가 없습니다</b>
+                    <span>이 {isAgency ? '기관' : '경찰서'}에서 수사 절차를 직접 겪으셨다면 첫 평가를 남겨 주세요. 로그인 없이도 작성할 수 있습니다.</span>
+                    <Link href={`/station/${s.id}/write`} className="btn sm">첫 평가 작성하기</Link>
+                  </span>
+                )}
+            </p>
+          )}
+          {totalPages > 1 && (
+            <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>
+              {page > 1 && <Link href={pageHref(page - 1)} className="btn line sm">이전</Link>}
+              <span className="sub">{page} / {totalPages}</span>
+              {page < totalPages && <Link href={pageHref(page + 1)} className="btn line sm">다음</Link>}
+            </div>
+          )}
+        </Card>
+        </div>
+        <aside className="station-aside">
         <Card>
-          <h2>관할구역 <span className="tag">경찰청과 그 소속기관 직제 시행규칙 별표2</span></h2>
-          {jurisdiction.kind !== 'complex' && jurisdiction.path ? (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <svg
-                  viewBox={jurisdiction.viewBox} style={{ width: '100%', maxWidth: 280, height: 'auto' }}
-                  role="img" aria-label={`${s.name} 관할구역 지도`}
-                >
-                  <path d={jurisdiction.path} fill="var(--brand-soft)" stroke="var(--brand)" strokeWidth={1.5} />
-                  {jurisdiction.stationX !== undefined && jurisdiction.stationY !== undefined ? (
-                    // 실제 경찰서 주소 위치 — 관할구역 도형의 기하학적 중심(labelX/Y)과는
-                    // 다른 지점이라, 라벨도 도형 중심이 아니라 이 실제 위치 옆에 붙인다.
-                    <g transform={`translate(${jurisdiction.stationX} ${jurisdiction.stationY})`}>
-                      <path
-                        d="M0,-9.3L7,-9.3L10,-4L10,1.1L0,11.5L-10,1.1L-10,-4L-7,-9.3Z"
-                        fill="var(--brand)" stroke="#fff" strokeWidth={1}
-                      />
-                      <text y={24} textAnchor="middle" fontSize={14} fontWeight={700} fill="var(--brand-ink)">
+          <h2>{isAgency ? '직속 수사부서' : '수사부서'} <span className="tag">{s.source?.includes('표준 편제') ? '표준 편제 기준' : '홈페이지 공개 기준'}</span></h2>
+          {s.departments.length ? (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {(s.department_items ?? s.departments.map((name, i) => ({ id: -i, label: name }))).map((d) => (
+                d.id > 0 ? (
+                  // 누르면 그 부서 대상 평가만 모아 본다(부서별 평가, 2026-10).
+                  <Link key={d.id} href={`/station/${s.id}?dept=${d.id}#reviews`} className={`badge dept-badge${deptFilter === d.id ? ' on' : ''}`}>{d.label}</Link>
+                ) : <span key={d.id} className="badge">{d.label}</span>
+              ))}
+            </div>
+          ) : (
+            <p className="sub">공개된 부서 정보가 없습니다.</p>
+          )}
+        </Card>
+        {jurisdiction && (
+          <Card>
+            <h2>관할구역 <span className="tag">경찰청과 그 소속기관 직제 시행규칙 별표2</span></h2>
+            {jurisdiction.kind !== 'complex' && jurisdiction.path ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <svg
+                    viewBox={jurisdiction.viewBox} style={{ width: '100%', maxWidth: 280, height: 'auto' }}
+                    role="img" aria-label={`${s.name} 관할구역 지도`}
+                  >
+                    <path d={jurisdiction.path} fill="var(--brand-soft)" stroke="var(--brand)" strokeWidth={1.5} />
+                    {jurisdiction.stationX !== undefined && jurisdiction.stationY !== undefined ? (
+                      // 실제 경찰서 주소 위치 — 관할구역 도형의 기하학적 중심(labelX/Y)과는
+                      // 다른 지점이라, 라벨도 도형 중심이 아니라 이 실제 위치 옆에 붙인다.
+                      <g transform={`translate(${jurisdiction.stationX} ${jurisdiction.stationY})`}>
+                        <path
+                          d="M0,-9.3L7,-9.3L10,-4L10,1.1L0,11.5L-10,1.1L-10,-4L-7,-9.3Z"
+                          fill="var(--brand)" stroke="#fff" strokeWidth={1}
+                        />
+                        <text y={24} textAnchor="middle" fontSize={14} fontWeight={700} fill="var(--brand-ink)">
+                          {s.name.replace(/경찰서$/, '')}
+                        </text>
+                      </g>
+                    ) : jurisdiction.labelX !== undefined && jurisdiction.labelY !== undefined && (
+                      <text
+                        x={jurisdiction.labelX} y={jurisdiction.labelY} textAnchor="middle"
+                        fontSize={15} fontWeight={700} fill="var(--brand-ink)"
+                      >
                         {s.name.replace(/경찰서$/, '')}
                       </text>
-                    </g>
-                  ) : jurisdiction.labelX !== undefined && jurisdiction.labelY !== undefined && (
-                    <text
-                      x={jurisdiction.labelX} y={jurisdiction.labelY} textAnchor="middle"
-                      fontSize={15} fontWeight={700} fill="var(--brand-ink)"
-                    >
-                      {s.name.replace(/경찰서$/, '')}
-                    </text>
-                  )}
-                </svg>
-              </div>
-              <p className="sub" style={{ textAlign: 'center', marginTop: 8 }}>{jurisdiction.text}</p>
-            </>
-          ) : (
-            <p className="sub">{jurisdiction.text}</p>
-          )}
-        </Card>
-      )}
-
-      {(deptRatings.length > 0 || officerRatings.length > 0) && (
-        <Card id="target-ratings">
-          <h2>부서·수사관별 평가</h2>
-          <p className="sub" style={{ marginBottom: 12 }}>
-            누르면 해당 평가만 모아 볼 수 있어요. 수사관 이름은 일부 가려서 표시하며, 이용자가 입력한 미검증 정보입니다.
-          </p>
-          <div className="grid2" style={{ marginBottom: 0 }}>
-            {deptRatings.length > 0 && (
-              <div>
-                <h3 style={{ fontSize: 15, marginBottom: 8 }}>부서</h3>
-                {deptRatings.map((t) => (
-                  <Link key={`d${t.id}`} href={`/station/${s.id}?dept=${t.id}#reviews`} className="target-row">
-                    <span>{t.label}</span>
-                    <span className="sub"><Score value={t.rating.overall} /> · {t.rating.count}건</span>
-                  </Link>
-                ))}
-              </div>
+                    )}
+                  </svg>
+                </div>
+                <p className="sub" style={{ textAlign: 'center', marginTop: 8 }}>{jurisdiction.text}</p>
+              </>
+            ) : (
+              <p className="sub">{jurisdiction.text}</p>
             )}
-            {officerRatings.length > 0 && (
-              <div>
-                <h3 style={{ fontSize: 15, marginBottom: 8 }}>수사관</h3>
-                {officerRatings.map((t) => (
-                  <div key={`o${t.id}`} className="target-row">
-                    <Link href={`/station/${s.id}?officer=${t.id}#reviews`}>
-                      {t.label}{t.rank ? ` ${t.rank}` : ''}{t.department_name ? <span className="sub"> · {t.department_name}</span> : null}
-                    </Link>
-                    <span className="sub"><Score value={t.rating.overall} /> · {t.rating.count}건</span>
-                  </div>
-                ))}
-                <p className="sub" style={{ fontSize: 12, marginTop: 8 }}>
-                  본인 정보가 잘못 올라갔거나 게시를 원하지 않으면, 이름을 눌러 나오는 &quot;이 수사관 정보 삭제·정정 요청&quot;으로
-                  요청할 수 있습니다. 접수 즉시 비공개 처리됩니다.
-                </p>
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
-
-      <Card id="reviews">
-        {s.filter_label && (
-          <div className="guidebox" style={{ marginTop: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span><b>{s.filter_label}</b> 대상 평가만 보는 중</span>
-            <span className="btn-row" style={{ alignItems: 'center' }}>
-              {officerFilter && <Link href={`/takedown/officer/${officerFilter}`} className="sub">이 수사관 정보 삭제·정정 요청</Link>}
-              <Link href={`/station/${s.id}#reviews`} className="btn line sm">전체 보기</Link>
-            </span>
-          </div>
+          </Card>
         )}
-        <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-          <h2 style={{ marginBottom: 0 }}>평가 후기 <span className="sub" style={{ fontWeight: 500 }}>{s.reviews.total}건</span></h2>
-          <Link href={`/station/${s.id}${evidenceOnly ? '' : '?evidence=1'}`} className={`link-btn ${evidenceOnly ? 'on' : ''}`}>
-            <ShieldCheck size={13} />증빙확인된 평가만 보기
-          </Link>
-        </div>
-        {s.reviews.items.length ? (
-          <ReviewList stationId={s.id} items={s.reviews.items} />
-        ) : (
-          <p className="sub">
-            {evidenceOnly ? '증빙확인된 평가가 아직 없습니다.'
-              : deptFilter ? <>이 부서에 대한 평가가 아직 없습니다. <Link href={`/station/${s.id}/write?dept=${deptFilter}`}>이 부서 평가 작성하기</Link></>
-              : '등록된 평가가 없습니다.'}
-          </p>
+        {s.nearby.length > 0 && (
+          <Card>
+            <h2>인근 경찰서</h2>
+            <div className="aside-list">
+              {s.nearby.map((n) => (
+                <Link key={n.id} href={`/station/${n.id}`} className="aside-row">
+                  <span className="nm">{n.name}</span>
+                  <span className="sub">{n.distance_km}km · {n.rating.overall !== null ? `평균 ${n.rating.overall.toFixed(1)}점` : '평가 없음'}</span>
+                </Link>
+              ))}
+            </div>
+          </Card>
         )}
-        {totalPages > 1 && (
-          <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>
-            {page > 1 && <Link href={pageHref(page - 1)} className="btn line sm">이전</Link>}
-            <span className="sub">{page} / {totalPages}</span>
-            {page < totalPages && <Link href={pageHref(page + 1)} className="btn line sm">다음</Link>}
-          </div>
-        )}
-      </Card>
+        </aside>
+      </div>
       <p className="sub" style={{ fontSize: 12, textAlign: 'center', marginTop: 4 }}>
         {isAgency ? '기관' : '경찰서'} 정보 출처: {s.source ?? '경찰청 전국경찰관서안내 공개자료'}
       </p>
