@@ -51,7 +51,7 @@ function errorMessage(e: unknown): string {
   });
 }
 
-export default function WriteForm({ stationId, initialDept }: { stationId: number; initialDept?: number }) {
+export default function WriteForm({ stationId, initialDept, isAgency }: { stationId: number; initialDept?: number; isAgency?: boolean }) {
   const router = useRouter();
   const [role, setRole] = useState(ROLE_OPTIONS[0][0]);
   const [roleOther, setRoleOther] = useState('');
@@ -127,7 +127,7 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
       <div className="form-section">1. 평가 대상</div>
       <div className="field">
         <div className="seg" role="group" aria-label="평가 대상">
-          {([['station', '경찰서 전체'], ['department', '특정 부서'], ['officer', '특정 수사관']] as [Target, string][]).map(([v, l]) => (
+          {([['station', isAgency ? '기관 전체' : '경찰서 전체'], ['department', '특정 부서'], ['officer', '특정 수사관']] as [Target, string][]).map(([v, l]) => (
             <button key={v} type="button" className={target === v ? 'active' : ''} aria-pressed={target === v} onClick={() => setTarget(v)}>{l}</button>
           ))}
         </div>
@@ -174,7 +174,7 @@ export default function WriteForm({ stationId, initialDept }: { stationId: numbe
           )}
           <p className="sub" style={{ marginTop: -8, marginBottom: 16, fontSize: 12.5 }}>
             이름은 공개 화면에서 <b>김*수</b>처럼 일부 가려져 표시되고, 본문에 같은 이름을 적어도 자동으로 가려집니다.
-            같은 경찰서에 이미 있는 이름이면 같은 사람으로 묶입니다. 해당 경찰관 본인은 언제든 삭제·정정을 요청할 수 있습니다.
+            {isAgency ? '같은 기관' : '같은 경찰서'}에 이미 있는 이름이면 같은 사람으로 묶입니다. 해당 경찰관 본인은 언제든 삭제·정정을 요청할 수 있습니다.
           </p>
         </>
       )}

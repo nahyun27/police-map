@@ -20,6 +20,7 @@ from app.models import (
     VerificationStatus,
 )
 from app.services.audit import log_action
+from app.services.analytics import today_kst
 from app.services.takedown import utcnow
 
 VERIFICATION_RETENTION = timedelta(days=365)
@@ -74,7 +75,7 @@ def run_purge(db: Session) -> dict[str, int]:
     ).rowcount or 0
 
     counts["page_views"] = db.execute(
-        delete(PageView).where(PageView.created_at < now - PAGE_VIEW_RETENTION).execution_options(synchronize_session=False)
+        delete(PageView).where(PageView.day < today_kst() - PAGE_VIEW_RETENTION).execution_options(synchronize_session=False)
     ).rowcount or 0
 
     if any(counts.values()):

@@ -41,7 +41,7 @@ export default async function SearchPage({ searchParams }: Props) {
         </div>
         {(q || failed) && (
           <>
-            <h2><PoliceStationIcon size={17} style={{ verticalAlign: -2, marginRight: 8, color: 'var(--brand)' }} />경찰서 ({stations.length})</h2>
+            <h2><PoliceStationIcon size={17} style={{ verticalAlign: -2, marginRight: 8, color: 'var(--brand)' }} />관서 ({stations.length})</h2>
             {failed ? <p className="sub">검색 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.</p> : stations.length ? stations.map((s) => (
               // 줄 전체를 눌러 이동(이름 글자만 링크면 모바일에서 누르기 어렵다). 평가 작성 모드면 바로 작성 화면으로.
               <Link

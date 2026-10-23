@@ -67,11 +67,19 @@ export default function AdminUsersPage() {
   const unsuspend = (u: AdminUser) => {
     if (confirm(`${u.nickname} 회원의 이용 정지를 해제할까요?`)) act(() => unsuspendAdminUser(u.id));
   };
+  // 작성 글을 빠르게 여러 명 열 때 늦게 온 이전 회원의 글이 지금 펼친 회원 아래에 뜨지 않게 한다.
+  const contentSeq = useRef(0);
   const toggleContent = async (u: AdminUser) => {
+    const mySeq = ++contentSeq.current;
     if (openId === u.id) { setOpenId(null); return; }
     setOpenId(u.id);
     setContent(null);
-    try { setContent(await getAdminUserContent(u.id)); } catch (e) { setError(errMsg(e)); setContent([]); }
+    try {
+      const items = await getAdminUserContent(u.id);
+      if (contentSeq.current === mySeq) { setContent(items); setError(null); }
+    } catch (e) {
+      if (contentSeq.current === mySeq) { setError(errMsg(e)); setContent([]); }
+    }
   };
 
   return (
@@ -91,6 +99,10 @@ export default function AdminUsersPage() {
         </form>
       </div>
       <Card>
+        <p className="sub" style={{ marginTop: 0 }}>
+          정지하면 그 계정으로는 로그인·작성을 할 수 없지만, 평가·게시글은 로그인 없이도 쓸 수 있어 비회원 작성까지 막지는 못합니다.
+          문제 글은 신고·블라인드에서 따로 처리해 주세요.
+        </p>
         {error && <div className="warn" style={{ marginBottom: 16 }}>{error}</div>}
         <TableWrap>
           <table className="list">

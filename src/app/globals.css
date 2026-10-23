@@ -1094,7 +1094,7 @@ nav.gnb a { transition: color .15s, background .15s; }
 /* 등장 효과: 페이지에 들어오면 본문 블록이 아래에서 살짝 떠오르며 차례로 나타난다(처음 몇 개만 시차).
    CSS 만으로 처리해 자바스크립트가 늦거나 실패해도 내용이 숨겨진 채로 남지 않는다. */
 @keyframes pm-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-main > * { animation: pm-rise .45s var(--ease) both; }
+main > * { animation: pm-rise .45s var(--ease) backwards; }
 main > *:nth-child(2) { animation-delay: .05s; }
 main > *:nth-child(3) { animation-delay: .1s; }
 main > *:nth-child(4) { animation-delay: .15s; }
@@ -1156,7 +1156,9 @@ footer.site { padding: 52px 0 36px; }
   .station-layout { grid-template-columns: 1fr; gap: 0; }
   .station-main > .card:last-child { margin-bottom: 20px; }
   .station-head { padding: 22px; }
-  .station-head .bigscore { width: 100%; text-align: left; display: flex; align-items: baseline; gap: 12px; }
+  .station-head .bigscore { width: 100%; }
+  .station-head .bigscore:not(.bigscore-empty) { text-align: left; display: flex; align-items: baseline; gap: 12px; }
+  .station-head .bigscore-empty { min-height: 0; padding: 12px 16px; }
   .station-head .bigscore .num { font-size: 36px; }
 }
 @media (prefers-reduced-motion: reduce) { .aside-row { transition: none; } }
@@ -1293,3 +1295,7 @@ footer.site { padding: 52px 0 36px; }
    메뉴 배경과 어울리는 옅은 안쪽 테두리로. */
 nav.gnb a:focus-visible, .hauth a:focus-visible { outline: none; box-shadow: inset 0 0 0 2px #b9cbff; }
 nav.gnb a:focus:not(:focus-visible) { outline: none; }
+
+/* 관리자 통계 4칸: 좁은 화면에서는 2칸으로 */
+.grid3.grid4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 760px) { .grid3.grid4 { grid-template-columns: repeat(2, 1fr); } }

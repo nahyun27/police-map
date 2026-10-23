@@ -200,13 +200,22 @@ def admin_edit_ad(
         raise HTTPException(422, "종료일이 시작일보다 빠릅니다.")
     link = _check_link(link_url)
     old_files: list[str | None] = []
-    if image_wide and image_wide.filename:
-        old_files.append(a.image_wide)
-        a.image_wide = save_ad_image(image_wide, "wide")
-    if image_side and image_side.filename:
-        old_files.append(a.image_side)
-        a.image_side = save_ad_image(image_side, "side")
-    elif remove_side and a.image_side:
+    new_files: list[str] = []
+    try:
+        if image_wide and image_wide.filename:
+            new_files.append(save_ad_image(image_wide, "wide"))
+            old_files.append(a.image_wide)
+            a.image_wide = new_files[-1]
+        if image_side and image_side.filename:
+            new_files.append(save_ad_image(image_side, "side"))
+            old_files.append(a.image_side)
+            a.image_side = new_files[-1]
+    except Exception:
+        # 두 번째 배너가 형식 오류 등으로 거절되면 먼저 저장한 새 파일이 고아로 남지 않게 지운다.
+        for f in new_files:
+            delete_ad_image(f)
+        raise
+    if not (image_side and image_side.filename) and remove_side and a.image_side:
         old_files.append(a.image_side)
         a.image_side = None
     a.title, a.advertiser, a.link_url, a.region_id = title.strip(), advertiser.strip(), link, region_id

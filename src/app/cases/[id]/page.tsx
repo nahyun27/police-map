@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { CaseDetailView } from '@/components/CaseDetailView';
 import { Crumb } from '@/components/ui';
 import { getCase, type CaseDetail } from '@/lib/api';
-import { NOINDEX } from '@/lib/seo';
+import { NOINDEX, pageMeta } from '@/lib/seo';
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -11,7 +11,7 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const c = await getCase(Number((await params).id));
-    return { title: c.title, description: c.excerpt, robots: NOINDEX, openGraph: { title: c.title, description: c.excerpt } };
+    return { ...pageMeta({ title: c.title, description: c.excerpt, path: `/cases/${c.id}` }), robots: NOINDEX };
   } catch {
     return { title: '사건 공론화', robots: NOINDEX };
   }

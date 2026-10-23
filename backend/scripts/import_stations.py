@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
-from app.models import Department, Region, Station
+from app.models import Department, Officer, Region, Review, Station
 
 DEFAULT_FILE = Path(__file__).resolve().parent.parent / "data" / "police_stations.json"
 
@@ -100,7 +100,16 @@ def import_data(db: Session, payload: dict) -> dict[str, int]:
                     db.add(Department(station_id=station.id, name=name))
             for name, dept in existing.items():
                 if name not in wanted:
-                    db.delete(dept)
+                    # 평가나 수사관이 이 부서를 가리키고 있으면 지우지 않는다(지우면 외래키 오류로 전체 적재가 실패하고,
+                    # 지워진다 해도 기존 평가의 대상 정보가 사라진다). 남겨 둔 부서는 따로 알려 준다.
+                    in_use = db.scalar(select(Review.id).where(Review.department_id == dept.id).limit(1)) or db.scalar(
+                        select(Officer.id).where(Officer.department_id == dept.id).limit(1))
+                    if in_use:
+                        stats.setdefault("department_kept", 0)
+                        stats["department_kept"] += 1
+                        print(f"  부서 유지(평가·수사관 연결): {station.name} / {name}")
+                    else:
+                        db.delete(dept)
             stats["department_synced"] += 1
 
     return stats

@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models import OfficerSource
 
@@ -80,6 +80,14 @@ class AdminUserOut(BaseModel):
 
 class SuspendIn(BaseModel):
     reason: str = Field(min_length=2, max_length=300)
+
+    @field_validator("reason")
+    @classmethod
+    def _strip(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError("정지 사유를 2자 이상 적어 주세요.")
+        return v
 
 
 class AdminUserContentItem(BaseModel):

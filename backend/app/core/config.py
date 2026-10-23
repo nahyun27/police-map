@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     # 마이그레이션(alembic) 전용 접속 주소. 운영에서는 사이트가 테이블 구조를 못 바꾸는 저권한 계정으로
     # 접속하고(DATABASE_URL), 구조 변경은 이 관리자 계정 주소로만 한다. 비워 두면 DATABASE_URL 을 쓴다.
     MIGRATION_DATABASE_URL: str = ""
+    # 회원가입 동의 기록에 남기는 약관 버전(약관·처리방침 시행일, 프론트 src/lib/legal.ts TERMS_VERSION 과 맞춘다).
+    TERMS_VERSION: str = "2026-10-20"
 
     JWT_SECRET_KEY: str = INSECURE_DEFAULT
     JWT_ALGORITHM: str = "HS256"

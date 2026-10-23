@@ -57,10 +57,10 @@ export default async function RegionPage({ params }: Props) {
           <dl>
             {!national && <div><dt>관할 경찰서</dt><dd>{rg.station_count}곳</dd></div>}
             <div><dt>평가가 있는 관서</dt><dd>{rg.stations.filter((s) => s.rating.count > 0).length}곳</dd></div>
-            {hasAgencyRow && agency && (
+            {hasAgencyRow && (national || agency) && (
               <div>
                 <dt>{national ? '기관' : '시·도경찰청 직속 수사부서'}</dt>
-                <dd>{national ? `${rg.stations.length}곳` : <Link href={`/station/${agency.id}`}>{agency.department_count}개 →</Link>}</dd>
+                <dd>{national ? `${rg.stations.length}곳` : agency && <Link href={`/station/${agency.id}`}>{agency.department_count}개 →</Link>}</dd>
               </div>
             )}
           </dl>

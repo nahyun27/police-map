@@ -48,7 +48,7 @@ export default async function WritePage({ params, searchParams }: Props) {
       </Card>
 
       <Card>
-        <WriteForm stationId={s.id} initialDept={initialDept} />
+        <WriteForm stationId={s.id} initialDept={initialDept} isAgency={!!s.kind && s.kind !== 'station'} />
       </Card>
     </>
   );

@@ -121,7 +121,7 @@ export default async function StatsPage() {
         {stats.station_ranking.length ? (
           <div className="table-wrap">
             <table className="list">
-              <thead><tr><th style={{ width: 56 }}>순위</th><th>경찰서</th><th>평균</th><th>평가 수</th></tr></thead>
+              <thead><tr><th style={{ width: 56 }}>순위</th><th>관서</th><th>평균</th><th>평가 수</th></tr></thead>
               <tbody>
                 {stats.station_ranking.map((s, i) => (
                   <ClickableRow key={s.id} href={`/station/${s.id}`}>

@@ -11,6 +11,9 @@ export function CountUp({ value, duration = 900 }: { value: number; duration?: n
   useEffect(() => {
     const el = ref.current;
     if (!el || value <= 0 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // 처음부터 화면에 보이는 숫자는 그대로 둔다(최종값이 보였다가 0 으로 돌아가 다시 오르는 깜빡임 방지).
+    const r = el.getBoundingClientRect();
+    if (r.top < window.innerHeight && r.bottom > 0) return;
     let raf = 0;
     const run = () => {
       const start = performance.now();
@@ -21,6 +24,7 @@ export function CountUp({ value, duration = 900 }: { value: number; duration?: n
       };
       raf = requestAnimationFrame(tick);
     };
+    setShown(0);
     const io = new IntersectionObserver((entries) => {
       if (entries.some((e) => e.isIntersecting)) { io.disconnect(); run(); }
     });
@@ -28,5 +32,5 @@ export function CountUp({ value, duration = 900 }: { value: number; duration?: n
     return () => { io.disconnect(); cancelAnimationFrame(raf); };
   }, [value, duration]);
 
-  return <span ref={ref}>{shown.toLocaleString()}</span>;
+  return <span ref={ref}>{shown.toLocaleString('ko-KR')}</span>;
 }

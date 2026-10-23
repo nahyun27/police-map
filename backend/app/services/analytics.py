@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import Request
 
-from app.core.client_ip import real_client_ip
+from app.core.client_ip import client_ip_key
 from app.core.config import settings
 
 KST = ZoneInfo("Asia/Seoul")
@@ -27,7 +27,7 @@ def is_bot(user_agent: str) -> bool:
 
 def client_ip(request: Request) -> str:
     # Cloudflare 경유(policemap.kr)면 원래 IP. 헤더는 실제 Cloudflare 에서 온 요청일 때만 믿는다(core/client_ip.py).
-    return real_client_ip(request)
+    return client_ip_key(request)
 
 
 def visitor_hash(day: date, ip: str, user_agent: str) -> str:
@@ -37,12 +37,18 @@ def visitor_hash(day: date, ip: str, user_agent: str) -> str:
 
 
 def clean_path(path: str) -> str | None:
+    path = path.replace("\x00", "")
     if not path.startswith("/") or path.startswith("//") or path.startswith("/admin") or path.startswith("/api/"):
         return None
-    return path.split("?", 1)[0].split("#", 1)[0][:300] or "/"
+    path = path.split("?", 1)[0].split("#", 1)[0][:300] or "/"
+    # 삭제·정정 요청 조회 코드는 비밀번호 같은 값이라 주소째 남기지 않는다.
+    if path.startswith("/takedown/status/"):
+        return "/takedown/status/*"
+    return path
 
 
 def referrer_host(referrer: str | None) -> str | None:
+    referrer = (referrer or "").replace("\x00", "")
     if not referrer:
         return None
     try:

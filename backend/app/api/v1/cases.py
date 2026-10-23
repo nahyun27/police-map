@@ -1,10 +1,14 @@
 """사건 공론화 API — 운영 규칙은 app/models/public_case.py docstring 참고."""
+import hashlib
+import hmac
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1._present import iso
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import get_client_ip_hash, get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
@@ -35,9 +39,18 @@ def _update_counts(db: Session, ids: list[int]) -> dict[int, int]:
     return dict(rows)
 
 
+def _anon_empathy_key(request: Request) -> str:
+    """비회원 공감자 식별값. IP 만 쓰면 같은 회사·학교·통신사 공유 IP 뒤의 여러 사람이 한 사람으로 묶여, 남이 한
+    공감이 내 것으로 보이고 취소까지 되던 문제(2026-10 점검)가 있어 브라우저 정보(User-Agent)를 함께 섞는다.
+    쿠키는 쓰지 않는다(개인정보처리방침: 로그인 유지용 쿠키만 사용). 원래 값은 저장하지 않는 HMAC 해시다."""
+    ua = request.headers.get("user-agent", "")[:300]
+    digest = hmac.new(settings.JWT_SECRET_KEY.encode(), f"case-empathy:{get_client_ip_hash(request)}|{ua}".encode(), hashlib.sha256)
+    return digest.hexdigest()[:32]
+
+
 def _empathizer(request: Request, user: User | None):
-    """공감한 사람을 찾는 조건. 회원은 계정, 비회원은 IP 해시(커뮤니티 추천과 같은 기준)."""
-    return PublicCaseEmpathy.user_id == user.id if user else PublicCaseEmpathy.ip_hash == get_client_ip_hash(request)
+    """공감한 사람을 찾는 조건. 회원은 계정, 비회원은 IP+브라우저 해시."""
+    return PublicCaseEmpathy.user_id == user.id if user else PublicCaseEmpathy.ip_hash == _anon_empathy_key(request)
 
 
 def _my_empathies(db: Session, ids: list[int], request: Request, user: User | None) -> set[int]:
@@ -190,7 +203,7 @@ def add_empathy(
     exists = db.scalar(select(PublicCaseEmpathy.id).where(PublicCaseEmpathy.case_id == case_id, _empathizer(request, user)))
     if not exists:
         db.add(PublicCaseEmpathy(
-            case_id=case_id, user_id=user.id if user else None, ip_hash=None if user else get_client_ip_hash(request),
+            case_id=case_id, user_id=user.id if user else None, ip_hash=None if user else _anon_empathy_key(request),
         ))
         # 카운터는 DB 에서 원자적으로 올린다(파이썬에서 읽고 더해 쓰면 동시 공감이 서로 덮어써 숫자가 샌다).
         db.execute(update(PublicCase).where(PublicCase.id == case_id).values(empathy_count=PublicCase.empathy_count + 1))

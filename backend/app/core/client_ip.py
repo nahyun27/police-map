@@ -33,3 +33,17 @@ def real_client_ip(request: Request) -> str:
         except ValueError:
             pass
     return host
+
+
+def client_ip_key(request: Request) -> str:
+    """"한 사람"을 셀 때 쓰는 IP 키. IPv6 는 가정·휴대폰 한 회선이 보통 /64 대역 전체를 쓰고 그 안에서 주소를
+    마음대로 바꿀 수 있어, 주소 그대로 세면 비회원 공감·추천과 요청 횟수 제한을 무제한 우회할 수 있다(2026-10 점검).
+    IPv6 는 /64 대역 단위로 묶고, IPv4 는 주소 그대로 쓴다."""
+    ip = real_client_ip(request)
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return ip
+    if addr.version == 6:
+        return str(ipaddress.ip_network(f"{addr}/64", strict=False).network_address) + "/64"
+    return str(addr)

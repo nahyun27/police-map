@@ -16,7 +16,7 @@ export default function PageViewTracker() {
     fetch(apiAsset('/api/v1/track'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: pathname, referrer: first ? document.referrer || null : null }),
+      body: JSON.stringify({ path: pathname.startsWith('/takedown/status/') ? '/takedown/status/*' : pathname, referrer: first ? document.referrer || null : null }),
       keepalive: true,
       credentials: 'omit',
     }).catch(() => {});

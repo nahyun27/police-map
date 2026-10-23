@@ -23,7 +23,7 @@ export function TrafficPanel() {
   return (
     <Card>
       <h2><Activity size={17} style={{ verticalAlign: -3, marginRight: 5, color: 'var(--brand)' }} />방문 통계</h2>
-      <div className="grid3" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+      <div className="grid3 grid4">
         {kpi('오늘', t.today)}
         {kpi('어제', t.yesterday)}
         {kpi('최근 7일', t.last_7d)}
