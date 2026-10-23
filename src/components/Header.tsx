@@ -35,6 +35,15 @@ export default function Header() {
     setOpen(false);
   }, [pathname]);
 
+  // 스크롤하면 헤더 아래에 옅은 그림자를 줘서 본문과 분리한다(globals.css 의 .site-header.scrolled).
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   useEffect(() => {
     getMe().then(setUser).catch(() => setUser(null));
   }, [pathname]);
@@ -82,7 +91,7 @@ export default function Header() {
   if (pathname.startsWith('/admin')) return null;
 
   return (
-    <header className="site-header">
+    <header className={`site-header${scrolled ? ' scrolled' : ''}`}>
       <div className="hwrap">
         <Link href="/" className="logo">
           <Image src="/images/logo.webp" alt="폴리스맵" width={213} height={72} className="logo-img" priority />
