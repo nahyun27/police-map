@@ -6,6 +6,7 @@ from jose import JWTError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.client_ip import real_client_ip
 from app.core.cookies import get_access_token, get_refresh_token, set_access_cookie
 from app.core.database import get_db
 from app.core.security import create_access_token, decode_token, token_matches_user
@@ -61,7 +62,7 @@ def get_client_ip_hash(request: Request) -> str:
     는 nginx 뒤에서 그대로 쓰면 항상 127.0.0.1(프록시 자신)이 찍히므로, uvicorn 을
     --proxy-headers 로 띄워 nginx 가 보내는 X-Forwarded-For 를 신뢰하게 해 뒀다(배포 설정
     참고, rate_limit.py 의 같은 전제와 동일)."""
-    ip = request.client.host if request.client else "unknown"
+    ip = real_client_ip(request)  # Cloudflare(policemap.kr) 경유면 원래 IP(core/client_ip.py)
     digest = hmac.new(settings.JWT_SECRET_KEY.encode(), f"vote-ip:{ip}".encode(), hashlib.sha256).hexdigest()
     return digest[:32]
 

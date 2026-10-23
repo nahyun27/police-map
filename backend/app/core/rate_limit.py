@@ -8,6 +8,7 @@ import time
 from collections import defaultdict, deque
 
 from fastapi import HTTPException, Request, status
+from app.core.client_ip import real_client_ip
 
 
 def _client_key(request: Request) -> str:
@@ -22,7 +23,7 @@ def _client_key(request: Request) -> str:
             return f"u:{decode_token(token, expected_type='access')['sub']}"
         except Exception:
             pass
-    return f"ip:{request.client.host if request.client else 'unknown'}"
+    return f"ip:{real_client_ip(request)}"
 
 
 class RateLimiter:

@@ -79,14 +79,20 @@ class PublicCase(Base):
 
 
 class PublicCaseEmpathy(Base):
-    """공감 — 회원당 사건별 1회(취소 가능). 사실 인정·법적 동의를 뜻하지 않는다."""
+    """공감 — 사건별 1회(취소 가능). 사실 인정·법적 동의를 뜻하지 않는다.
+    회원은 계정당 1회, 비회원은 IP 해시당 1회(2026-10: 로그인 없이도 공감, 커뮤니티 추천과 같은 방식)."""
 
     __tablename__ = "public_case_empathies"
-    __table_args__ = (UniqueConstraint("case_id", "user_id"),)
+    __table_args__ = (
+        UniqueConstraint("case_id", "user_id"),
+        UniqueConstraint("case_id", "ip_hash", name="uq_public_case_empathies_case_ip"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     case_id: Mapped[int] = mapped_column(ForeignKey("public_cases.id"), index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    # 비회원 공감자 식별(원래 IP 가 아닌 HMAC 해시, core/deps.get_client_ip_hash). 회원 공감이면 None.
+    ip_hash: Mapped[str | None] = mapped_column(String(32), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

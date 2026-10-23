@@ -69,9 +69,8 @@ def test_case_banned_words_rejected(user_client):
     assert r.status_code == 422
 
 
-def test_empathy_once_per_member_and_login_required(db, client, user_client):
+def test_empathy_once_per_member(db, client, user_client):
     cid = user_client.post(f"{API}/cases", json=case_payload()).json()["id"]
-    assert client.post(f"{API}/cases/{cid}/empathy").status_code == 401
     assert user_client.post(f"{API}/cases/{cid}/empathy").json() == {"empathized": True, "empathy_count": 1}
     assert user_client.post(f"{API}/cases/{cid}/empathy").json()["empathy_count"] == 1  # 두 번 눌러도 1
     other = reporters(db, 1, "emp")[0]
@@ -226,3 +225,14 @@ def test_empathy_toggle_counts_stay_consistent(db, user_client):
     others[0].delete(f"{API}/cases/{cid}/empathy")
     others[0].delete(f"{API}/cases/{cid}/empathy")  # 두 번 취소해도 한 번만 깎인다
     assert user_client.get(f"{API}/cases/{cid}").json()["empathy_count"] == 2
+
+
+def test_anonymous_empathy_once_per_ip(db, client, user_client):
+    """로그인 없이도 공감할 수 있다(2026-10). 비회원은 IP 해시당 사건별 1회, 취소 가능."""
+    cid = user_client.post(f"{API}/cases", json=case_payload()).json()["id"]
+    assert client.post(f"{API}/cases/{cid}/empathy").json() == {"empathized": True, "empathy_count": 1}
+    assert client.post(f"{API}/cases/{cid}/empathy").json()["empathy_count"] == 1  # 같은 IP 는 한 번만
+    assert client.get(f"{API}/cases/{cid}").json()["my_empathy"] is True
+    assert user_client.post(f"{API}/cases/{cid}/empathy").json()["empathy_count"] == 2  # 회원은 따로 센다
+    assert client.delete(f"{API}/cases/{cid}/empathy").json() == {"empathized": False, "empathy_count": 1}
+    assert client.get(f"{API}/cases").json()["items"][0]["my_empathy"] is False

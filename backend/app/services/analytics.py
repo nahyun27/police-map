@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import Request
 
+from app.core.client_ip import real_client_ip
 from app.core.config import settings
 
 KST = ZoneInfo("Asia/Seoul")
@@ -25,9 +26,8 @@ def is_bot(user_agent: str) -> bool:
 
 
 def client_ip(request: Request) -> str:
-    # policemap.kr 은 Cloudflare 를 거쳐 들어와 접속 IP 가 Cloudflare 주소로 찍힌다. 방문자 수만 세는 용도라
-    # Cloudflare 가 알려 주는 원래 IP 를 쓴다(이 헤더는 꾸며낼 수 있지만, 그래도 숫자가 조금 틀어질 뿐이다).
-    return request.headers.get("cf-connecting-ip") or (request.client.host if request.client else "unknown")
+    # Cloudflare 경유(policemap.kr)면 원래 IP. 헤더는 실제 Cloudflare 에서 온 요청일 때만 믿는다(core/client_ip.py).
+    return real_client_ip(request)
 
 
 def visitor_hash(day: date, ip: str, user_agent: str) -> str:

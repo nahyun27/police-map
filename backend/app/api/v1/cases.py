@@ -1,12 +1,12 @@
 """사건 공론화 API — 운영 규칙은 app/models/public_case.py docstring 참고."""
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.v1._present import iso
 from app.core.database import get_db
-from app.core.deps import get_current_user, get_current_user_optional
+from app.core.deps import get_client_ip_hash, get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
 from app.core.rate_limit import case_limiter, comment_limiter, empathy_limiter, view_limiter
 from app.models import (
@@ -35,11 +35,16 @@ def _update_counts(db: Session, ids: list[int]) -> dict[int, int]:
     return dict(rows)
 
 
-def _my_empathies(db: Session, ids: list[int], user: User | None) -> set[int]:
-    if not user or not ids:
+def _empathizer(request: Request, user: User | None):
+    """공감한 사람을 찾는 조건. 회원은 계정, 비회원은 IP 해시(커뮤니티 추천과 같은 기준)."""
+    return PublicCaseEmpathy.user_id == user.id if user else PublicCaseEmpathy.ip_hash == get_client_ip_hash(request)
+
+
+def _my_empathies(db: Session, ids: list[int], request: Request, user: User | None) -> set[int]:
+    if not ids:
         return set()
     return set(db.scalars(
-        select(PublicCaseEmpathy.case_id).where(PublicCaseEmpathy.user_id == user.id, PublicCaseEmpathy.case_id.in_(ids))
+        select(PublicCaseEmpathy.case_id).where(_empathizer(request, user), PublicCaseEmpathy.case_id.in_(ids))
     ))
 
 
@@ -55,6 +60,7 @@ def _card(c: PublicCase, update_count: int, my_empathy: bool) -> CaseCard:
 
 @router.get("", response_model=Page[CaseCard])
 def list_cases(
+    request: Request,
     category: CaseCategory | None = None,
     q: str | None = Query(None, max_length=50),
     sort: str = Query("new", pattern="^(new|empathy)$"),
@@ -76,7 +82,7 @@ def list_cases(
         base.options(joinedload(PublicCase.station)).order_by(*order).offset((page - 1) * size).limit(size)
     ).all()
     ids = [c.id for c in rows]
-    counts, mine = _update_counts(db, ids), _my_empathies(db, ids, user)
+    counts, mine = _update_counts(db, ids), _my_empathies(db, ids, request, user)
     return Page(items=[_card(c, counts.get(c.id, 0), c.id in mine) for c in rows], total=total, page=page, size=size)
 
 
@@ -106,9 +112,11 @@ def _visible_or_404(db: Session, case_id: int, user: User | None) -> tuple[Publi
 
 
 @router.get("/{case_id}", response_model=CaseDetail)
-def get_case(case_id: int, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
+def get_case(
+    case_id: int, request: Request, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
+):
     c, privileged = _visible_or_404(db, case_id, user)
-    card = _card(c, len(c.updates), c.id in _my_empathies(db, [c.id], user))
+    card = _card(c, len(c.updates), c.id in _my_empathies(db, [c.id], request, user))
     return CaseDetail(
         **card.model_dump(), body=c.body, desired_action=c.desired_action,
         updates=[CaseUpdateOut(id=u.id, body=u.body, created_at=iso(u.created_at)) for u in c.updates],
@@ -172,13 +180,18 @@ def delete_case(case_id: int, db: Session = Depends(get_db), user: User = Depend
 
 
 @router.post("/{case_id}/empathy", response_model=EmpathyOut, dependencies=[Depends(empathy_limiter)])
-def add_empathy(case_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def add_empathy(
+    case_id: int, request: Request, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
+):
+    """로그인 없이도 공감할 수 있다(2026-10). 비회원은 IP 해시당 사건별 1회."""
     c = db.get(PublicCase, case_id)
     if not c or c.status != CaseStatus.published:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "사건을 찾을 수 없습니다.")
-    exists = db.scalar(select(PublicCaseEmpathy.id).where(PublicCaseEmpathy.case_id == case_id, PublicCaseEmpathy.user_id == user.id))
+    exists = db.scalar(select(PublicCaseEmpathy.id).where(PublicCaseEmpathy.case_id == case_id, _empathizer(request, user)))
     if not exists:
-        db.add(PublicCaseEmpathy(case_id=case_id, user_id=user.id))
+        db.add(PublicCaseEmpathy(
+            case_id=case_id, user_id=user.id if user else None, ip_hash=None if user else get_client_ip_hash(request),
+        ))
         # 카운터는 DB 에서 원자적으로 올린다(파이썬에서 읽고 더해 쓰면 동시 공감이 서로 덮어써 숫자가 샌다).
         db.execute(update(PublicCase).where(PublicCase.id == case_id).values(empathy_count=PublicCase.empathy_count + 1))
         try:
@@ -190,13 +203,15 @@ def add_empathy(case_id: int, db: Session = Depends(get_db), user: User = Depend
 
 
 @router.delete("/{case_id}/empathy", response_model=EmpathyOut, dependencies=[Depends(empathy_limiter)])
-def remove_empathy(case_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def remove_empathy(
+    case_id: int, request: Request, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional),
+):
     c = db.get(PublicCase, case_id)
     if not c or c.status != CaseStatus.published:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "사건을 찾을 수 없습니다.")
     # 삭제된 행 수로 판단해야 같은 사람의 동시 취소 두 번이 카운터를 두 번 깎지 않는다.
     deleted = db.execute(
-        delete(PublicCaseEmpathy).where(PublicCaseEmpathy.case_id == case_id, PublicCaseEmpathy.user_id == user.id)
+        delete(PublicCaseEmpathy).where(PublicCaseEmpathy.case_id == case_id, _empathizer(request, user))
     ).rowcount
     if deleted:
         db.execute(update(PublicCase).where(PublicCase.id == case_id, PublicCase.empathy_count > 0)

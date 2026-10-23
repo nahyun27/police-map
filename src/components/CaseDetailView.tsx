@@ -127,7 +127,7 @@ export function CaseDetailView({ id, initial }: { id: number; initial: CaseDetai
           </button>
           <button type="button" className="btn line" onClick={share}><Link2 size={16} />{copied ? '주소 복사됨' : '공유하기'}</button>
         </div>
-        <p className="sub" style={{ marginTop: 6, fontSize: 12 }}>공감은 로그인한 회원만 사건당 한 번 할 수 있으며, 사실 인정이나 법적 동의를 뜻하지 않습니다.</p>
+        <p className="sub" style={{ marginTop: 6, fontSize: 12 }}>공감은 로그인 없이도 사건당 한 번 할 수 있으며, 사실 인정이나 법적 동의를 뜻하지 않습니다.</p>
         {msg && <div className="warn">{msg}</div>}
 
         <div className="btn-row" style={{ marginTop: 18, alignItems: 'center', justifyContent: 'space-between' }}>
