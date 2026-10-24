@@ -1299,3 +1299,13 @@ nav.gnb a:focus:not(:focus-visible) { outline: none; }
 /* 관리자 통계 4칸: 좁은 화면에서는 2칸으로 */
 .grid3.grid4 { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 760px) { .grid3.grid4 { grid-template-columns: repeat(2, 1fr); } }
+
+/* 홈 하단 "폴리스맵이란?"·자주 묻는 질문 */
+.home-about h2 { margin-bottom: 10px; }
+.home-about-lead { color: var(--ink2); line-height: 1.75; max-width: 760px; margin-bottom: 22px; }
+.home-about h3 { font-size: 15px; margin-bottom: 4px; }
+.home-faq { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; }
+.home-faq > div { padding: 14px 0; border-top: 1px solid var(--line2); }
+.home-faq dt { font-weight: 650; color: var(--ink); margin-bottom: 4px; }
+.home-faq dd { margin: 0; color: var(--ink2); font-size: 14px; line-height: 1.65; }
+@media (max-width: 760px) { .home-faq { grid-template-columns: 1fr; } }

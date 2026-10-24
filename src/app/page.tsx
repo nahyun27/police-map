@@ -18,6 +18,21 @@ import { JsonLd } from '@/components/JsonLd';
 // 홈의 대표 주소. 제목·설명은 루트 layout 기본값을 그대로 쓴다.
 export const metadata: Metadata = { alternates: { canonical: '/' }, openGraph: { url: '/', siteName: SITE_NAME, locale: 'ko_KR', type: 'website' } };
 
+// 검색엔진과 AI 요약이 그대로 인용할 수 있는 정의 문장과 자주 묻는 질문. 화면(홈 하단)과 구조화 데이터에 같은 문장을 쓴다.
+// 답변은 실제 동작·약관과 맞춰 적었으니 동작이 바뀌면 함께 고친다.
+const ABOUT = [
+  '폴리스맵은 전국 경찰서와 수사부서에 대한 수사 경험을 국민이 직접 평가하고 공유하는 국민 참여형 플랫폼입니다.',
+  '고소인·피해자·피의자·참고인이나 변호인으로 수사를 겪은 사람이 경찰서·부서·수사관 단위로 평가를 남길 수 있습니다.',
+  '기피신청, 수사심의, 국민신문고 같은 권리구제 방법도 함께 안내합니다.',
+].join(' ');
+const FAQ: [string, string][] = [
+  ['로그인해야 평가할 수 있나요?', '아니요. 평가, 게시글, 사건 공론화 공감은 로그인 없이도 할 수 있습니다.'],
+  ['수사관 이름이 그대로 공개되나요?', '아니요. 공개 화면에서는 이름 일부를 가려(예: 김*수) 표시합니다.'],
+  ['허위 평가는 어떻게 처리하나요?', '금지 표현은 자동으로 거부됩니다. 서로 다른 회원 5명 이상이 신고하면 자동으로 비공개되고, 권리를 침해당한 사람이 삭제·정정을 요청하면 즉시 임시 비공개 처리합니다.'],
+  ['어떤 경찰서를 평가할 수 있나요?', '전국 경찰서와 시·도경찰청, 경찰청 본청·국가수사본부의 수사부서를 평가할 수 있습니다.'],
+  ['폴리스맵은 경찰이 운영하나요?', '아니요. 경찰과 관계없는 민간 서비스로, 공무집행의 투명성을 높이는 공익 목적으로 운영합니다.'],
+];
+
 // 검색 결과에 사이트 이름·로고를 정확히 표시하고, 구글 "사이트 내 검색창"을 쓸 수 있게 하는 구조화 데이터.
 const SITE_JSONLD = {
   '@context': 'https://schema.org',
@@ -34,7 +49,11 @@ const SITE_JSONLD = {
     {
       '@type': 'Organization', '@id': `${SITE_URL}/#organization`, name: SITE_NAME, url: SITE_URL,
       // 투명 배경 아이콘은 구글 이미지 검색에서 배경이 검게 나와, 흰 배경 정사각 로고를 따로 둔다.
-      logo: `${SITE_URL}/images/logo-square.png`, email: LEGAL.contactEmail,
+      logo: `${SITE_URL}/images/logo-square.png`, email: LEGAL.contactEmail, description: ABOUT,
+    },
+    {
+      '@type': 'FAQPage', '@id': `${SITE_URL}/#faq`, inLanguage: 'ko-KR',
+      mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
     },
   ],
 };
@@ -256,6 +275,15 @@ export default async function Home() {
         <Link href="/why" className="btn ghost sm" style={{ marginTop: 18, borderColor: 'var(--low)', color: 'var(--low)' }}>
           전체 기록 보기: 폴리스맵 소개 <ArrowUpRight size={14} />
         </Link>
+      </Card>
+
+      <Card className="home-about">
+        <h2>폴리스맵이란?</h2>
+        <p className="home-about-lead">{ABOUT}</p>
+        <h3>자주 묻는 질문</h3>
+        <dl className="home-faq">
+          {FAQ.map(([q, a]) => <div key={q}><dt>{q}</dt><dd>{a}</dd></div>)}
+        </dl>
       </Card>
 
     </>
