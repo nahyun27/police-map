@@ -75,8 +75,15 @@ export function Crumb({ items }: { items: { label: string; to?: string }[] }) {
   );
 }
 
-export function Card({ children, className = '', style, id }: { children: ReactNode; className?: string; style?: CSSProperties; id?: string }) {
-  return <div id={id} className={`card ${className}`.trim()} style={style}>{children}</div>;
+/** reveal: 화면에 들어올 때 나타나는 효과(RevealOnScroll 이 있는 페이지에서만 동작). 'stagger' 는 자식이 차례로. */
+export function Card({ children, className = '', style, id, reveal }: {
+  children: ReactNode; className?: string; style?: CSSProperties; id?: string; reveal?: true | 'stagger';
+}) {
+  return (
+    <div id={id} className={`card ${className}`.trim()} style={style} data-reveal={reveal === true ? '' : reveal}>
+      {children}
+    </div>
+  );
 }
 
 export function PageHead({

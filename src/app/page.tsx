@@ -14,6 +14,7 @@ import { formatDate } from '@/lib/format';
 import { LEGAL } from '@/lib/legal';
 import { SITE_NAME, SITE_URL } from '@/lib/seo';
 import { JsonLd } from '@/components/JsonLd';
+import { RevealOnScroll } from '@/components/RevealOnScroll';
 
 // 홈의 대표 주소. 제목·설명은 루트 layout 기본값을 그대로 쓴다.
 export const metadata: Metadata = { alternates: { canonical: '/' }, openGraph: { url: '/', siteName: SITE_NAME, locale: 'ko_KR', type: 'website' } };
@@ -107,6 +108,7 @@ export default async function Home() {
   return (
     <>
       <JsonLd data={SITE_JSONLD} />
+      <RevealOnScroll />
       <section className="card hero">
         <div className="eyebrow">국민 참여형 수사기관 평가 플랫폼</div>
         <h1>수사 절차의 투명성,<br /><em>국민이 만듭니다</em></h1>
@@ -143,7 +145,7 @@ export default async function Home() {
       </section>
 
       {/* 운영 원칙을 한 줄로 보여 주는 신뢰 띠. 자세한 내용은 운영원칙 페이지에 있다. */}
-      <section className="trust-band" aria-label="운영 원칙">
+      <section className="trust-band" aria-label="운영 원칙" data-reveal="stagger">
         <div><ShieldCheck size={18} /><span><b>실명 보호</b>수사관 이름은 일부 가려 표시</span></div>
         <div><EyeOff size={18} /><span><b>즉시 임시조치</b>당사자 삭제·정정 요청 시 바로 비공개</span></div>
         <div><Building2 size={18} /><span><b>공개자료 기반</b>경찰청 관서 안내·홈페이지 기준</span></div>
@@ -151,8 +153,11 @@ export default async function Home() {
       </section>
 
       <section className="purpose-section">
-        <h2 className="purpose-title">어떤 도움이 필요하신가요?</h2>
-        <div className="purpose-grid">
+        <div className="home-sec-head" data-reveal>
+          <div className="eyebrow">바로가기</div>
+          <h2 className="purpose-title">어떤 도움이 필요하신가요?</h2>
+        </div>
+        <div className="purpose-grid" data-reveal="stagger">
           {PURPOSES.map((p) => (
             <Link href={p.to} key={p.to} className="purpose-card">
               <div className="ico"><p.icon size={20} /></div>
@@ -165,7 +170,7 @@ export default async function Home() {
 
       <MyRegionFeed />
 
-      <div className="grid2">
+      <div className="grid2" data-reveal>
         <Card id="find-map">
           <h2>지도에서 찾기</h2>
           <p className="sub">시·도경찰청을 선택하면 관할 경찰서 목록으로 이동합니다.</p>
@@ -184,7 +189,7 @@ export default async function Home() {
               <div><em>안내</em>경찰서 정보는 경찰청 전국경찰관서안내 공개자료를 기준으로 합니다.</div>
             </div>
           </Card>
-        <Card>
+        <Card className="home-recent">
           <div className="sec-head">
             <div>
               <h2 style={{ marginBottom: 4 }}>최근 등록된 평가</h2>
@@ -215,7 +220,7 @@ export default async function Home() {
         </div>
       </div>
 
-      <Card>
+      <Card reveal>
         <div className="sec-head">
           <div>
             <h2 style={{ marginBottom: 4 }}><Flame size={18} style={{ verticalAlign: -3, marginRight: 4, color: 'var(--star)' }} />인기 게시글</h2>
@@ -241,11 +246,11 @@ export default async function Home() {
             ))}
           </div>
         ) : (
-          <p className="sub">아직 추천받은 글이 없습니다. <Link href="/board/write">첫 글을 남겨 보세요</Link>.</p>
+          <p className="sub empty-inline">아직 추천받은 글이 없습니다. <Link href="/board/write">첫 글을 남겨 보세요</Link>.</p>
         )}
       </Card>
 
-      <div className="grid3">
+      <div className="grid3" data-reveal="stagger">
         {FEATURES.map(({ to, icon: Icon, title, body, more }) => (
           <Link key={to} href={to} className="card clickable-card feature">
             <div className="ico"><Icon size={22} /></div>
@@ -256,14 +261,14 @@ export default async function Home() {
         ))}
       </div>
 
-      <Card className="failure-records">
+      <Card className="failure-records" reveal>
         <div className="eyebrow" style={{ color: 'var(--low)' }}>왜 폴리스맵인가</div>
         <h2>기록되지 않은 실패는 반복됩니다</h2>
         <p className="sub" style={{ maxWidth: 720, marginBottom: 18 }}>
           아래 사건들의 공통점은 하나입니다. 문제가 커지기 전까지, 아무도 지켜보지 않았다는 것. 모두 법원 판결·국정조사·수사기관의
           공식 조치로 이미 확인된 기록입니다.
         </p>
-        <div className="grid3">
+        <div className="grid3" data-reveal="stagger">
           {WHY_CASES.map((c) => (
             <Link key={c.title} href="/why" className="card clickable-card flat">
               <span className="badge" style={{ background: '#fff', color: 'var(--low)', border: '1px solid #f0c9c7' }}>{c.tag}</span>
@@ -277,13 +282,21 @@ export default async function Home() {
         </Link>
       </Card>
 
-      <Card className="home-about">
-        <h2>폴리스맵이란?</h2>
-        <p className="home-about-lead">{ABOUT}</p>
-        <h3>자주 묻는 질문</h3>
-        <dl className="home-faq">
-          {FAQ.map(([q, a]) => <div key={q}><dt>{q}</dt><dd>{a}</dd></div>)}
-        </dl>
+      <Card className="home-about" reveal>
+        <div className="home-about-intro">
+          <div className="eyebrow">About</div>
+          <h2>폴리스맵이란?</h2>
+          <p className="home-about-lead">{ABOUT}</p>
+          <Link href="/why" className="more">폴리스맵 소개 자세히 보기 <ChevronRight size={15} /></Link>
+        </div>
+        <div>
+          <h3>자주 묻는 질문</h3>
+          <dl className="home-faq">
+            {FAQ.map(([q, a], i) => (
+              <div key={q}><dt><span className="faq-n">{String(i + 1).padStart(2, '0')}</span>{q}</dt><dd>{a}</dd></div>
+            ))}
+          </dl>
+        </div>
       </Card>
 
     </>

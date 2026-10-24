@@ -6,6 +6,7 @@ import {
   Scale, Search, ShieldAlert, ShieldCheck, Star, TrendingUp, Users2,
 } from 'lucide-react';
 import { Card } from '@/components/ui';
+import { RevealOnScroll } from '@/components/RevealOnScroll';
 import { getStats } from '@/lib/api';
 import { pageMeta } from '@/lib/seo';
 
@@ -79,14 +80,24 @@ export default async function WhyPage() {
 
   return (
     <>
+      <RevealOnScroll />
       <section className="card hero solo">
-        <div className="eyebrow">POLICEMAP.KR · 국민이 만드는 수사 감시 플랫폼</div>
-        <h1>수사의 실패는 언제나 있었습니다.<br /><em>기록되지 않았을 뿐입니다.</em></h1>
+        <div className="eyebrow">POLICEMAP.CO.KR · 국민이 만드는 수사 감시 플랫폼</div>
+        <h1>
+          <span className="hero-line">수사의 실패는 언제나 있었습니다.</span><br />
+          <em className="hero-line">기록되지 않았을 뿐입니다.</em>
+        </h1>
         <p className="lead">
           수사권 조정 이후 대부분의 사건은 경찰 단계에서 시작되고, 경찰 단계에서 끝납니다. 그러나 그 과정을 지켜보고
           기록하는 시민의 도구는 없었습니다. 아래는 법원 판결과 국정조사 등 공식 절차로 이미 확인된, 우리 모두가
           기억하는 실패의 기록입니다.
         </p>
+        {/* 아래 두 장(Chapter)의 사건 카드에서 센 값이다. 카드를 더하거나 빼면 함께 고친다. */}
+        <div className="why-hero-facts">
+          <div><b>7건</b><span>공식 확인된 실패의 기록</span></div>
+          <div><b>3건</b><span>수십 년 뒤의 재심 무죄</span></div>
+          <div><b>32년</b><span>무죄가 밝혀지기까지 가장 긴 시간</span></div>
+        </div>
       </section>
 
       {/* 3억 5천만 원(층간소음 국가배상) 카드는 바로 아래 Chapter 01 사례 카드와 내용이 겹쳐서 뺐다(2026-10).
@@ -102,68 +113,72 @@ export default async function WhyPage() {
         </Card>
       )}
 
-      <ChapterHead n="01" eyebrow="Chapter 01 · 국민이 치른 대가" title="현장에서 물러선 경찰, 지켜지지 않은 신변보호"
-        sub="현장 대응과 초동 조치의 실패가 되돌릴 수 없는 결과로 이어진 4건의 기록" />
-      <div className="grid2">
-        <WhyCase icon={AlertTriangle} tone="danger" tag="2021 · 인천" title="층간소음 흉기난동, 현장을 이탈한 경찰"
-          after={'경찰관 2명 해임. 2026년 6월 법원, 국가·경찰의 배상책임 인정(3억 5천만 원). "경찰 믿을 수 있나"라는 사회적 공분의 기점.'}
-          refs="출처: 서울신문 2022.1.7, 연합뉴스·네이트뉴스 2026.6.21">
-          층간소음 갈등 끝에 이웃이 흉기를 휘두르는 동안, 출동해 있던 <b>경찰관들이 현장을 이탈</b>해 피해자가 중상을 입었습니다.
-          지원 요청도, 즉각 대응도 없었습니다.
-        </WhyCase>
-        <WhyCase icon={ShieldAlert} tone="danger" tag="2021~2022 · 서울" title="신변보호 요청, 그 후의 살인들"
-          after="스토킹처벌법 강화, 신변보호 시스템 개편의 계기가 되었습니다."
-          refs="출처: 서울신문 2021.11.22, 위키백과·언론 보도 종합">
-          신변보호를 받던 여성이 스마트워치로 두 차례 구조 신호를 보냈지만 위치 측정 실패로 살해됐고(중구), 신변보호 대상
-          여성 대신 <b>그 가족이 보복 살해</b>당했으며(송파), 스토킹 피해를 고소했던 역무원은 신변보호가 연장되지 않은 채
-          근무지에서 살해됐습니다(신당역, 2022). 세 사건 모두 "신고 이후"에 일어났습니다.
-        </WhyCase>
-        <WhyCase icon={Search} tone="danger" tag="2026 · 제주" title="장미란 실종사건, 허위 종결로 놓친 100일"
-          after="담당 경찰관 긴급체포(직무유기·공전자기록 위작 등 혐의), 서부경찰서장 등 지휘라인 4명 대기발령. 같은 수법의 다른 실종신고 허위 종결도 추가로 드러났습니다."
-          refs="출처: 헤드라인제주 2026.8.22·8.26, MBC 2026.8.24 보도 종합">
-          실종 신고를 받은 당일 밤, 담당 경찰관이 <b>"본인과 연락됐다, 위치를 알리지 말아 달라고 했다"</b>며 사건을 허위로
-          종결 처리했습니다. 가족의 재신고로 거짓 종결이 드러났을 땐 신고 후 100여 일이 지나 있었고, 장 씨는 이미 숨진
-          채 발견됐습니다.
-        </WhyCase>
-        <WhyCase icon={PhoneOff} tone="danger" tag="2012 · 수원" title="오원춘 사건, 골든타임을 놓친 112"
-          after="112 통합 시스템 개편, 위치추적 권한 확대 입법의 계기. 부실 대응 경찰관 다수 징계."
-          refs="출처: 언론 보도 종합">
-          납치된 피해자가 112에 전화해 위치를 설명하는 동안 <b>상담 요원은 정확한 위치를 파악하지 못했고, 현장 수색은
-          엉뚱한 곳을 맴돌았습니다.</b> 피해자는 살해됐습니다. 112 신고 시스템의 구조적 한계가 전국민에게 드러난 사건입니다.
-        </WhyCase>
-      </div>
+      <section className="why-chapter">
+        <ChapterHead n="01" eyebrow="Chapter 01 · 국민이 치른 대가" title="현장에서 물러선 경찰, 지켜지지 않은 신변보호"
+          sub="현장 대응과 초동 조치의 실패가 되돌릴 수 없는 결과로 이어진 4건의 기록" />
+        <div className="grid2" data-reveal="stagger">
+          <WhyCase icon={AlertTriangle} tone="danger" tag="2021 · 인천" title="층간소음 흉기난동, 현장을 이탈한 경찰"
+            after={'경찰관 2명 해임. 2026년 6월 법원, 국가·경찰의 배상책임 인정(3억 5천만 원). "경찰 믿을 수 있나"라는 사회적 공분의 기점.'}
+            refs="출처: 서울신문 2022.1.7, 연합뉴스·네이트뉴스 2026.6.21">
+            층간소음 갈등 끝에 이웃이 흉기를 휘두르는 동안, 출동해 있던 <b>경찰관들이 현장을 이탈</b>해 피해자가 중상을 입었습니다.
+            지원 요청도, 즉각 대응도 없었습니다.
+          </WhyCase>
+          <WhyCase icon={ShieldAlert} tone="danger" tag="2021~2022 · 서울" title="신변보호 요청, 그 후의 살인들"
+            after="스토킹처벌법 강화, 신변보호 시스템 개편의 계기가 되었습니다."
+            refs="출처: 서울신문 2021.11.22, 위키백과·언론 보도 종합">
+            신변보호를 받던 여성이 스마트워치로 두 차례 구조 신호를 보냈지만 위치 측정 실패로 살해됐고(중구), 신변보호 대상
+            여성 대신 <b>그 가족이 보복 살해</b>당했으며(송파), 스토킹 피해를 고소했던 역무원은 신변보호가 연장되지 않은 채
+            근무지에서 살해됐습니다(신당역, 2022). 세 사건 모두 "신고 이후"에 일어났습니다.
+          </WhyCase>
+          <WhyCase icon={Search} tone="danger" tag="2026 · 제주" title="장미란 실종사건, 허위 종결로 놓친 100일"
+            after="담당 경찰관 긴급체포(직무유기·공전자기록 위작 등 혐의), 서부경찰서장 등 지휘라인 4명 대기발령. 같은 수법의 다른 실종신고 허위 종결도 추가로 드러났습니다."
+            refs="출처: 헤드라인제주 2026.8.22·8.26, MBC 2026.8.24 보도 종합">
+            실종 신고를 받은 당일 밤, 담당 경찰관이 <b>"본인과 연락됐다, 위치를 알리지 말아 달라고 했다"</b>며 사건을 허위로
+            종결 처리했습니다. 가족의 재신고로 거짓 종결이 드러났을 땐 신고 후 100여 일이 지나 있었고, 장 씨는 이미 숨진
+            채 발견됐습니다.
+          </WhyCase>
+          <WhyCase icon={PhoneOff} tone="danger" tag="2012 · 수원" title="오원춘 사건, 골든타임을 놓친 112"
+            after="112 통합 시스템 개편, 위치추적 권한 확대 입법의 계기. 부실 대응 경찰관 다수 징계."
+            refs="출처: 언론 보도 종합">
+            납치된 피해자가 112에 전화해 위치를 설명하는 동안 <b>상담 요원은 정확한 위치를 파악하지 못했고, 현장 수색은
+            엉뚱한 곳을 맴돌았습니다.</b> 피해자는 살해됐습니다. 112 신고 시스템의 구조적 한계가 전국민에게 드러난 사건입니다.
+          </WhyCase>
+        </div>
+      </section>
 
-      <ChapterHead n="02" eyebrow="Chapter 02 · 조작과 은폐, 그리고 뒤늦은 무죄" title="잘못된 수사는 무고한 시민의 인생을 빼앗았습니다"
-        sub="강압수사와 조작된 증거로 수십 년 뒤에야 무죄가 밝혀진 3건의 기록" />
-      <div className="grid3">
-        <WhyCase icon={Gavel} tone="brand" tag="1988→2020 · 화성" title="이춘재 8차 사건, 20년을 빼앗긴 윤성여 씨"
-          after="2020년 재심 무죄. 법원, 당시 경찰 수사의 위법성을 정면으로 인정."
-          refs="출처: 재심 판결·언론 보도 종합">
-          경찰의 <b>강압수사와 조작된 증거</b>로 무고한 시민이 살인범으로 몰려 20년을 복역했습니다. 진범 이춘재의 자백 후
-          재심에서 무죄가 선고되기까지 32년이 걸렸습니다.
-        </WhyCase>
-        <WhyCase icon={FileWarning} tone="brand" tag="2000→2016 · 익산" title="약촌오거리 사건, 15살 소년의 10년"
-          after="2016년 재심 무죄, 국가배상 판결. 영화 '재심'의 실화."
-          refs="출처: 재심 판결·언론 보도 종합">
-          택시기사 살인 사건에서 경찰은 <b>15세 소년을 폭행·협박해 허위 자백</b>을 받아냈고, 소년은 10년을 복역했습니다.
-          진범이 검거될 기회도 수사기관이 스스로 덮었습니다.
-        </WhyCase>
-        <WhyCase icon={Users2} tone="brand" tag="1999→2016 · 완주" title="삼례 나라슈퍼 사건, 지적장애인 3인의 허위자백"
-          after="2016년 재심 무죄, 국가배상 판결."
-          refs="출처: 재심 판결·언론 보도 종합">
-          강도치사 사건에서 경찰이 <b>지적장애가 있는 청년 3명에게 허위 자백을 강요</b>해 옥살이를 시켰습니다. 진범의
-          자백이 있었음에도 수사는 바로잡히지 않았습니다.
-        </WhyCase>
-      </div>
+      <section className="why-chapter">
+        <ChapterHead n="02" eyebrow="Chapter 02 · 조작과 은폐, 그리고 뒤늦은 무죄" title="잘못된 수사는 무고한 시민의 인생을 빼앗았습니다"
+          sub="강압수사와 조작된 증거로 수십 년 뒤에야 무죄가 밝혀진 3건의 기록" />
+        <div className="grid3" data-reveal="stagger">
+          <WhyCase icon={Gavel} tone="brand" tag="1988→2020 · 화성" title="이춘재 8차 사건, 20년을 빼앗긴 윤성여 씨"
+            after="2020년 재심 무죄. 법원, 당시 경찰 수사의 위법성을 정면으로 인정."
+            refs="출처: 재심 판결·언론 보도 종합">
+            경찰의 <b>강압수사와 조작된 증거</b>로 무고한 시민이 살인범으로 몰려 20년을 복역했습니다. 진범 이춘재의 자백 후
+            재심에서 무죄가 선고되기까지 32년이 걸렸습니다.
+          </WhyCase>
+          <WhyCase icon={FileWarning} tone="brand" tag="2000→2016 · 익산" title="약촌오거리 사건, 15살 소년의 10년"
+            after="2016년 재심 무죄, 국가배상 판결. 영화 '재심'의 실화."
+            refs="출처: 재심 판결·언론 보도 종합">
+            택시기사 살인 사건에서 경찰은 <b>15세 소년을 폭행·협박해 허위 자백</b>을 받아냈고, 소년은 10년을 복역했습니다.
+            진범이 검거될 기회도 수사기관이 스스로 덮었습니다.
+          </WhyCase>
+          <WhyCase icon={Users2} tone="brand" tag="1999→2016 · 완주" title="삼례 나라슈퍼 사건, 지적장애인 3인의 허위자백"
+            after="2016년 재심 무죄, 국가배상 판결."
+            refs="출처: 재심 판결·언론 보도 종합">
+            강도치사 사건에서 경찰이 <b>지적장애가 있는 청년 3명에게 허위 자백을 강요</b>해 옥살이를 시켰습니다. 진범의
+            자백이 있었음에도 수사는 바로잡히지 않았습니다.
+          </WhyCase>
+        </div>
+      </section>
 
-      <Card>
+      <Card reveal>
         <div className="eyebrow">So, Policemap</div>
         <h2>처벌이 아니라 기록이 시스템을 바꿉니다</h2>
         <p className="sub" style={{ maxWidth: 720, marginBottom: 20 }}>
           위 사건들의 공통점은 하나입니다. 문제가 커지기 전까지, 아무도 지켜보지 않았다는 것. 폴리스맵은 수사 절차를
           직접 경험한 시민의 구조화된 평가를 모아, 잘 하는 경찰에게는 신뢰를, 반복되는 문제에는 조기 경보를 만듭니다.
         </p>
-        <div className="grid3">
+        <div className="why-features" data-reveal="stagger">
           {FEATURES.map(({ icon: Icon, title, body }) => (
             <div className="feature" key={title}>
               <div className="ico"><Icon size={22} /></div>
@@ -174,7 +189,7 @@ export default async function WhyPage() {
         </div>
       </Card>
 
-      <section className="card hero compact" style={{ textAlign: 'center' }}>
+      <section className="card hero compact why-cta" style={{ textAlign: 'center' }} data-reveal>
         <h2>당신의 경험이 다음 실패를 막습니다</h2>
         <p className="lead" style={{ margin: '10px auto 22px' }}>좋았던 수사도, 아쉬웠던 수사도, 기록해 주세요.</p>
         <div className="quick" style={{ justifyContent: 'center' }}>
@@ -183,7 +198,7 @@ export default async function WhyPage() {
         </div>
       </section>
 
-      <p className="sub" style={{ fontSize: 12, textAlign: 'center' }}>
+      <p className="sub why-disclaimer">
         본 페이지의 사건 서술은 법원 판결(재심 무죄·국가배상), 국정조사, 수사기관의 공식 조치(체포·기소·징계 등) 등
         공개된 자료에 근거한 사실의 기록이며, 각 항목에 출처를 표시했습니다. 수사·재판이 진행 중인 사건은 혐의 사실로,
         확정되지 않은 부분은 확정되지 않은 것으로 서술합니다. 특정 개인에 대한 비방 목적이 아닌, 공공기관 직무수행의
