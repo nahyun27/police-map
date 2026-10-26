@@ -55,6 +55,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
+        {/* 새 글 목록(src/app/rss.xml). metadata.alternates 는 페이지별 canonical 설정에 덮이므로 여기 직접 둔다. */}
+        <link rel="alternate" type="application/rss+xml" title="폴리스맵 새 글" href="/rss.xml" />
       </head>
       <body>
         <Header />
