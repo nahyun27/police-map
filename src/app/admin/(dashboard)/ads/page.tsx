@@ -121,18 +121,20 @@ export default function AdminAdsPage() {
 
   return (
     <>
-      <Card>
-        <div className="btn-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <p className="sub" style={{ margin: 0 }}>
-            광고는 경찰서 상세 페이지(양옆·하단)와 권리구제 광고란에 나옵니다. 지역을 고르면 그 지역 경찰서에 우선, &quot;전국&quot;이면 지역 광고가 없는 경찰서에 노출됩니다.
-          </p>
-          <button className="btn sm" onClick={() => setOpen((v) => !v)}><Plus size={14} />광고 등록</button>
-        </div>
-        {open && (
-          <AdForm regions={regions} busy={busy} onSubmit={(f) => save(() => createAdminAd(f), () => setOpen(false))} />
-        )}
-        {error && <div className="warn" style={{ marginTop: 12 }}>{error}</div>}
-      </Card>
+      <p className="admin-desc">
+        광고는 경찰서 상세 페이지(양옆·하단)와 권리구제 광고란에 나옵니다. 지역을 고르면 그 지역 경찰서에 우선, &quot;전국&quot;이면 지역 광고가 없는 경찰서에 노출됩니다.
+      </p>
+      <div className="admin-toolbar">
+        <span className="sub">{ads ? `등록된 광고 ${ads.length}개` : ''}</span>
+        <button className="btn sm" onClick={() => setOpen((v) => !v)}><Plus size={14} />광고 등록</button>
+      </div>
+      {error && <div className="warn" style={{ marginBottom: 14 }}>{error}</div>}
+      {open && (
+        <Card>
+          <h3 style={{ marginBottom: 0 }}>새 광고 등록</h3>
+          <AdForm regions={regions} busy={busy} onSubmit={(f) => save(() => createAdminAd(f), () => setOpen(false))} onCancel={() => setOpen(false)} />
+        </Card>
+      )}
 
       <Card>
         {ads === null ? <p className="sub">불러오는 중…</p> : ads.length ? ads.map((a) => {
@@ -173,7 +175,7 @@ export default function AdminAdsPage() {
               )}
             </div>
           );
-        }) : <p className="sub">등록된 광고가 없습니다. 위의 &quot;광고 등록&quot;으로 추가하세요.</p>}
+        }) : <p className="sub admin-empty">등록된 광고가 없습니다. 위의 &quot;광고 등록&quot;으로 추가하세요.</p>}
       </Card>
     </>
   );

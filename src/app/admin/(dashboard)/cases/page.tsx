@@ -60,7 +60,7 @@ export default function AdminCasesPage() {
       <Card>
         {error && <div className="warn" style={{ marginBottom: 16 }}>{error}</div>}
 
-        <div style={{ marginTop: 16 }}>
+        <div>
           {data?.items.length ? data.items.map((c) => (
             <div className="review" key={c.id}>
               <div className="meta">
@@ -87,7 +87,7 @@ export default function AdminCasesPage() {
                 </div>
               )}
             </div>
-          )) : <p className="sub">{data ? '해당 상태의 사건이 없습니다.' : '불러오는 중…'}</p>}
+          )) : <p className="sub admin-empty">{data ? '해당 상태의 사건이 없습니다.' : '불러오는 중…'}</p>}
         </div>
         {totalPages > 1 && (
           <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>

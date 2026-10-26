@@ -84,25 +84,24 @@ export default function AdminUsersPage() {
 
   return (
     <>
+      <p className="admin-desc">
+        정지하면 그 계정으로는 로그인·작성을 할 수 없지만, 평가·게시글은 로그인 없이도 쓸 수 있어 비회원 작성까지 막지는 못합니다.
+        문제 글은 신고·블라인드에서 따로 처리해 주세요.
+      </p>
       <div className="admin-toolbar">
         <div className="seg">
           {STATUS_TABS.map(([v, l]) => (
             <button key={v} type="button" className={status === v ? 'active' : ''} aria-pressed={status === v} onClick={() => changeStatus(v)}>{l}</button>
           ))}
         </div>
-        <form onSubmit={search} className="hsearch" style={{ marginLeft: 0 }}>
+        <form onSubmit={search} className="hsearch admin-search">
           <Search size={16} />
           <input
             value={q} onChange={(e) => setQ(e.target.value)} placeholder="닉네임·이메일 검색" aria-label="회원 검색" maxLength={100}
-            style={{ background: '#fff', width: 260 }}
           />
         </form>
       </div>
       <Card>
-        <p className="sub" style={{ marginTop: 0 }}>
-          정지하면 그 계정으로는 로그인·작성을 할 수 없지만, 평가·게시글은 로그인 없이도 쓸 수 있어 비회원 작성까지 막지는 못합니다.
-          문제 글은 신고·블라인드에서 따로 처리해 주세요.
-        </p>
         {error && <div className="warn" style={{ marginBottom: 16 }}>{error}</div>}
         <TableWrap>
           <table className="list">

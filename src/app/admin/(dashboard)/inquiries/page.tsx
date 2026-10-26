@@ -41,8 +41,8 @@ export default function AdminInquiriesPage() {
         </div>
       </div>
       <Card>
-        {error && <div className="warn" style={{ marginTop: 12 }}>{error}</div>}
-        <div style={{ marginTop: 16 }}>
+        {error && <div className="warn" style={{ marginBottom: 12 }}>{error}</div>}
+        <div>
           {data?.items.length ? data.items.map((q) => (
             <div className="review" key={q.id}>
               <div className="meta">
@@ -57,7 +57,7 @@ export default function AdminInquiriesPage() {
                 <button className="btn sm" style={{ marginTop: 8 }} onClick={() => done(q)}><Check size={14} />처리 완료</button>
               )}
             </div>
-          )) : <p className="sub">{data ? '해당 문의가 없습니다.' : '불러오는 중…'}</p>}
+          )) : <p className="sub admin-empty">{data ? '해당 문의가 없습니다.' : '불러오는 중…'}</p>}
         </div>
         {totalPages > 1 && (
           <div className="btn-row" style={{ marginTop: 16, alignItems: 'center' }}>

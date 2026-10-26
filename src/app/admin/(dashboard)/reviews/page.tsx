@@ -83,14 +83,15 @@ export default function AdminReviewQueuePage() {
 
   return (
     <>
-      <Card>
-      <div className="seg">
-        {STATUS_TABS.map(([v, l]) => (
-          <button key={v} type="button" className={status === v ? 'active' : ''} onClick={() => setStatus(v)}>{l}</button>
-        ))}
+      <div className="admin-toolbar">
+        <div className="seg">
+          {STATUS_TABS.map(([v, l]) => (
+            <button key={v} type="button" className={status === v ? 'active' : ''} onClick={() => setStatus(v)}>{l}</button>
+          ))}
+        </div>
       </div>
-
-      {error && <div className="warn" style={{ marginTop: 16 }}>{error}</div>}
+      <Card>
+      {error && <div className="warn" style={{ marginBottom: 16 }}>{error}</div>}
 
       <TableWrap>
         <table className="list">

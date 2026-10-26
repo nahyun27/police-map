@@ -39,12 +39,10 @@ export default function AdminBlindedPage() {
 
   return (
     <>
-      <div className="admin-toolbar">
-        <p className="sub">
-          서로 다른 회원 5명 이상이 신고하면 자동으로 블라인드되고, 신고 메뉴에서 즉시 블라인드할 수도 있습니다.
-          블라인드는 삭제가 아니라 공개만 멈춘 상태이며, 작성자에게는 마이페이지에서 사유가 보입니다.
-        </p>
-      </div>
+      <p className="admin-desc">
+        서로 다른 회원 5명 이상이 신고하면 자동으로 블라인드되고, 신고 메뉴에서 즉시 블라인드할 수도 있습니다.
+        블라인드는 삭제가 아니라 공개만 멈춘 상태이며, 작성자에게는 마이페이지에서 사유가 보입니다.
+      </p>
       <Card>
         {error && <div className="warn">{error}</div>}
         <TableWrap>

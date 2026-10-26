@@ -232,6 +232,8 @@ footer.site p { line-height: 1.8; max-width: 720px; }
 .admin-login-brand .sub { color: #9aa6c9; margin-top: 8px; }
 
 @media (max-width: 920px) {
+  /* 위쪽 메뉴 막대와 본문이 가로로 나란히 놓여 본문이 좁아지던 문제: 세로로 쌓는다 */
+  .admin-shell { flex-direction: column; }
   .admin-sidebar { transform: translateX(-100%); transition: transform .2s ease; box-shadow: 0 0 40px rgba(0, 0, 0, .3); }
   .admin-sidebar.open { transform: translateX(0); }
   .admin-main { margin-left: 0; }
@@ -1423,4 +1425,23 @@ em.hero-line { animation-delay: .35s; }
 @media (prefers-reduced-motion: reduce) {
   .hero-line, .why-hero-facts > div, .why-cta::after { animation: none; }
   .why-case { transition: none; }
+}
+
+/* ---------- 관리자 목록 화면 통일: 제목 → 설명 한 줄 → 툴바(왼쪽 탭, 오른쪽 검색·버튼) → 표 카드 ---------- */
+.admin-desc { margin: -10px 0 18px; font-size: 14px; line-height: 1.65; color: var(--muted); max-width: 900px; }
+.admin-toolbar { min-height: 40px; margin-bottom: 12px; }
+.admin-toolbar .seg { padding: 3px; }
+.admin-toolbar .seg button, .admin-toolbar .seg a { padding: 7px 14px; }
+.admin-search input, .admin-search input:focus { width: 280px; height: 40px; background: #fff; border: 1px solid var(--line); }
+.admin-search input:focus { border-color: var(--brand); }
+.admin-content .card > .table-wrap:first-child, .admin-content .card > .warn + .table-wrap { margin-top: -4px; }
+.admin-content table.list { min-width: 760px; }
+.admin-content table.list td[colspan].sub { text-align: center; padding: 44px 14px; color: var(--muted); }
+.admin-empty { text-align: center; padding: 30px 0; margin: 0; }
+@media (max-width: 640px) {
+  .admin-toolbar .seg { max-width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+  .admin-toolbar .seg button, .admin-toolbar .seg a { flex-shrink: 0; }
+  .admin-search { flex: 1 1 100%; }
+  .admin-search input, .admin-search input:focus { width: 100%; }
+  .admin-desc { margin-top: -6px; font-size: 13.5px; }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Search } from 'lucide-react';
 import { Card, TableWrap } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import { listAuditLogs, type AuditLogOut, type Page } from '@/lib/api';
@@ -25,12 +26,14 @@ export default function AdminAuditLogPage() {
 
   return (
     <>
+      <p className="admin-desc">관리자 조치(검수·반려·삭제·인증 처리 등)가 기록되는 순서대로 쌓입니다. 수정·삭제는 불가능합니다.</p>
       <div className="admin-toolbar">
-        <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, width: '100%' }}>
-          <p className="sub">관리자 조치(검수·반려·삭제·인증 처리 등)가 기록되는 순서대로 쌓입니다. 수정·삭제는 불가능합니다.</p>
+        <span />
+        <div className="hsearch admin-search">
+          <Search size={16} />
           <input
-            className="sel" placeholder="action 값으로 필터(예: review_approved)" value={action}
-            onChange={(e) => { setAction(e.target.value); setPage(1); }} style={{ minWidth: 220 }}
+            placeholder="조치 이름으로 필터(예: user.suspend)" aria-label="조치 이름으로 필터" value={action}
+            onChange={(e) => { setAction(e.target.value); setPage(1); }}
           />
         </div>
       </div>
