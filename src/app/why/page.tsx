@@ -3,16 +3,11 @@ import type { ComponentType, ReactNode } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle, FileWarning, Gavel, Link2, Map, PhoneOff,
-  Scale, Search, ShieldAlert, ShieldCheck, Star, TrendingUp, Users2,
+  Scale, Search, ShieldAlert, ShieldCheck, Star, Users2,
 } from 'lucide-react';
 import { Card } from '@/components/ui';
 import { RevealOnScroll } from '@/components/RevealOnScroll';
-import { getStats } from '@/lib/api';
 import { pageMeta } from '@/lib/seo';
-
-// getStats() 가 이미 60초 캐시돼 있어(src/lib/api.ts), force-dynamic 없이도 신선도는
-// 동일하게 유지된다 — ISR 로 바꿔 매 요청 재렌더링 비용만 없앤다.
-export const revalidate = 60;
 
 export const metadata: Metadata = pageMeta({
   title: '폴리스맵 소개',
@@ -75,9 +70,13 @@ const FEATURES = [
   { icon: ShieldCheck, title: '투명한 운영', body: '모든 게시물 즉시 공개(금칙어 자동 필터), 당사자 삭제·정정 요청 즉시 임시조치, 분기별 투명성 보고서 공개.' },
 ];
 
-export default async function WhyPage() {
-  const latestAppeal = await getStats().then((s) => s.appeals_filed.at(-1)).catch(() => undefined);
+const HERO_FACTS = [
+  { num: '5만 6,165건', label: '경찰 불송치 결정에 대한 이의신청(2025년), 4년 새 2.1배', source: '경찰청 자료 · 뉴시스 2026.7.26' },
+  { num: '40%', label: '수사관 기피신청 수용률(2025년), 2021년 69%에서 5년 연속 하락', source: '경찰청 자료 · 파이낸셜뉴스 2026.8.23' },
+  { num: '22%', label: '검찰 재수사 요청 후 송치로 결론이 바뀐 불송치 사건(2023~2025년)', source: '경찰청 자료 · 파이낸셜뉴스 2026.9.1' },
+];
 
+export default function WhyPage() {
   return (
     <>
       <RevealOnScroll />
@@ -92,26 +91,18 @@ export default async function WhyPage() {
           기록하는 시민의 도구는 없었습니다. 아래는 법원 판결과 국정조사 등 공식 절차로 이미 확인된, 우리 모두가
           기억하는 실패의 기록입니다.
         </p>
-        {/* 아래 두 장(Chapter)의 사건 카드에서 센 값이다. 카드를 더하거나 빼면 함께 고친다. */}
+        {/* 경찰청이 국회 의원실에 제출한 자료를 언론이 보도한 수치(2026-10 조사). 우리 사이트 자체 통계가 아니므로
+            출처를 함께 적는다. 새 연도 자료가 나오면 숫자와 출처를 같이 바꾼다. */}
         <div className="why-hero-facts">
-          <div><b>7건</b><span>공식 확인된 실패의 기록</span></div>
-          <div><b>3건</b><span>수십 년 뒤의 재심 무죄</span></div>
-          <div><b>32년</b><span>무죄가 밝혀지기까지 가장 긴 시간</span></div>
+          {HERO_FACTS.map((f) => (
+            <div key={f.num}>
+              <b>{f.num}</b>
+              <span>{f.label}</span>
+              <small>{f.source}</small>
+            </div>
+          ))}
         </div>
       </section>
-
-      {/* 3억 5천만 원(층간소음 국가배상) 카드는 바로 아래 Chapter 01 사례 카드와 내용이 겹쳐서 뺐다(2026-10).
-          기피신청 통계는 운영진이 입력해야 채워지는 값이라, 있을 때만 한 장으로 보여준다. */}
-      {latestAppeal && (
-        <Card className="kpi why why-solo">
-          <div className="ico"><TrendingUp size={22} /></div>
-          <div>
-            <div className="num">{latestAppeal.value.toLocaleString()}건</div>
-            <div className="lbl">연간 수사관 기피신청({latestAppeal.year}), 5년 새 2배</div>
-            <p className="sub" style={{ marginTop: 4 }}>2018년 2,425건 대비 · 언론 보도 종합</p>
-          </div>
-        </Card>
-      )}
 
       <section className="why-chapter">
         <ChapterHead n="01" eyebrow="Chapter 01 · 국민이 치른 대가" title="현장에서 물러선 경찰, 지켜지지 않은 신변보호"
