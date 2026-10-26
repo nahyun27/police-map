@@ -53,6 +53,12 @@ const SITE_JSONLD = {
       logo: `${SITE_URL}/images/logo-square.png`, email: LEGAL.contactEmail, description: ABOUT,
     },
     {
+      // 검색 결과·이미지 검색에서 이 페이지를 대표하는 이미지로 공유 이미지를 지정한다.
+      '@type': 'WebPage', '@id': `${SITE_URL}/#webpage`, url: SITE_URL, name: SITE_NAME, inLanguage: 'ko-KR',
+      isPartOf: { '@id': `${SITE_URL}/#website` }, about: { '@id': `${SITE_URL}/#organization` },
+      primaryImageOfPage: { '@type': 'ImageObject', url: `${SITE_URL}/opengraph-image`, width: 1200, height: 630 },
+    },
+    {
       '@type': 'FAQPage', '@id': `${SITE_URL}/#faq`, inLanguage: 'ko-KR',
       mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
     },
