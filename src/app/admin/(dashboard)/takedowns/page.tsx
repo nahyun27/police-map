@@ -1,14 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { ShieldCheck, Trash2 } from 'lucide-react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
+import { ChevronDown, ChevronUp, Pencil, ShieldCheck, Trash2 } from 'lucide-react';
+import { AdminContentView } from '@/components/admin/AdminContentView';
 import { Card, TableWrap } from '@/components/ui';
 import { formatDate } from '@/lib/format';
-import { listAdminTakedowns, resolveTakedown, type AdminTakedown, type Page } from '@/lib/api';
+import { editTakedownNote, listAdminTakedowns, resolveTakedown, type AdminTakedown, type Page } from '@/lib/api';
 
 const STATUS_TABS: [string, string][] = [['pending', '재검토 대기'], ['kept', '게시 유지'], ['removed', '삭제 확정']];
 const SIZE = 20;
-const TARGET_LABEL: Record<string, string> = { review: '평가', officer: '수사관 프로필' };
+const TARGET_LABEL: Record<string, string> = { review: '평가', officer: '수사관 프로필', public_case: '사건 공론화' };
 const REQUEST_LABEL: Record<string, string> = { delete: '삭제', correct: '정정' };
 
 export default function AdminTakedownQueuePage() {
@@ -20,6 +21,9 @@ export default function AdminTakedownQueuePage() {
   const [decision, setDecision] = useState<'keep' | 'remove'>('keep');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<number | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+  const [noteDraft, setNoteDraft] = useState('');
 
   const load = useCallback(() => {
     listAdminTakedowns({ status, page, size: SIZE }).then(setData).catch(() => setError('목록을 불러오지 못했습니다.'));
@@ -40,6 +44,17 @@ export default function AdminTakedownQueuePage() {
       setNote('');
       await load();
     } catch { setError('처리에 실패했습니다.'); } finally { setBusyId(null); }
+  };
+
+  const saveNote = async (id: number) => {
+    if (noteDraft.trim().length < 5) return;
+    setBusyId(id);
+    setError(null);
+    try {
+      await editTakedownNote(id, noteDraft.trim());
+      setEditingNoteId(null);
+      await load();
+    } catch { setError('메모를 고치지 못했습니다.'); } finally { setBusyId(null); }
   };
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.size)) : 1;
@@ -66,9 +81,22 @@ export default function AdminTakedownQueuePage() {
               </tr>
             </thead>
             <tbody>
-              {data?.items.length ? data.items.map((t) => (
-                <tr key={t.id}>
-                  <td>{TARGET_LABEL[t.target_type] ?? t.target_type} #{t.review_id ?? t.officer_id}</td>
+              {data?.items.length ? data.items.map((t) => {
+                const targetId = t.review_id ?? t.case_id ?? t.officer_id;
+                const open = openId === t.id;
+                return (
+                <Fragment key={t.id}>
+                <tr>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    {TARGET_LABEL[t.target_type] ?? t.target_type} #{targetId}
+                    {targetId !== null && (
+                      <div>
+                        <button type="button" className="btn ghost sm acv-toggle" aria-expanded={open} onClick={() => setOpenId(open ? null : t.id)}>
+                          {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}원문 {open ? '접기' : '보기'}
+                        </button>
+                      </div>
+                    )}
+                  </td>
                   <td>{REQUEST_LABEL[t.request_type] ?? t.request_type} · {t.relation}</td>
                   <td>{t.requester_name}</td>
                   <td className="sub">{t.requester_contact}</td>
@@ -82,7 +110,7 @@ export default function AdminTakedownQueuePage() {
                       {resolvingId === t.id ? (
                         <div>
                           <p className="sub" style={{ marginBottom: 4 }}>{decision === 'keep' ? '게시 유지로 처리' : '삭제 확정으로 처리'}</p>
-                          <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="처리 메모(5자 이상, 양측에 통지될 내용)"
+                          <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="처리 메모(5자 이상). 요청인이 처리 상태 조회 화면에서 보게 됩니다."
                             style={{ minHeight: 60, width: '100%', border: '1px solid var(--line)', borderRadius: 8, padding: 8, fontSize: 13 }} />
                           <div className="btn-row" style={{ marginTop: 6 }}>
                             <button className="btn sm" disabled={note.trim().length < 5 || busyId === t.id} onClick={() => submitResolve(t.id)}>확정</button>
@@ -97,9 +125,36 @@ export default function AdminTakedownQueuePage() {
                       )}
                     </td>
                   )}
-                  {status !== 'pending' && <td className="sub" style={{ maxWidth: 200 }}>{t.resolution_note}</td>}
+                  {status !== 'pending' && (
+                    <td className="sub" style={{ minWidth: 200, maxWidth: 260 }}>
+                      {editingNoteId === t.id ? (
+                        <div>
+                          <textarea value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} maxLength={2000}
+                            style={{ minHeight: 70, width: '100%', border: '1px solid var(--line)', borderRadius: 8, padding: 8, fontSize: 13 }} />
+                          <div className="btn-row" style={{ marginTop: 6 }}>
+                            <button className="btn sm" disabled={noteDraft.trim().length < 5 || busyId === t.id} onClick={() => saveNote(t.id)}>저장</button>
+                            <button className="btn line sm" onClick={() => setEditingNoteId(null)}>취소</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ whiteSpace: 'pre-wrap' }}>{t.resolution_note}</div>
+                          <button type="button" className="btn ghost sm acv-toggle" onClick={() => { setEditingNoteId(t.id); setNoteDraft(t.resolution_note ?? ''); }}>
+                            <Pencil size={13} />메모 수정
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  )}
                 </tr>
-              )) : (
+                {open && targetId !== null && (
+                  <tr className="admin-expand-row">
+                    <td colSpan={8}><AdminContentView kind={t.target_type} id={targetId} /></td>
+                  </tr>
+                )}
+                </Fragment>
+                );
+              }) : (
                 <tr><td colSpan={8} className="sub">해당 상태의 요청이 없습니다.</td></tr>
               )}
             </tbody>

@@ -865,6 +865,9 @@ export const listAdminTakedowns = (opts: { status: string; page?: number; size?:
 };
 export const resolveTakedown = (id: number, decision: 'keep' | 'remove', note: string) =>
   apiFetch<AdminTakedown>(`/admin/takedown-requests/${id}/resolve`, { method: 'POST', body: JSON.stringify({ decision, note }) });
+/** 처리 후 메모(요청인이 처리 상태 조회에서 보는 문구)만 고친다. 처리 결과는 그대로다. */
+export const editTakedownNote = (id: number, note: string) =>
+  apiFetch<AdminTakedown>(`/admin/takedown-requests/${id}/note`, { method: 'PATCH', body: JSON.stringify({ note }) });
 
 
 /* ===================== 블라인드(관리자) ===================== */
@@ -881,8 +884,25 @@ export interface BlindedItem {
   blind_reason: string | null;
   is_auto: boolean;
   pending_reporters: number;
+  takedown_pending: boolean;
 }
 export const listAdminBlinded = () => apiFetch<BlindedItem[]>('/admin/blinded');
+
+/** 블라인드·삭제 요청 판단용 원문(관리자 전용, 실명·작성자 그대로). */
+export type AdminContentKind = 'review' | 'post' | 'public_case' | 'officer';
+export interface AdminContent {
+  kind: AdminContentKind;
+  id: number;
+  title: string;
+  status: string;
+  author: string;
+  created_at: string | null;
+  meta: string[];
+  ratings: Record<string, number | null> | null;
+  body: string;
+  sections: { label: string; text: string }[];
+}
+export const getAdminContent = (kind: AdminContentKind, id: number) => apiFetch<AdminContent>(`/admin/content/${kind}/${id}`);
 
 export function getMyPosts(opts?: { page?: number; size?: number }) {
   const qs = new URLSearchParams();

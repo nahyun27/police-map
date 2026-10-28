@@ -56,3 +56,23 @@ class BlindedItemOut(BaseModel):
     blind_reason: str | None
     is_auto: bool
     pending_reporters: int
+    takedown_pending: bool = False  # 처리 대기 중인 삭제·정정 요청이 있으면 해제는 요청 처리로만 한다
+
+
+class AdminContentSection(BaseModel):
+    label: str
+    text: str
+
+
+class AdminContentOut(BaseModel):
+    """블라인드·삭제 요청 판단용 원문. 관리자 전용이라 수사관 실명·작성자 정보를 가리지 않는다."""
+    kind: str
+    id: int
+    title: str
+    status: str
+    author: str
+    created_at: str | None
+    meta: list[str]
+    ratings: dict[str, int | None] | None = None
+    body: str
+    sections: list[AdminContentSection] = []

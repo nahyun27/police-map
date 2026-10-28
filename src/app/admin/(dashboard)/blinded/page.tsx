@@ -1,14 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Eye } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, FileText } from 'lucide-react';
+import { AdminContentView } from '@/components/admin/AdminContentView';
 import { Card, TableWrap } from '@/components/ui';
 import { adminUnblind, listAdminBlinded, type BlindedItem } from '@/lib/api';
 
 const TYPE_LABEL: Record<BlindedItem['target_type'], string> = { review: '평가', post: '게시글', public_case: '사건 공론화' };
 
-// 평가는 블라인드되면 공개 API 에서 관리자에게도 안 보이므로 링크를 걸지 않는다(미리보기만).
+// 평가는 블라인드되면 공개 API 에서 관리자에게도 안 보이므로 링크를 걸지 않는다. 원문은 "원문 보기"로 펼쳐 본다.
 function hrefOf(it: BlindedItem): string | null {
   if (it.target_type === 'post') return `/board/${it.target_id}`;
   if (it.target_type === 'public_case') return `/cases/${it.target_id}`;
@@ -21,6 +22,7 @@ export default function AdminBlindedPage() {
   const [items, setItems] = useState<BlindedItem[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [openKey, setOpenKey] = useState<string | null>(null);
 
   const load = useCallback(() => {
     listAdminBlinded().then(setItems).catch(() => setError('목록을 불러오지 못했습니다.'));
@@ -52,17 +54,41 @@ export default function AdminBlindedPage() {
               {items?.length ? items.map((it) => {
                 const href = hrefOf(it);
                 const key = `${it.target_type}-${it.target_id}`;
+                const open = openKey === key;
                 return (
-                  <tr key={key}>
-                    <td style={{ whiteSpace: 'nowrap' }}>{TYPE_LABEL[it.target_type]} #{it.target_id}</td>
-                    <td style={{ maxWidth: 280 }}>{href ? <Link href={href} target="_blank">{it.title}</Link> : it.title}</td>
-                    <td style={{ maxWidth: 240 }}>
-                      <span className={`badge ${it.is_auto ? 'mid' : 'low'}`}>{it.is_auto ? '신고 누적 자동' : '운영진·요청 조치'}</span>
-                      <div className="sub" style={{ marginTop: 4 }}>{it.blind_reason}</div>
-                    </td>
-                    <td>{it.pending_reporters}명</td>
-                    <td><button className="btn line sm" disabled={busy === key} onClick={() => unblind(it)}><Eye size={14} />해제</button></td>
-                  </tr>
+                  <Fragment key={key}>
+                    <tr>
+                      <td style={{ whiteSpace: 'nowrap' }}>{TYPE_LABEL[it.target_type]} #{it.target_id}</td>
+                      <td style={{ maxWidth: 280 }}>
+                        {href ? <Link href={href} target="_blank">{it.title}</Link> : it.title}
+                        <div>
+                          <button type="button" className="btn ghost sm acv-toggle" aria-expanded={open} onClick={() => setOpenKey(open ? null : key)}>
+                            {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}원문 {open ? '접기' : '보기'}
+                          </button>
+                        </div>
+                      </td>
+                      <td style={{ maxWidth: 240 }}>
+                        <span className={`badge ${it.is_auto ? 'mid' : 'low'}`}>
+                          {it.is_auto ? '신고 누적 자동' : it.takedown_pending ? '삭제·정정 요청' : '운영진 조치'}
+                        </span>
+                        <div className="sub" style={{ marginTop: 4 }}>{it.blind_reason}</div>
+                      </td>
+                      <td>{it.pending_reporters}명</td>
+                      <td>
+                        {/* 처리 대기 중인 삭제·정정 요청이 있으면 서버가 해제를 막는다. 요청 메뉴에서 유지/삭제로 처리한다. */}
+                        {it.takedown_pending ? (
+                          <Link href="/admin/takedowns" className="btn line sm"><FileText size={14} />요청 처리하기</Link>
+                        ) : (
+                          <button className="btn line sm" disabled={busy === key} onClick={() => unblind(it)}><Eye size={14} />해제</button>
+                        )}
+                      </td>
+                    </tr>
+                    {open && (
+                      <tr className="admin-expand-row">
+                        <td colSpan={5}><AdminContentView kind={it.target_type} id={it.target_id} /></td>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               }) : (
                 <tr><td colSpan={5} className="sub">{items ? '블라인드된 게시물이 없습니다.' : '불러오는 중…'}</td></tr>

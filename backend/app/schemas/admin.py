@@ -18,6 +18,10 @@ class ResolveIn(BaseModel):
     note: str = Field(min_length=5, max_length=2000)
 
 
+class NoteIn(BaseModel):
+    note: str = Field(min_length=5, max_length=2000)
+
+
 class AssignmentIn(BaseModel):
     period: str = Field(min_length=1, max_length=20)
     description: str = Field(min_length=1, max_length=200)

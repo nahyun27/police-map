@@ -236,3 +236,50 @@ def test_anonymous_empathy_once_per_ip(db, client, user_client):
     assert user_client.post(f"{API}/cases/{cid}/empathy").json()["empathy_count"] == 2  # 회원은 따로 센다
     assert client.delete(f"{API}/cases/{cid}/empathy").json() == {"empathized": False, "empathy_count": 1}
     assert client.get(f"{API}/cases").json()["items"][0]["my_empathy"] is False
+
+
+
+def test_admin_content_shows_full_blinded_review_and_takedown_flag(db, client, admin_client, world):
+    """블라인드된 평가도 관리자는 원문 전체를 볼 수 있어야 유지/삭제를 판단할 수 있다(2026-10)."""
+    rv = world["reviews"][0]
+    rv.officer_id, rv.body = world["officer"].id, "긴 원문 " * 40
+    db.commit()
+    assert client.post(f"{API}/takedown-requests", json={
+        "target_type": "review", "target_id": rv.id, "request_type": "delete", "requester_name": "홍길동",
+        "requester_contact": "hong@example.com", "relation": "본인", "reason": "사실과 다른 내용이 게시되어 있습니다.",
+    }).status_code == 201
+
+    item = [x for x in admin_client.get(f"{API}/admin/blinded").json() if x["target_id"] == rv.id][0]
+    assert item["takedown_pending"] is True and len(item["title"]) <= 80
+
+    r = admin_client.get(f"{API}/admin/content/review/{rv.id}")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "blinded" and body["body"] == rv.body  # 잘리지 않은 원문
+    assert any("가상갑" in m for m in body["meta"])  # 관리자에게는 실명 그대로
+    assert body["author"] == "비회원"
+
+    assert admin_client.get(f"{API}/admin/content/officer/{world['officer'].id}").json()["title"].startswith("가상갑")
+    assert admin_client.get(f"{API}/admin/content/nope/1").status_code == 404
+    assert client.get(f"{API}/admin/content/review/{rv.id}").status_code in (401, 403)
+
+
+def test_takedown_note_can_be_edited_after_resolve_and_admin_is_mailed(db, client, admin_client, world, monkeypatch):
+    """접수되면 운영자에게 알림 메일(요청인 개인정보 제외), 처리 후에는 메모만 고칠 수 있다(2026-10)."""
+    from app.api.v1 import takedown as takedown_api
+    sent = []
+    monkeypatch.setattr(takedown_api, "send_notification", lambda subject, body: sent.append((subject, body)))
+    rv = world["reviews"][0]
+    assert client.post(f"{API}/takedown-requests", json={
+        "target_type": "review", "target_id": rv.id, "request_type": "delete", "requester_name": "홍길동",
+        "requester_contact": "010-1234-5678", "relation": "본인", "reason": "사실과 다른 내용이 게시되어 있습니다.",
+    }).status_code == 201
+    assert len(sent) == 1 and f"#{rv.id}" in sent[0][0]
+    assert "홍길동" not in sent[0][1] and "010-1234-5678" not in sent[0][1]
+
+    tid = admin_client.get(f"{API}/admin/takedown-requests?status=pending").json()["items"][0]["id"]
+    assert admin_client.patch(f"{API}/admin/takedown-requests/{tid}/note", json={"note": "처리 전 수정"}).status_code == 409
+    assert admin_client.post(f"{API}/admin/takedown-requests/{tid}/resolve", json={"decision": "remove", "note": "삭제했습니다"}).status_code == 200
+    r = admin_client.patch(f"{API}/admin/takedown-requests/{tid}/note", json={"note": "요청하신 평가를 삭제했습니다."})
+    assert r.status_code == 200 and r.json()["resolution_note"] == "요청하신 평가를 삭제했습니다." and r.json()["status"] == "removed"
+    assert admin_client.patch(f"{API}/admin/takedown-requests/{tid}/note", json={"note": "  짧 "}).status_code == 422

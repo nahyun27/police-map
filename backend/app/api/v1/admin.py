@@ -16,15 +16,16 @@ from app.models import (
     PostComment, PublicCase, Region, Report, ReportStatus, ReportTarget, Review, ReviewComment, ReviewReply, ReviewStatus,
     InquiryStatus, Station, TakedownRequest, TakedownStatus, User, UserRole, VerificationStatus,
 )
+from app.models.community import POST_CATEGORY_LABELS
 from app.models.officer import SOURCE_LABELS
 from app.models.review import case_type_label, role_label
 from app.schemas.admin import (
-    AdminUserContentItem, AdminUserOut, DashboardActivity, DashboardOut, DashboardPending, EvidenceVerifyIn, OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate,
+    AdminUserContentItem, AdminUserOut, DashboardActivity, DashboardOut, DashboardPending, EvidenceVerifyIn, NoteIn, OfficerCreate, OfficerUpdate, RejectIn, ResolveIn, StationCreate,
     SuspendIn, UserStatsOut,
 )
 from app.schemas.public import Page
 from app.schemas.public_case import AdminCaseOut
-from app.schemas.report import AdminReportOut, BlindedItemOut, BlindIn, ResolveReportIn
+from app.schemas.report import AdminContentOut, AdminContentSection, AdminReportOut, BlindedItemOut, BlindIn, ResolveReportIn
 from app.schemas.verification import AdminVerifyOut
 from app.services import takedown as takedown_svc
 from app.services.audit import log_action
@@ -536,6 +537,7 @@ def list_blinded(db: Session = Depends(get_db)):
             target_type=tt.value, target_id=obj.id, title=title, blind_reason=obj.blind_reason,
             is_auto=obj.blind_reason == blinding.REASON_AUTO,
             pending_reporters=blinding.pending_reporter_count(db, tt, obj.id),
+            takedown_pending=blinding.has_pending_takedown(db, obj),
         ))
 
     for rv in db.scalars(select(Review).where(Review.status == ReviewStatus.blinded).order_by(Review.id.desc()).limit(200)):
@@ -545,6 +547,71 @@ def list_blinded(db: Session = Depends(get_db)):
     for c in db.scalars(select(PublicCase).where(PublicCase.status == CaseStatus.blinded).order_by(PublicCase.id.desc()).limit(200)):
         add(ReportTarget.public_case, c, c.title)
     return items
+
+
+def _author(u: User | None) -> str:
+    if u is None:
+        return "비회원"
+    return f"{u.nickname} ({u.email})" if u.deleted_at is None else "탈퇴한 회원"
+
+
+@router.get("/content/{kind}/{target_id}", response_model=AdminContentOut)
+def admin_content(kind: str, target_id: int, db: Session = Depends(get_db)):
+    """블라인드 목록·삭제·정정 요청에서 판단할 수 있게 대상 원문 전체를 상태와 관계없이 보여 준다."""
+    if kind == "review":
+        r = db.get(Review, target_id)
+        if not r:
+            raise HTTPException(404, "평가를 찾을 수 없습니다.")
+        a = _admin_review(r)
+        meta = [r.station.name, a.role_label, a.case_type_label]
+        if a.target_label:
+            meta.append(f"평가 대상: {a.target_label}")
+        if r.case_number:
+            meta.append(f"사건번호: {r.case_number}")
+        return AdminContentOut(
+            kind=kind, id=r.id, title=f"{r.station.name} 평가 #{r.id}", status=r.status.value,
+            author=_author(db.get(User, r.author_id) if r.author_id else None), created_at=iso(r.created_at),
+            meta=meta, ratings=a.ratings, body=r.body or "(서술 없음, 별점만 등록)",
+            sections=[AdminContentSection(label="증빙 메모", text=r.evidence_note)] if r.evidence_note else [],
+        )
+    if kind == "post":
+        p = db.get(Post, target_id)
+        if not p:
+            raise HTTPException(404, "게시글을 찾을 수 없습니다.")
+        meta = [POST_CATEGORY_LABELS.get(p.category, p.category.value)]
+        if p.station_id and (st := db.get(Station, p.station_id)):
+            meta.append(st.name)
+        return AdminContentOut(
+            kind=kind, id=p.id, title=p.title, status="removed" if p.is_removed else "blinded" if p.is_blinded else "published",
+            author=_author(db.get(User, p.author_id) if p.author_id else None), created_at=iso(p.created_at),
+            meta=meta, body=p.body,
+        )
+    if kind == "public_case":
+        c = db.get(PublicCase, target_id)
+        if not c:
+            raise HTTPException(404, "사건을 찾을 수 없습니다.")
+        meta = [CASE_CATEGORY_LABELS.get(c.category, c.category.value)]
+        if c.station:
+            meta.append(c.station.name)
+        sections = [AdminContentSection(label="원하는 조치", text=c.desired_action)] if c.desired_action else []
+        sections += [AdminContentSection(label=f"진행 기록 · {(iso(u.created_at) or '')[:10]}", text=u.body) for u in c.updates]
+        return AdminContentOut(
+            kind=kind, id=c.id, title=c.title, status=c.status.value, author=_author(db.get(User, c.author_id)),
+            created_at=iso(c.created_at), meta=meta, body=c.body, sections=sections,
+        )
+    if kind == "officer":
+        o = db.get(Officer, target_id)
+        if not o:
+            raise HTTPException(404, "수사관 정보를 찾을 수 없습니다.")
+        reviews = db.scalars(select(Review).where(Review.officer_id == o.id).order_by(Review.id.desc()).limit(50)).all()
+        meta = [o.station.name] + ([o.department.name] if o.department else []) + [SOURCE_LABELS.get(o.source, o.source.value)]
+        return AdminContentOut(
+            kind=kind, id=o.id, title=f"{o.name} {o.rank}".strip(), status="blinded" if o.is_blinded else "published",
+            author="-", created_at=iso(o.created_at), meta=meta,
+            body=f"이 수사관을 평가 대상으로 한 평가 {len(reviews)}건" + (" (최근 50건까지 표시)" if len(reviews) == 50 else ""),
+            sections=[AdminContentSection(label=f"평가 #{r.id} · {r.status.value}", text=r.body or "(서술 없음)") for r in reviews],
+        )
+    raise HTTPException(404, "알 수 없는 종류입니다.")
 
 
 # ---------- 삭제·정정 요청 ----------
@@ -608,6 +675,23 @@ def resolve_takedown(request_id: int, body: ResolveIn, admin: User = Depends(req
             blinding.maybe_auto_blind(db, ReportTarget.review, t.review_id)
         elif t.case_id:
             blinding.maybe_auto_blind(db, ReportTarget.public_case, t.case_id)
+    db.commit()
+    return _admin_takedown(t)
+
+
+@router.patch("/takedown-requests/{request_id}/note", response_model=AdminTakedown)
+def edit_takedown_note(request_id: int, body: NoteIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """처리 메모(요청인이 처리 상태 조회에서 보는 문구) 고치기. 처리 결과(유지/삭제)는 바뀌지 않으며, 고치기 전 문구는 처리 기록에 남는다."""
+    t = db.get(TakedownRequest, request_id)
+    if not t:
+        raise HTTPException(404, "요청을 찾을 수 없습니다.")
+    if t.status == TakedownStatus.pending:
+        raise HTTPException(409, "아직 처리되지 않은 요청입니다.")
+    note = body.note.strip()
+    if len(note) < 5:
+        raise HTTPException(422, "처리 메모를 5자 이상 적어 주세요.")
+    log_action(db, admin.id, "takedown_note_edit", "takedown_request", t.id, {"before": t.resolution_note, "after": note})
+    t.resolution_note = note
     db.commit()
     return _admin_takedown(t)
 
