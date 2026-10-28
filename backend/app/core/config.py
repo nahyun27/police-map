@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     SMTP_FROM: str = ""
     INQUIRY_NOTIFY_TO: str = ""  # 쉼표로 여러 주소 가능
 
+    # IndexNow(네이버·빙 등에 새 주소를 바로 알리는 표준). 키는 공개 값이며 public/<키>.txt 와 같아야 한다.
+    # 개발·테스트 환경에서는 보내지 않는다(services/indexnow.py).
+    INDEXNOW_KEY: str = "8bbe5d524000d041b6ad790fe8bc1085"
+    PUBLIC_SITE_URL: str = "https://policemap.co.kr"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

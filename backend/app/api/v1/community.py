@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.core.deps import get_client_ip_hash, get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
 from app.core.rate_limit import comment_limiter, follow_limiter, post_limiter, scrap_limiter, view_limiter, vote_limiter
+from app.services import indexnow
 from app.api.v1._present import review_overall, review_target
 from app.models import (
     Post, PostCategory, PostComment, PostCommentVote, PostScrap, PostVote, Region, RegionFollow, Review,
@@ -292,7 +293,10 @@ def popular_posts(
 
 
 @router.post("/posts", response_model=PostReceipt, status_code=status.HTTP_201_CREATED, dependencies=[Depends(post_limiter)])
-def create_post(body: PostCreate, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
+def create_post(
+    body: PostCreate, background: BackgroundTasks, db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
     """게시글 작성. 평가(Review)와 마찬가지로 로그인 없이도 익명으로 작성할 수 있다
     (2026-10 결정). 로그인한 상태로 쓰면 author_id 가 채워져 본인이 나중에 삭제할 수 있지만,
     익명 글은 작성자 본인이 지울 방법이 없고 관리자만 지울 수 있다.
@@ -322,6 +326,7 @@ def create_post(body: PostCreate, db: Session = Depends(get_db), user: User | No
     )
     db.add(post)
     db.commit()
+    background.add_task(indexnow.submit, [indexnow.site_url(f"/board/{post.id}")])
     return PostReceipt(id=post.id, message="게시되었습니다.")
 
 

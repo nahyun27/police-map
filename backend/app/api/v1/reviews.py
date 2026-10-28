@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.core.deps import get_client_ip_hash, get_current_user, get_current_user_optional
 from app.core.moderation import find_banned
 from app.core.rate_limit import comment_limiter, reply_limiter, review_limiter, scrap_limiter, vote_limiter
+from app.services import indexnow
 from app.core.security import hash_case_number
 from app.models import (
     Department, Officer, Review, ReviewComment, ReviewCommentVote, ReviewReply, ReviewScrap, ReviewStatus, ReviewVote, Station, User,
@@ -140,7 +141,10 @@ def unscrap_review(review_id: int, db: Session = Depends(get_db), user: User = D
 
 
 @router.post("", response_model=ReviewReceipt, status_code=status.HTTP_201_CREATED, dependencies=[Depends(review_limiter)])
-def create_review(body: ReviewCreate, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
+def create_review(
+    body: ReviewCreate, background: BackgroundTasks, db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
     """평가 제출. 로그인 없이도 익명으로 작성 가능하고, 2026-10 결정으로 사전 검수 없이 즉시
     게시된다(게시판과 동일한 방식 — 명예훼손 등 게시물 책임은 작성자 본인이 진다). 금칙어
     자동 필터만 1차로 걸러내고, 문제가 생기면 관리자가 사후 삭제하거나 당사자가 삭제·정정
@@ -231,6 +235,8 @@ def create_review(body: ReviewCreate, db: Session = Depends(get_db), user: User 
     except IntegrityError:  # 동시 요청으로 중복이 통과한 경우
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "같은 사건번호로 이미 제출된 평가가 있습니다.")
+    if review.status == ReviewStatus.published:
+        background.add_task(indexnow.submit, [indexnow.site_url(f"/station/{review.station_id}")])
     return ReviewReceipt(id=review.id, status=review.status.value, message="게시되었습니다.")
 
 
