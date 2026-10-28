@@ -280,6 +280,9 @@ def test_takedown_note_can_be_edited_after_resolve_and_admin_is_mailed(db, clien
     tid = admin_client.get(f"{API}/admin/takedown-requests?status=pending").json()["items"][0]["id"]
     assert admin_client.patch(f"{API}/admin/takedown-requests/{tid}/note", json={"note": "처리 전 수정"}).status_code == 409
     assert admin_client.post(f"{API}/admin/takedown-requests/{tid}/resolve", json={"decision": "remove", "note": "삭제했습니다"}).status_code == 200
+    removed = [x for x in admin_client.get(f"{API}/admin/reviews?status=removed").json()["items"] if x["id"] == rv.id][0]
+    assert removed["reject_reason"] == f"삭제·정정 요청 #{tid}에 따른 삭제"  # 삭제돼도 관리자 목록에 사유와 원문이 남는다
+    assert removed["body"] == rv.body
     r = admin_client.patch(f"{API}/admin/takedown-requests/{tid}/note", json={"note": "요청하신 평가를 삭제했습니다."})
     assert r.status_code == 200 and r.json()["resolution_note"] == "요청하신 평가를 삭제했습니다." and r.json()["status"] == "removed"
     assert admin_client.patch(f"{API}/admin/takedown-requests/{tid}/note", json={"note": "  짧 "}).status_code == 422

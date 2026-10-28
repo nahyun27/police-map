@@ -113,6 +113,8 @@ def resolve_remove(db: Session, req: TakedownRequest, admin: User, note: str) ->
     if isinstance(target, Review):
         target.status = ReviewStatus.removed
         target.blinded_from_status = None
+        # 관리자 "평가 검수 → 삭제됨" 목록의 사유 칸에 어떤 요청으로 지웠는지 남긴다.
+        target.reject_reason = f"삭제·정정 요청 #{req.id}에 따른 삭제"[:300]
     elif isinstance(target, PublicCase):
         target.status, target.blinded_from_status = CaseStatus.removed, None
         target.removed_reason = "삭제·정정 요청에 따른 삭제"

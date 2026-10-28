@@ -62,7 +62,7 @@ export default function AdminBlindedPage() {
                       <td style={{ maxWidth: 280 }}>
                         {href ? <Link href={href} target="_blank">{it.title}</Link> : it.title}
                         <div>
-                          <button type="button" className="btn ghost sm acv-toggle" aria-expanded={open} onClick={() => setOpenKey(open ? null : key)}>
+                          <button type="button" className="acv-toggle" aria-expanded={open} onClick={() => setOpenKey(open ? null : key)}>
                             {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}원문 {open ? '접기' : '보기'}
                           </button>
                         </div>

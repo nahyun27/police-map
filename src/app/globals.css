@@ -1434,7 +1434,6 @@ em.hero-line { animation-delay: .35s; }
 .admin-toolbar .seg button, .admin-toolbar .seg a { padding: 7px 14px; }
 .admin-search input, .admin-search input:focus { width: 280px; height: 40px; background: #fff; border: 1px solid var(--line); }
 .admin-search input:focus { border-color: var(--brand); }
-.admin-content .card > .table-wrap:first-child, .admin-content .card > .warn + .table-wrap { margin-top: -4px; }
 .admin-content table.list { min-width: 760px; }
 .admin-content table.list td[colspan].sub { text-align: center; padding: 44px 14px; color: var(--muted); }
 .admin-empty { text-align: center; padding: 30px 0; margin: 0; }
@@ -1456,5 +1455,22 @@ em.hero-line { animation-delay: .35s; }
 }
 .acv-section { display: flex; flex-direction: column; gap: 4px; }
 .admin-expand-row > td { background: var(--bg); }
-.acv-toggle { margin-top: 6px; padding: 4px 8px; gap: 4px; color: var(--brand); border: none; background: none; }
-.acv-toggle:hover { background: var(--brand-soft); }
+.acv-toggle {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; padding: 5px 10px; border-radius: 8px;
+  font: inherit; font-size: 12.5px; font-weight: 650; color: var(--brand); background: var(--brand-soft); border: none; cursor: pointer;
+}
+.acv-toggle:hover { background: #dde7ff; }
+
+/* 관리자 표: 카드 안에 표를 한 번 더 넣지 않고, 표 자체가 하나의 둥근 상자로 보이게 */
+.admin-content .card:has(> .table-wrap) { padding: 0; overflow: hidden; }
+.admin-content .card:has(> .table-wrap) > .table-wrap { margin: 0; }
+.admin-content .card:has(> .table-wrap) > .warn { margin: 16px 20px; }
+.admin-content .card:has(> .table-wrap) > .btn-row { margin: 0 !important; padding: 14px 20px; border-top: 1px solid var(--line2); }
+.admin-content .card:has(> .table-wrap) table.list thead th { background: #f8fafc; padding-top: 16px; padding-bottom: 16px; font-size: 13px; color: var(--ink2); }
+.admin-content .card:has(> .table-wrap) table.list th:first-child,
+.admin-content .card:has(> .table-wrap) table.list td:first-child { padding-left: 24px; }
+.admin-content .card:has(> .table-wrap) table.list th:last-child,
+.admin-content .card:has(> .table-wrap) table.list td:last-child { padding-right: 24px; }
+.admin-content .card:has(> .table-wrap) table.list tbody tr:hover > td { background: #fafbfd; }
+.admin-content .card:has(> .table-wrap) table.list tr.admin-expand-row > td,
+.admin-content .card:has(> .table-wrap) table.list tr.admin-expand-row:hover > td { background: var(--bg); padding: 16px 24px 20px; }

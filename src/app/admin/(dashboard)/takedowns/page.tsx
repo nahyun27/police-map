@@ -91,7 +91,7 @@ export default function AdminTakedownQueuePage() {
                     {TARGET_LABEL[t.target_type] ?? t.target_type} #{targetId}
                     {targetId !== null && (
                       <div>
-                        <button type="button" className="btn ghost sm acv-toggle" aria-expanded={open} onClick={() => setOpenId(open ? null : t.id)}>
+                        <button type="button" className="acv-toggle" aria-expanded={open} onClick={() => setOpenId(open ? null : t.id)}>
                           {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}원문 {open ? '접기' : '보기'}
                         </button>
                       </div>
@@ -139,7 +139,7 @@ export default function AdminTakedownQueuePage() {
                       ) : (
                         <>
                           <div style={{ whiteSpace: 'pre-wrap' }}>{t.resolution_note}</div>
-                          <button type="button" className="btn ghost sm acv-toggle" onClick={() => { setEditingNoteId(t.id); setNoteDraft(t.resolution_note ?? ''); }}>
+                          <button type="button" className="acv-toggle" onClick={() => { setEditingNoteId(t.id); setNoteDraft(t.resolution_note ?? ''); }}>
                             <Pencil size={13} />메모 수정
                           </button>
                         </>
